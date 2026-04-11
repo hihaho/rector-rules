@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Hihaho\RectorRules\Rector\NamingClasses;
 
 use Hihaho\RectorRules\Tests\Rector\NamingClasses\AddResourceSuffixRector\AddResourceSuffixRectorTest;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 use PhpParser\Node;
 use PhpParser\Node\Identifier;
+use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\Class_;
 use PHPStan\Reflection\ReflectionProvider;
 use Rector\Rector\AbstractRector;
@@ -18,9 +21,9 @@ use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
  */
 final class AddResourceSuffixRector extends AbstractRector
 {
-    private const string JSON_RESOURCE = 'Illuminate\Http\Resources\Json\JsonResource';
+    private const string JSON_RESOURCE = JsonResource::class;
 
-    private const string RESOURCE_COLLECTION = 'Illuminate\Http\Resources\Json\ResourceCollection';
+    private const string RESOURCE_COLLECTION = ResourceCollection::class;
 
     public function __construct(
         private readonly ReflectionProvider $reflectionProvider,
@@ -71,11 +74,11 @@ CODE_SAMPLE,
             return null;
         }
 
-        if ($node->name === null) {
+        if (! $node->name instanceof Identifier) {
             return null;
         }
 
-        if ($node->extends === null) {
+        if (! $node->extends instanceof Name) {
             return null;
         }
 

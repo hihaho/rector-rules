@@ -13,4 +13,8 @@ final class HihahoSetList
     public const string ROUTING = self::SETS_DIR . 'routing.php';
 
     public const string NAMING = self::SETS_DIR . 'naming.php';
+
+    public const string MIGRATIONS = self::SETS_DIR . 'migrations.php';
+
+    public const string IMPORTS = self::SETS_DIR . 'imports.php';
 }

@@ -13,6 +13,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addcommandsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddCommandSuffixRector\\AddCommandSuffixRectorTest',
+          'command' => 'Illuminate\\Console\\Command',
           'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
           'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
         ),
@@ -38,6 +39,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addcommandsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddCommandSuffixRector\\AddCommandSuffixRectorTest',
+          'command' => 'Illuminate\\Console\\Command',
           'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
           'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
         ),
@@ -52,6 +54,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
            'uses' => 
           array (
             'addcommandsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddCommandSuffixRector\\AddCommandSuffixRectorTest',
+            'command' => 'Illuminate\\Console\\Command',
             'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
             'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
           ),
@@ -87,6 +90,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addcommandsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddCommandSuffixRector\\AddCommandSuffixRectorTest',
+          'command' => 'Illuminate\\Console\\Command',
           'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
           'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
         ),
@@ -101,6 +105,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
            'uses' => 
           array (
             'addcommandsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddCommandSuffixRector\\AddCommandSuffixRectorTest',
+            'command' => 'Illuminate\\Console\\Command',
             'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
             'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
           ),
@@ -136,6 +141,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addcommandsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddCommandSuffixRector\\AddCommandSuffixRectorTest',
+          'command' => 'Illuminate\\Console\\Command',
           'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
           'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
         ),
@@ -150,6 +156,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
            'uses' => 
           array (
             'addcommandsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddCommandSuffixRector\\AddCommandSuffixRectorTest',
+            'command' => 'Illuminate\\Console\\Command',
             'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
             'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
           ),
@@ -182,7 +189,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     1 => 
     array (
-      '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AddCommandSuffixRector.php' => 'cc66b930ef8e5e5842e7d9cafbee618a307315145e6bcdffe9b1a9b67b212756',
+      '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AddCommandSuffixRector.php' => 'b510cfe2d80fd0dc6da4a5f2136dfab35c610a5db4f747ff492506f3bd095c13',
     ),
   ),
 ));

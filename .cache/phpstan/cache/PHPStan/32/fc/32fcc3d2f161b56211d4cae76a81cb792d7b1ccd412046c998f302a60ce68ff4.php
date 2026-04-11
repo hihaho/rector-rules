@@ -42,6 +42,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'namespace' => 'Hihaho\\RectorRules\\Rector\\Routing\\Concerns',
          'uses' => 
         array (
+          'route' => 'Illuminate\\Support\\Facades\\Route',
           'staticcall' => 'PhpParser\\Node\\Expr\\StaticCall',
           'identifier' => 'PhpParser\\Node\\Identifier',
           'name' => 'PhpParser\\Node\\Name',
@@ -74,6 +75,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'namespace' => 'Hihaho\\RectorRules\\Rector\\Routing\\Concerns',
          'uses' => 
         array (
+          'route' => 'Illuminate\\Support\\Facades\\Route',
           'staticcall' => 'PhpParser\\Node\\Expr\\StaticCall',
           'identifier' => 'PhpParser\\Node\\Identifier',
           'name' => 'PhpParser\\Node\\Name',
@@ -106,6 +108,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'namespace' => 'Hihaho\\RectorRules\\Rector\\Routing\\Concerns',
          'uses' => 
         array (
+          'route' => 'Illuminate\\Support\\Facades\\Route',
           'staticcall' => 'PhpParser\\Node\\Expr\\StaticCall',
           'identifier' => 'PhpParser\\Node\\Identifier',
           'name' => 'PhpParser\\Node\\Name',
@@ -138,6 +141,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'namespace' => 'Hihaho\\RectorRules\\Rector\\Routing\\Concerns',
          'uses' => 
         array (
+          'route' => 'Illuminate\\Support\\Facades\\Route',
           'staticcall' => 'PhpParser\\Node\\Expr\\StaticCall',
           'identifier' => 'PhpParser\\Node\\Identifier',
           'name' => 'PhpParser\\Node\\Name',
@@ -346,7 +350,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     1 => 
     array (
       '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/Routing/NormalizeRoutePathRector.php' => 'cd4cebe7dc43243c0745664cbcd5a41cd392b38d7f5607e45c00c8b039a81d24',
-      '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/Routing/Concerns/ChecksRouteContext.php' => '3d013efa01bd8c215cf380dcfdb0c50cd07fb22166cdab055ed2689c4a1a92a6',
+      '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/Routing/Concerns/ChecksRouteContext.php' => '01986941a90caa1d2be9ebce7297703d3797eecc1e8960617b3e687e04ec3f07',
     ),
   ),
 ));

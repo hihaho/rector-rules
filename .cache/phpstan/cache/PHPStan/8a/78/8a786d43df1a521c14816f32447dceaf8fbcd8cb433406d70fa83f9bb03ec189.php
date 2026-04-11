@@ -13,6 +13,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addmailsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddMailSuffixRector\\AddMailSuffixRectorTest',
+          'mailable' => 'Illuminate\\Mail\\Mailable',
           'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
           'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
         ),
@@ -38,6 +39,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addmailsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddMailSuffixRector\\AddMailSuffixRectorTest',
+          'mailable' => 'Illuminate\\Mail\\Mailable',
           'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
           'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
         ),
@@ -52,6 +54,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
            'uses' => 
           array (
             'addmailsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddMailSuffixRector\\AddMailSuffixRectorTest',
+            'mailable' => 'Illuminate\\Mail\\Mailable',
             'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
             'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
           ),
@@ -87,6 +90,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addmailsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddMailSuffixRector\\AddMailSuffixRectorTest',
+          'mailable' => 'Illuminate\\Mail\\Mailable',
           'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
           'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
         ),
@@ -101,6 +105,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
            'uses' => 
           array (
             'addmailsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddMailSuffixRector\\AddMailSuffixRectorTest',
+            'mailable' => 'Illuminate\\Mail\\Mailable',
             'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
             'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
           ),
@@ -136,6 +141,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addmailsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddMailSuffixRector\\AddMailSuffixRectorTest',
+          'mailable' => 'Illuminate\\Mail\\Mailable',
           'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
           'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
         ),
@@ -150,6 +156,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
            'uses' => 
           array (
             'addmailsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddMailSuffixRector\\AddMailSuffixRectorTest',
+            'mailable' => 'Illuminate\\Mail\\Mailable',
             'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
             'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
           ),
@@ -182,7 +189,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     1 => 
     array (
-      '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AddMailSuffixRector.php' => '300c9e24221d0437067f53a3d508035206093e21b5e1821c5c2e3e937d9e8861',
+      '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AddMailSuffixRector.php' => 'e6ad47ca92b20a3ae7bb8a1e1b79a8f56fc401afcdefdc693abcaf4495230d32',
     ),
   ),
 ));

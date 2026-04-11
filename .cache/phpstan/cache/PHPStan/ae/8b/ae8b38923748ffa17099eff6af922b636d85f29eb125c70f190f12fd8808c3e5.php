@@ -2,7 +2,7 @@
 
 // odsl-/Users/sandermuller/Documents/GitHub/rector-rules/src/Set/HihahoSetList.php-PHPStan\BetterReflection\Reflection\ReflectionClass-Hihaho\RectorRules\Set\HihahoSetList
 return \PHPStan\Cache\CacheItem::__set_state(array(
-   'variableKey' => 'v2-6.65.0.9-8.5.4-681dbcb2d731501e8025a5f1d41430d01da39a35f69a95358b69cf46bf18eb29',
+   'variableKey' => 'v2-6.65.0.9-8.5.4-e53cf01d1798e2c0fb487764f599aa224d2be9101a766926bbed003c050cd83a',
    'data' => 
   array (
     'locatedSource' => 
@@ -27,7 +27,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     array (
     ),
     'startLine' => 7,
-    'endLine' => 16,
+    'endLine' => 20,
     'startColumn' => 1,
     'endColumn' => 1,
     'parentClassName' => NULL,
@@ -186,6 +186,80 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         'endLine' => 15,
         'startColumn' => 5,
         'endColumn' => 63,
+      ),
+      'MIGRATIONS' => 
+      array (
+        'declaringClassName' => 'Hihaho\\RectorRules\\Set\\HihahoSetList',
+        'implementingClassName' => 'Hihaho\\RectorRules\\Set\\HihahoSetList',
+        'name' => 'MIGRATIONS',
+        'modifiers' => 1,
+        'type' => 
+        array (
+          'class' => 'PHPStan\\BetterReflection\\Reflection\\ReflectionNamedType',
+          'data' => 
+          array (
+            'name' => 'string',
+            'isIdentifier' => true,
+          ),
+        ),
+        'value' => 
+        array (
+          'code' => 'self::SETS_DIR . \'migrations.php\'',
+          'attributes' => 
+          array (
+            'startLine' => 17,
+            'endLine' => 17,
+            'startTokenPos' => 107,
+            'startFilePos' => 394,
+            'endTokenPos' => 113,
+            'endFilePos' => 426,
+          ),
+        ),
+        'docComment' => NULL,
+        'attributes' => 
+        array (
+        ),
+        'startLine' => 17,
+        'endLine' => 17,
+        'startColumn' => 5,
+        'endColumn' => 71,
+      ),
+      'IMPORTS' => 
+      array (
+        'declaringClassName' => 'Hihaho\\RectorRules\\Set\\HihahoSetList',
+        'implementingClassName' => 'Hihaho\\RectorRules\\Set\\HihahoSetList',
+        'name' => 'IMPORTS',
+        'modifiers' => 1,
+        'type' => 
+        array (
+          'class' => 'PHPStan\\BetterReflection\\Reflection\\ReflectionNamedType',
+          'data' => 
+          array (
+            'name' => 'string',
+            'isIdentifier' => true,
+          ),
+        ),
+        'value' => 
+        array (
+          'code' => 'self::SETS_DIR . \'imports.php\'',
+          'attributes' => 
+          array (
+            'startLine' => 19,
+            'endLine' => 19,
+            'startTokenPos' => 126,
+            'startFilePos' => 464,
+            'endTokenPos' => 132,
+            'endFilePos' => 493,
+          ),
+        ),
+        'docComment' => NULL,
+        'attributes' => 
+        array (
+        ),
+        'startLine' => 19,
+        'endLine' => 19,
+        'startColumn' => 5,
+        'endColumn' => 65,
       ),
     ),
     'immediateProperties' => 

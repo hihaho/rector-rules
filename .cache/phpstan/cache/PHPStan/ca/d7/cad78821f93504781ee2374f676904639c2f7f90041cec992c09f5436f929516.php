@@ -2,7 +2,7 @@
 
 // odsl-/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/Routing/Concerns/ChecksRouteContext.php-PHPStan\BetterReflection\Reflection\ReflectionClass-Hihaho\RectorRules\Rector\Routing\Concerns\ChecksRouteContext
 return \PHPStan\Cache\CacheItem::__set_state(array(
-   'variableKey' => 'v2-6.65.0.9-8.5.4-3d013efa01bd8c215cf380dcfdb0c50cd07fb22166cdab055ed2689c4a1a92a6',
+   'variableKey' => 'v2-6.65.0.9-8.5.4-01986941a90caa1d2be9ebce7297703d3797eecc1e8960617b3e687e04ec3f07',
    'data' => 
   array (
     'locatedSource' => 
@@ -26,8 +26,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     'attributes' => 
     array (
     ),
-    'startLine' => 11,
-    'endLine' => 54,
+    'startLine' => 12,
+    'endLine' => 55,
     'startColumn' => 1,
     'endColumn' => 1,
     'parentClassName' => NULL,
@@ -65,8 +65,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
         ),
         'docComment' => NULL,
-        'startLine' => 13,
-        'endLine' => 16,
+        'startLine' => 14,
+        'endLine' => 17,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,
@@ -104,8 +104,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 18,
-            'endLine' => 18,
+            'startLine' => 19,
+            'endLine' => 19,
             'startColumn' => 40,
             'endColumn' => 55,
             'parameterIndex' => 0,
@@ -130,8 +130,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 18,
-            'endLine' => 18,
+            'startLine' => 19,
+            'endLine' => 19,
             'startColumn' => 58,
             'endColumn' => 71,
             'parameterIndex' => 1,
@@ -152,8 +152,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
         ),
         'docComment' => NULL,
-        'startLine' => 18,
-        'endLine' => 33,
+        'startLine' => 19,
+        'endLine' => 34,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,
@@ -191,8 +191,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 38,
-            'endLine' => 38,
+            'startLine' => 39,
+            'endLine' => 39,
             'startColumn' => 50,
             'endColumn' => 65,
             'parameterIndex' => 0,
@@ -217,8 +217,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 38,
-            'endLine' => 38,
+            'startLine' => 39,
+            'endLine' => 39,
             'startColumn' => 68,
             'endColumn' => 81,
             'parameterIndex' => 1,
@@ -241,8 +241,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         'docComment' => '/**
  * @param list<string> $methods
  */',
-        'startLine' => 38,
-        'endLine' => 53,
+        'startLine' => 39,
+        'endLine' => 54,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,

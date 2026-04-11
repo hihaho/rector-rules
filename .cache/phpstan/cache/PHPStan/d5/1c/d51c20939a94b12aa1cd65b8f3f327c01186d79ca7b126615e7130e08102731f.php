@@ -7,7 +7,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
   array (
     '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AbstractAddSuffixRector.php' => 
     array (
-      0 => 'e636a1fa8f13905ba42a509e25d54a60896c9f1ecd9aed702f90c5970824a40f',
+      0 => 'a7a64a9de37cb89cf02c2cbad5170041479cdbdd9df361372c2a632c5a7137a3',
       1 => 
       array (
         0 => 'hihaho\\rectorrules\\rector\\namingclasses\\abstractaddsuffixrector',
@@ -28,7 +28,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AddCommandSuffixRector.php' => 
     array (
-      0 => 'cc66b930ef8e5e5842e7d9cafbee618a307315145e6bcdffe9b1a9b67b212756',
+      0 => 'b510cfe2d80fd0dc6da4a5f2136dfab35c610a5db4f747ff492506f3bd095c13',
       1 => 
       array (
         0 => 'hihaho\\rectorrules\\rector\\namingclasses\\addcommandsuffixrector',
@@ -45,7 +45,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AddMailSuffixRector.php' => 
     array (
-      0 => '300c9e24221d0437067f53a3d508035206093e21b5e1821c5c2e3e937d9e8861',
+      0 => 'e6ad47ca92b20a3ae7bb8a1e1b79a8f56fc401afcdefdc693abcaf4495230d32',
       1 => 
       array (
         0 => 'hihaho\\rectorrules\\rector\\namingclasses\\addmailsuffixrector',
@@ -62,7 +62,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AddNotificationSuffixRector.php' => 
     array (
-      0 => '51607c8622a16531da015ce1808f66ac5ff133ded282e3407b1792dd365c2b85',
+      0 => '81c4c51609bb590daacc15595a36eff3f9058052214d447e12c5d69180fe3fd7',
       1 => 
       array (
         0 => 'hihaho\\rectorrules\\rector\\namingclasses\\addnotificationsuffixrector',
@@ -79,7 +79,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AddResourceSuffixRector.php' => 
     array (
-      0 => '0169e6e009c2b7f7c35f8af298de16fe352208dc91998b4c42bcd2044ffd9a75',
+      0 => '7da376576364eb9a847fa2b3e9d2e86f169621ef38fbc53dbbda4034b3274cc3',
       1 => 
       array (
         0 => 'hihaho\\rectorrules\\rector\\namingclasses\\addresourcesuffixrector',
@@ -139,7 +139,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/src/Set/HihahoSetList.php' => 
     array (
-      0 => '681dbcb2d731501e8025a5f1d41430d01da39a35f69a95358b69cf46bf18eb29',
+      0 => 'e53cf01d1798e2c0fb487764f599aa224d2be9101a766926bbed003c050cd83a',
       1 => 
       array (
         0 => 'hihaho\\rectorrules\\set\\hihahosetlist',
@@ -153,7 +153,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/Routing/Concerns/ChecksRouteContext.php' => 
     array (
-      0 => '3d013efa01bd8c215cf380dcfdb0c50cd07fb22166cdab055ed2689c4a1a92a6',
+      0 => '01986941a90caa1d2be9ebce7297703d3797eecc1e8960617b3e687e04ec3f07',
       1 => 
       array (
         0 => 'hihaho\\rectorrules\\rector\\routing\\concerns\\checksroutecontext',
@@ -163,6 +163,79 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         0 => 'hihaho\\rectorrules\\rector\\routing\\concerns\\isinroutesdirectory',
         1 => 'hihaho\\rectorrules\\rector\\routing\\concerns\\isroutestaticcall',
         2 => 'hihaho\\rectorrules\\rector\\routing\\concerns\\isroutestaticcallformethods',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/Migration/Concerns/ChecksMigrationContext.php' => 
+    array (
+      0 => '51476026f4d75685da8a751ae7a56925d0efd04c22403bf5ca35b7600c85ae70',
+      1 => 
+      array (
+        0 => 'hihaho\\rectorrules\\rector\\migration\\concerns\\checksmigrationcontext',
+      ),
+      2 => 
+      array (
+        0 => 'hihaho\\rectorrules\\rector\\migration\\concerns\\isinmigrationsdirectory',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/Migration/InlineMigrationConstantsRector.php' => 
+    array (
+      0 => 'd699b06f26dc884dd8c27579c39369d75fadb8d74074305f01adaeecf9ec912c',
+      1 => 
+      array (
+        0 => 'hihaho\\rectorrules\\rector\\migration\\inlinemigrationconstantsrector',
+      ),
+      2 => 
+      array (
+        0 => 'hihaho\\rectorrules\\rector\\migration\\__construct',
+        1 => 'hihaho\\rectorrules\\rector\\migration\\getruledefinition',
+        2 => 'hihaho\\rectorrules\\rector\\migration\\getnodetypes',
+        3 => 'hihaho\\rectorrules\\rector\\migration\\refactor',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/Migration/RemoveAfterColumnPositioningRector.php' => 
+    array (
+      0 => 'a7a0a4aaca1d27698bf955d824e7abfcd396037e43ccb14f466c52fa3a299040',
+      1 => 
+      array (
+        0 => 'hihaho\\rectorrules\\rector\\migration\\removeaftercolumnpositioningrector',
+      ),
+      2 => 
+      array (
+        0 => 'hihaho\\rectorrules\\rector\\migration\\getruledefinition',
+        1 => 'hihaho\\rectorrules\\rector\\migration\\getnodetypes',
+        2 => 'hihaho\\rectorrules\\rector\\migration\\refactor',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/Import/AliasImportRector.php' => 
+    array (
+      0 => 'bb9ddd4a089892c520c89c5c7502af30e78e33e71a994a5db30b04d0483d17ef',
+      1 => 
+      array (
+        0 => 'hihaho\\rectorrules\\rector\\import\\aliasimportrector',
+      ),
+      2 => 
+      array (
+        0 => 'hihaho\\rectorrules\\rector\\import\\getruledefinition',
+        1 => 'hihaho\\rectorrules\\rector\\import\\configure',
+        2 => 'hihaho\\rectorrules\\rector\\import\\getnodetypes',
+        3 => 'hihaho\\rectorrules\\rector\\import\\refactor',
+        4 => 'hihaho\\rectorrules\\rector\\import\\refactoruse',
+        5 => 'hihaho\\rectorrules\\rector\\import\\refactorname',
+        6 => 'hihaho\\rectorrules\\rector\\import\\ensurefilestate',
+        7 => 'hihaho\\rectorrules\\rector\\import\\scanexistingimports',
+        8 => 'hihaho\\rectorrules\\rector\\import\\scanstmtsforimports',
       ),
       3 => 
       array (

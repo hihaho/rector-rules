@@ -13,6 +13,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addnotificationsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddNotificationSuffixRector\\AddNotificationSuffixRectorTest',
+          'notification' => 'Illuminate\\Notifications\\Notification',
           'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
           'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
         ),
@@ -38,6 +39,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addnotificationsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddNotificationSuffixRector\\AddNotificationSuffixRectorTest',
+          'notification' => 'Illuminate\\Notifications\\Notification',
           'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
           'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
         ),
@@ -52,6 +54,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
            'uses' => 
           array (
             'addnotificationsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddNotificationSuffixRector\\AddNotificationSuffixRectorTest',
+            'notification' => 'Illuminate\\Notifications\\Notification',
             'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
             'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
           ),
@@ -87,6 +90,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addnotificationsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddNotificationSuffixRector\\AddNotificationSuffixRectorTest',
+          'notification' => 'Illuminate\\Notifications\\Notification',
           'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
           'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
         ),
@@ -101,6 +105,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
            'uses' => 
           array (
             'addnotificationsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddNotificationSuffixRector\\AddNotificationSuffixRectorTest',
+            'notification' => 'Illuminate\\Notifications\\Notification',
             'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
             'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
           ),
@@ -136,6 +141,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addnotificationsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddNotificationSuffixRector\\AddNotificationSuffixRectorTest',
+          'notification' => 'Illuminate\\Notifications\\Notification',
           'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
           'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
         ),
@@ -150,6 +156,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
            'uses' => 
           array (
             'addnotificationsuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddNotificationSuffixRector\\AddNotificationSuffixRectorTest',
+            'notification' => 'Illuminate\\Notifications\\Notification',
             'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
             'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
           ),
@@ -182,7 +189,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     1 => 
     array (
-      '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AddNotificationSuffixRector.php' => '51607c8622a16531da015ce1808f66ac5ff133ded282e3407b1792dd365c2b85',
+      '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AddNotificationSuffixRector.php' => '81c4c51609bb590daacc15595a36eff3f9058052214d447e12c5d69180fe3fd7',
     ),
   ),
 ));

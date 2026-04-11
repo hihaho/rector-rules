@@ -3641,38 +3641,27 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
       array (
       ),
     ),
-    '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/Event/Value/Test/Issue/Code.php' => 
-    array (
-      0 => 'c88123c4cd278f05a6a049559a56054a19460f2916fc308ba00f21e913c41c98',
-      1 => 
-      array (
-        0 => 'phpunit\\event\\code\\issuetrigger\\code',
-      ),
-      2 => 
-      array (
-        0 => 'phpunit\\event\\code\\issuetrigger\\isfirstpartyortest',
-        1 => 'phpunit\\event\\code\\issuetrigger\\isthirdpartyorphpunitorphp',
-      ),
-      3 => 
-      array (
-      ),
-    ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/Event/Value/Test/Issue/IssueTrigger.php' => 
     array (
-      0 => '74974c7d4bf76a730cc2aa611a5e99d9bd74a3dce0877be81e28b5990b2ffb6f',
+      0 => 'f2f54f2c9de9a6333aea1e938d48af561b275f55a6156922217280fb106bbf62',
       1 => 
       array (
         0 => 'phpunit\\event\\code\\issuetrigger\\issuetrigger',
       ),
       2 => 
       array (
-        0 => 'phpunit\\event\\code\\issuetrigger\\from',
-        1 => 'phpunit\\event\\code\\issuetrigger\\__construct',
-        2 => 'phpunit\\event\\code\\issuetrigger\\isself',
-        3 => 'phpunit\\event\\code\\issuetrigger\\isdirect',
-        4 => 'phpunit\\event\\code\\issuetrigger\\isindirect',
-        5 => 'phpunit\\event\\code\\issuetrigger\\isunknown',
-        6 => 'phpunit\\event\\code\\issuetrigger\\asstring',
+        0 => 'phpunit\\event\\code\\issuetrigger\\test',
+        1 => 'phpunit\\event\\code\\issuetrigger\\self',
+        2 => 'phpunit\\event\\code\\issuetrigger\\direct',
+        3 => 'phpunit\\event\\code\\issuetrigger\\indirect',
+        4 => 'phpunit\\event\\code\\issuetrigger\\unknown',
+        5 => 'phpunit\\event\\code\\issuetrigger\\__construct',
+        6 => 'phpunit\\event\\code\\issuetrigger\\istest',
+        7 => 'phpunit\\event\\code\\issuetrigger\\isself',
+        8 => 'phpunit\\event\\code\\issuetrigger\\isdirect',
+        9 => 'phpunit\\event\\code\\issuetrigger\\isindirect',
+        10 => 'phpunit\\event\\code\\issuetrigger\\isunknown',
+        11 => 'phpunit\\event\\code\\issuetrigger\\asstring',
       ),
       3 => 
       array (
@@ -5519,7 +5508,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/Framework/Constraint/Cardinality/Count.php' => 
     array (
-      0 => '490fc0ad5f4cc5383fbdd61dda260fb22feee308c601513152d9927687214e94',
+      0 => 'a09f6a5c0319c2513155e482cb72020cca5720a139239e1eb05f65835b452426',
       1 => 
       array (
         0 => 'phpunit\\framework\\constraint\\count',
@@ -7580,7 +7569,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/Framework/MockObject/Runtime/Api/MockObjectApi.php' => 
     array (
-      0 => 'd7b0afedb40f771c543505c455b9df16455dcaf4f01c2917a6ea1fc6070c20ed',
+      0 => '22bd0a3587bb6fb902f73134881a8bc80f4cb06c5cdba0c530259892873db2ba',
       1 => 
       array (
         0 => 'phpunit\\framework\\mockobject\\mockobjectapi',
@@ -7633,7 +7622,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/Framework/MockObject/Runtime/Api/StubApi.php' => 
     array (
-      0 => 'acb6cd33a48360885942ba98af5a423336a46776ff0b078053e4339bdc766ab1',
+      0 => 'f85d5e77d7fe372cecc283de38585cb4dff30cebbee18ebe9c15c8fef0acb8d4',
       1 => 
       array (
         0 => 'phpunit\\framework\\mockobject\\stubapi',
@@ -8609,7 +8598,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/Framework/TestRunner/SeparateProcessTestRunner.php' => 
     array (
-      0 => 'fb1d94c08d5c350b391dc1d1543d6a0c1f974f54a142a4d341bc1a019df79338',
+      0 => '7222ebbf519d7e7d873a172a345c5fddcb5a798be7e8e9c916eea3d4a5833a27',
       1 => 
       array (
         0 => 'phpunit\\framework\\separateprocesstestrunner',
@@ -8617,9 +8606,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
       2 => 
       array (
         0 => 'phpunit\\framework\\run',
-        1 => 'phpunit\\framework\\sourcemapfileforchildprocess',
-        2 => 'phpunit\\framework\\saveconfigurationforchildprocess',
-        3 => 'phpunit\\framework\\pathforcachedsourcemap',
+        1 => 'phpunit\\framework\\saveconfigurationforchildprocess',
       ),
       3 => 
       array (
@@ -8981,7 +8968,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/Framework/TestSuite.php' => 
     array (
-      0 => 'f5457b5039c13ecc6b605b46c28289b6d6d8abd3663cfa14d458279e6530ace4',
+      0 => '566b09f03cfe4391ca4ec12b32d2e8287dbae3f6432eb5eb8da4eaae292f59fc',
       1 => 
       array (
         0 => 'phpunit\\framework\\testsuite',
@@ -11755,7 +11742,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/Runner/ErrorHandler.php' => 
     array (
-      0 => '2daaf6c8b255532d0d1d111f731d766081b9574e0e8ccf55a3d902b5e0bed53e',
+      0 => '26e276a2069a067a7af3f15da593d0094a509c28502364a971ec21046a6b2beb',
       1 => 
       array (
         0 => 'phpunit\\runner\\errorhandler',
@@ -11771,14 +11758,12 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         6 => 'phpunit\\runner\\usedeprecationtriggers',
         7 => 'phpunit\\runner\\ignoredbybaseline',
         8 => 'phpunit\\runner\\trigger',
-        9 => 'phpunit\\runner\\triggerforuserlanddeprecation',
-        10 => 'phpunit\\runner\\categorizefile',
-        11 => 'phpunit\\runner\\filteredstacktrace',
-        12 => 'phpunit\\runner\\guessdeprecationframe',
-        13 => 'phpunit\\runner\\errorstacktrace',
-        14 => 'phpunit\\runner\\frameisfunction',
-        15 => 'phpunit\\runner\\frameismethod',
-        16 => 'phpunit\\runner\\stacktrace',
+        9 => 'phpunit\\runner\\filteredstacktrace',
+        10 => 'phpunit\\runner\\guessdeprecationframe',
+        11 => 'phpunit\\runner\\errorstacktrace',
+        12 => 'phpunit\\runner\\frameisfunction',
+        13 => 'phpunit\\runner\\frameismethod',
+        14 => 'phpunit\\runner\\stacktrace',
       ),
       3 => 
       array (
@@ -12317,7 +12302,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/Runner/IssueFilter.php' => 
     array (
-      0 => '0ec0926c9a0177df078b8e2e95427c27ec09b93ae7b7f8ccf552d604a19b0a10',
+      0 => 'a949f29a26d94610b5664c466521c6c6ea8fe972128f53fc7ae6e356ebee8c64',
       1 => 
       array (
         0 => 'phpunit\\testrunner\\issuefilter',
@@ -12333,7 +12318,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/Runner/PHPT/PhptTestCase.php' => 
     array (
-      0 => 'cc2e31ba78255fd7edfc69c27962bf7d12695e0711f98afecd1ec748377ccf30',
+      0 => 'd3654b44d17d4e2e0a1214f1a45d363fe9858440522d40fc018449aea18eb417',
       1 => 
       array (
         0 => 'phpunit\\runner\\phpttestcase',
@@ -12638,7 +12623,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/Runner/TestResult/Collector.php' => 
     array (
-      0 => '963e01c6fc32585830f27400a5880a118623e74e331a24943e5f5d618d7a2fa6',
+      0 => '961ae33123bc0c8ba28069b0e2560b37b76d3f8b68fccc0ed4b035ac83199dad',
       1 => 
       array (
         0 => 'phpunit\\testrunner\\testresult\\collector',
@@ -13145,7 +13130,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/Runner/TestResult/TestResult.php' => 
     array (
-      0 => 'd123a16bb9d9673bb8472bd27252537baefe47fe6fd999ec511e4b3d66f6027e',
+      0 => '0983132e0f9bd0290fa3e30fe6ae3b7977a5fcd226bcc5ba1ff2c2fac676809c',
       1 => 
       array (
         0 => 'phpunit\\testrunner\\testresult\\testresult',
@@ -13165,7 +13150,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         10 => 'phpunit\\testrunner\\testresult\\numberoftestswithtestconsideredriskyevents',
         11 => 'phpunit\\testrunner\\testresult\\hastestconsideredriskyevents',
         12 => 'phpunit\\testrunner\\testresult\\testsuiteskippedevents',
-        13 => 'phpunit\\testrunner\\testresult\\numberoftestskippedbytestsuiteskippedevents',
+        13 => 'phpunit\\testrunner\\testresult\\numberoftestsuiteskippedevents',
         14 => 'phpunit\\testrunner\\testresult\\hastestsuiteskippedevents',
         15 => 'phpunit\\testrunner\\testresult\\testskippedevents',
         16 => 'phpunit\\testrunner\\testresult\\numberoftestskippedevents',
@@ -13269,7 +13254,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/Runner/Version.php' => 
     array (
-      0 => 'ec1316c9e736718a51042b84eb2a0045cb047198098236e5a63d6828fd100869',
+      0 => '8e706c2dbe11f47fa356ae7f154e235a2b1b2498ca170e471ec5813d8dbc8508',
       1 => 
       array (
         0 => 'phpunit\\runner\\version',
@@ -13287,7 +13272,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/TextUI/Application.php' => 
     array (
-      0 => '92e103ce6c04fa534c6ba42ee767bd369ccb57f216341337a763baaaea59d873',
+      0 => '586415b0993879128d3673130a65f2ca9677cd5cb7435b4e9248c8ff4a2890e1',
       1 => 
       array (
         0 => 'phpunit\\textui\\application',
@@ -14258,7 +14243,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/TextUI/Configuration/Merger.php' => 
     array (
-      0 => '872c621b6b07bf36ee5dc5b6aa50b306892fa71ebd6b698aa8ae4cce9828095b',
+      0 => '3d82aeef44df79b8e255e4cf64a452fa1ece63a1c7363c908a11de8b8232adc2',
       1 => 
       array (
         0 => 'phpunit\\textui\\configuration\\merger',
@@ -14330,17 +14315,15 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/TextUI/Configuration/SourceMapper.php' => 
     array (
-      0 => '304c97e3f3a1719beb4e8ef11ab438a4fd16fd44c790be0c20e6f5d3340033d4',
+      0 => 'ef2ac394d9b296a72f4416262a825098019ce2322bdfdef592aac5ee1377234c',
       1 => 
       array (
         0 => 'phpunit\\textui\\configuration\\sourcemapper',
       ),
       2 => 
       array (
-        0 => 'phpunit\\textui\\configuration\\saveto',
-        1 => 'phpunit\\textui\\configuration\\loadfrom',
-        2 => 'phpunit\\textui\\configuration\\map',
-        3 => 'phpunit\\textui\\configuration\\aggregatedirectories',
+        0 => 'phpunit\\textui\\configuration\\map',
+        1 => 'phpunit\\textui\\configuration\\aggregatedirectories',
       ),
       3 => 
       array (
@@ -14784,7 +14767,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/TextUI/Configuration/Value/Source.php' => 
     array (
-      0 => 'fa0d56217fa6cc6d919e22306d04cf4aec611cdf7d57418882cf93c1a5e0e043',
+      0 => '0099925b5d009a5c6296a143ff80986c3058b6cbd67015a954020290e23cdd85',
       1 => 
       array (
         0 => 'phpunit\\textui\\configuration\\source',
@@ -14814,7 +14797,6 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         20 => 'phpunit\\textui\\configuration\\ignoreselfdeprecations',
         21 => 'phpunit\\textui\\configuration\\ignoredirectdeprecations',
         22 => 'phpunit\\textui\\configuration\\ignoreindirectdeprecations',
-        23 => 'phpunit\\textui\\configuration\\identifyissuetrigger',
       ),
       3 => 
       array (
@@ -15240,7 +15222,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/TextUI/Configuration/Xml/DefaultConfiguration.php' => 
     array (
-      0 => '1eaeb2318462bb0fb9be4b81fb578ecaadf593ae1d6eaf5eab308901492572d9',
+      0 => '5f7d54b423c4e2af4d07b4df2d26a1c8d57bfdffb78b552fe50ed7bb86927217',
       1 => 
       array (
         0 => 'phpunit\\textui\\xmlconfiguration\\defaultconfiguration',
@@ -15323,7 +15305,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/TextUI/Configuration/Xml/Loader.php' => 
     array (
-      0 => 'ae6badf188dab561d29c8320895a0cc89c04f2f86b47e80b17b70a0a78b6ede4',
+      0 => '3612ed8b01adb2a4876b748d18fc5a840125baaf1ca040aa547e1e1383665eb1',
       1 => 
       array (
         0 => 'phpunit\\textui\\xmlconfiguration\\loader',
@@ -16401,7 +16383,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/TextUI/Output/Default/ProgressPrinter/ProgressPrinter.php' => 
     array (
-      0 => '0303a3dd5ae85395cd3ae1b82d9f20f0f7c20dc726819ab7abd3024696e8448a',
+      0 => '0d5ebb731500618ccff0ff4db5a33642ae32316c7f7e723ef624a4709dcdc165',
       1 => 
       array (
         0 => 'phpunit\\textui\\output\\default\\progressprinter\\progressprinter',
@@ -16413,34 +16395,33 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         2 => 'phpunit\\textui\\output\\default\\progressprinter\\beforetestclassmethoderrored',
         3 => 'phpunit\\textui\\output\\default\\progressprinter\\testprepared',
         4 => 'phpunit\\textui\\output\\default\\progressprinter\\testskipped',
-        5 => 'phpunit\\textui\\output\\default\\progressprinter\\testsuiteskipped',
-        6 => 'phpunit\\textui\\output\\default\\progressprinter\\testmarkedincomplete',
-        7 => 'phpunit\\textui\\output\\default\\progressprinter\\testtriggerednotice',
-        8 => 'phpunit\\textui\\output\\default\\progressprinter\\testtriggeredphpnotice',
-        9 => 'phpunit\\textui\\output\\default\\progressprinter\\testtriggereddeprecation',
-        10 => 'phpunit\\textui\\output\\default\\progressprinter\\testtriggeredphpdeprecation',
-        11 => 'phpunit\\textui\\output\\default\\progressprinter\\testtriggeredphpunitdeprecation',
-        12 => 'phpunit\\textui\\output\\default\\progressprinter\\testconsideredrisky',
-        13 => 'phpunit\\textui\\output\\default\\progressprinter\\testtriggeredwarning',
-        14 => 'phpunit\\textui\\output\\default\\progressprinter\\testtriggeredphpwarning',
-        15 => 'phpunit\\textui\\output\\default\\progressprinter\\testtriggeredphpunitwarning',
-        16 => 'phpunit\\textui\\output\\default\\progressprinter\\testtriggerederror',
-        17 => 'phpunit\\textui\\output\\default\\progressprinter\\testfailed',
-        18 => 'phpunit\\textui\\output\\default\\progressprinter\\testerrored',
-        19 => 'phpunit\\textui\\output\\default\\progressprinter\\testfinished',
-        20 => 'phpunit\\textui\\output\\default\\progressprinter\\registersubscribers',
-        21 => 'phpunit\\textui\\output\\default\\progressprinter\\updateteststatus',
-        22 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogressforsuccess',
-        23 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogressforskipped',
-        24 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogressforincomplete',
-        25 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogressfornotice',
-        26 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogressfordeprecation',
-        27 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogressforrisky',
-        28 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogressforwarning',
-        29 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogressforfailure',
-        30 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogressforerror',
-        31 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogresswithcolor',
-        32 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogress',
+        5 => 'phpunit\\textui\\output\\default\\progressprinter\\testmarkedincomplete',
+        6 => 'phpunit\\textui\\output\\default\\progressprinter\\testtriggerednotice',
+        7 => 'phpunit\\textui\\output\\default\\progressprinter\\testtriggeredphpnotice',
+        8 => 'phpunit\\textui\\output\\default\\progressprinter\\testtriggereddeprecation',
+        9 => 'phpunit\\textui\\output\\default\\progressprinter\\testtriggeredphpdeprecation',
+        10 => 'phpunit\\textui\\output\\default\\progressprinter\\testtriggeredphpunitdeprecation',
+        11 => 'phpunit\\textui\\output\\default\\progressprinter\\testconsideredrisky',
+        12 => 'phpunit\\textui\\output\\default\\progressprinter\\testtriggeredwarning',
+        13 => 'phpunit\\textui\\output\\default\\progressprinter\\testtriggeredphpwarning',
+        14 => 'phpunit\\textui\\output\\default\\progressprinter\\testtriggeredphpunitwarning',
+        15 => 'phpunit\\textui\\output\\default\\progressprinter\\testtriggerederror',
+        16 => 'phpunit\\textui\\output\\default\\progressprinter\\testfailed',
+        17 => 'phpunit\\textui\\output\\default\\progressprinter\\testerrored',
+        18 => 'phpunit\\textui\\output\\default\\progressprinter\\testfinished',
+        19 => 'phpunit\\textui\\output\\default\\progressprinter\\registersubscribers',
+        20 => 'phpunit\\textui\\output\\default\\progressprinter\\updateteststatus',
+        21 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogressforsuccess',
+        22 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogressforskipped',
+        23 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogressforincomplete',
+        24 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogressfornotice',
+        25 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogressfordeprecation',
+        26 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogressforrisky',
+        27 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogressforwarning',
+        28 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogressforfailure',
+        29 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogressforerror',
+        30 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogresswithcolor',
+        31 => 'phpunit\\textui\\output\\default\\progressprinter\\printprogress',
       ),
       3 => 
       array (
@@ -16588,21 +16569,6 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
       1 => 
       array (
         0 => 'phpunit\\textui\\output\\default\\progressprinter\\testskippedsubscriber',
-      ),
-      2 => 
-      array (
-        0 => 'phpunit\\textui\\output\\default\\progressprinter\\notify',
-      ),
-      3 => 
-      array (
-      ),
-    ),
-    '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/TextUI/Output/Default/ProgressPrinter/Subscriber/TestSuiteSkippedSubscriber.php' => 
-    array (
-      0 => '07b4fe4f5f7a34529f602a8d9fd4118cca905f28495751977eb124bac43cda6e',
-      1 => 
-      array (
-        0 => 'phpunit\\textui\\output\\default\\progressprinter\\testsuiteskippedsubscriber',
       ),
       2 => 
       array (
@@ -16879,7 +16845,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/TextUI/Output/SummaryPrinter.php' => 
     array (
-      0 => 'ac635c7c976e8022df76769b4afec039c8d8f0fc61fa2d32274a403b1f956789',
+      0 => 'd3c71a36a10c425b1ed6a731ec52ebf33f5cd44aef1adb6a1ba15111b7027d73',
       1 => 
       array (
         0 => 'phpunit\\textui\\output\\summaryprinter',
@@ -17424,6 +17390,86 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         0 => 'phpunit\\util\\preparestring',
         1 => 'phpunit\\util\\converttoutf8',
         2 => 'phpunit\\util\\isutf8',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/Event/Value/Test/Issue/DirectTrigger.php' => 
+    array (
+      0 => '902996689b9a59c0ae23ce3b2fe346f29d7bf511c87f2358a9e76aa20bc77ddc',
+      1 => 
+      array (
+        0 => 'phpunit\\event\\code\\issuetrigger\\directtrigger',
+      ),
+      2 => 
+      array (
+        0 => 'phpunit\\event\\code\\issuetrigger\\isdirect',
+        1 => 'phpunit\\event\\code\\issuetrigger\\asstring',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/Event/Value/Test/Issue/IndirectTrigger.php' => 
+    array (
+      0 => 'd7086fc610e54eb25cffd128e75cbbb0cb6ea38037dd969b1b5b2cfc9e18bd78',
+      1 => 
+      array (
+        0 => 'phpunit\\event\\code\\issuetrigger\\indirecttrigger',
+      ),
+      2 => 
+      array (
+        0 => 'phpunit\\event\\code\\issuetrigger\\isindirect',
+        1 => 'phpunit\\event\\code\\issuetrigger\\asstring',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/Event/Value/Test/Issue/SelfTrigger.php' => 
+    array (
+      0 => 'ecf8f5b648a6ee985e0b56a1fc99ab1df3c0bee2ec8ef0328f8fcb01a2630d01',
+      1 => 
+      array (
+        0 => 'phpunit\\event\\code\\issuetrigger\\selftrigger',
+      ),
+      2 => 
+      array (
+        0 => 'phpunit\\event\\code\\issuetrigger\\isself',
+        1 => 'phpunit\\event\\code\\issuetrigger\\asstring',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/Event/Value/Test/Issue/TestTrigger.php' => 
+    array (
+      0 => '8dff172637320bc8a89dce686d1f7e21163c949ac3cc5012e3b19735f3ef2183',
+      1 => 
+      array (
+        0 => 'phpunit\\event\\code\\issuetrigger\\testtrigger',
+      ),
+      2 => 
+      array (
+        0 => 'phpunit\\event\\code\\issuetrigger\\istest',
+        1 => 'phpunit\\event\\code\\issuetrigger\\asstring',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/Users/sandermuller/Documents/GitHub/rector-rules/vendor/phpunit/phpunit/src/Event/Value/Test/Issue/UnknownTrigger.php' => 
+    array (
+      0 => 'eee4483e3a049dc0f9fe2210949c0fb71b72e19902ac4903d3efbe6ac9a0fc35',
+      1 => 
+      array (
+        0 => 'phpunit\\event\\code\\issuetrigger\\unknowntrigger',
+      ),
+      2 => 
+      array (
+        0 => 'phpunit\\event\\code\\issuetrigger\\isunknown',
+        1 => 'phpunit\\event\\code\\issuetrigger\\asstring',
       ),
       3 => 
       array (

@@ -2,7 +2,7 @@
 
 // odsl-/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AddCommandSuffixRector.php-PHPStan\BetterReflection\Reflection\ReflectionClass-Hihaho\RectorRules\Rector\NamingClasses\AddCommandSuffixRector
 return \PHPStan\Cache\CacheItem::__set_state(array(
-   'variableKey' => 'v2-6.65.0.9-8.5.4-cc66b930ef8e5e5842e7d9cafbee618a307315145e6bcdffe9b1a9b67b212756',
+   'variableKey' => 'v2-6.65.0.9-8.5.4-b510cfe2d80fd0dc6da4a5f2136dfab35c610a5db4f747ff492506f3bd095c13',
    'data' => 
   array (
     'locatedSource' => 
@@ -28,8 +28,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     'attributes' => 
     array (
     ),
-    'startLine' => 14,
-    'endLine' => 50,
+    'startLine' => 15,
+    'endLine' => 51,
     'startColumn' => 1,
     'endColumn' => 1,
     'parentClassName' => 'Hihaho\\RectorRules\\Rector\\NamingClasses\\AbstractAddSuffixRector',
@@ -67,8 +67,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
         ),
         'docComment' => NULL,
-        'startLine' => 16,
-        'endLine' => 19,
+        'startLine' => 17,
+        'endLine' => 20,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,
@@ -102,8 +102,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
         ),
         'docComment' => NULL,
-        'startLine' => 21,
-        'endLine' => 24,
+        'startLine' => 22,
+        'endLine' => 25,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,
@@ -137,8 +137,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
         ),
         'docComment' => NULL,
-        'startLine' => 26,
-        'endLine' => 49,
+        'startLine' => 27,
+        'endLine' => 50,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,

@@ -1,0 +1,31 @@
+parameters:
+	ignoreErrors:
+		-
+			rawMessage: 'Parameter #1 $configuration (array<string, string>) of method Hihaho\RectorRules\Rector\Import\AliasImportRector::configure() should be contravariant with parameter $configuration (array<mixed>) of method Rector\Contract\Rector\ConfigurableRectorInterface::configure()'
+			identifier: method.childParameterType
+			count: 1
+			path: src/Rector/Import/AliasImportRector.php
+
+		-
+			rawMessage: 'Parameter #1 $className of method PHPStan\Reflection\ReflectionProvider::hasClass() expects string, string|null given.'
+			identifier: argument.type
+			count: 1
+			path: src/Rector/Migration/InlineMigrationConstantsRector.php
+
+		-
+			rawMessage: '''
+				Call to deprecated method isSubclassOf() of class PHPStan\Reflection\ClassReflection:
+				Use isSubclassOfClass instead.
+			'''
+			identifier: method.deprecated
+			count: 1
+			path: src/Rector/NamingClasses/AbstractAddSuffixRector.php
+
+		-
+			rawMessage: '''
+				Call to deprecated method isSubclassOf() of class PHPStan\Reflection\ClassReflection:
+				Use isSubclassOfClass instead.
+			'''
+			identifier: method.deprecated
+			count: 1
+			path: src/Rector/NamingClasses/AddResourceSuffixRector.php

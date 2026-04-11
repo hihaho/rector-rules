@@ -14,6 +14,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
           'node' => 'PhpParser\\Node',
           'identifier' => 'PhpParser\\Node\\Identifier',
+          'name' => 'PhpParser\\Node\\Name',
           'class_' => 'PhpParser\\Node\\Stmt\\Class_',
           'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
           'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -41,6 +42,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
           'node' => 'PhpParser\\Node',
           'identifier' => 'PhpParser\\Node\\Identifier',
+          'name' => 'PhpParser\\Node\\Name',
           'class_' => 'PhpParser\\Node\\Stmt\\Class_',
           'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
           'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -68,6 +70,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
           'node' => 'PhpParser\\Node',
           'identifier' => 'PhpParser\\Node\\Identifier',
+          'name' => 'PhpParser\\Node\\Name',
           'class_' => 'PhpParser\\Node\\Stmt\\Class_',
           'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
           'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -95,6 +98,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
           'node' => 'PhpParser\\Node',
           'identifier' => 'PhpParser\\Node\\Identifier',
+          'name' => 'PhpParser\\Node\\Name',
           'class_' => 'PhpParser\\Node\\Stmt\\Class_',
           'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
           'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -122,6 +126,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
           'node' => 'PhpParser\\Node',
           'identifier' => 'PhpParser\\Node\\Identifier',
+          'name' => 'PhpParser\\Node\\Name',
           'class_' => 'PhpParser\\Node\\Stmt\\Class_',
           'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
           'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -149,6 +154,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
           'node' => 'PhpParser\\Node',
           'identifier' => 'PhpParser\\Node\\Identifier',
+          'name' => 'PhpParser\\Node\\Name',
           'class_' => 'PhpParser\\Node\\Stmt\\Class_',
           'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
           'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -176,6 +182,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
           'node' => 'PhpParser\\Node',
           'identifier' => 'PhpParser\\Node\\Identifier',
+          'name' => 'PhpParser\\Node\\Name',
           'class_' => 'PhpParser\\Node\\Stmt\\Class_',
           'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
           'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -203,6 +210,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
           'node' => 'PhpParser\\Node',
           'identifier' => 'PhpParser\\Node\\Identifier',
+          'name' => 'PhpParser\\Node\\Name',
           'class_' => 'PhpParser\\Node\\Stmt\\Class_',
           'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
           'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -226,7 +234,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     1 => 
     array (
-      '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AbstractAddSuffixRector.php' => 'e636a1fa8f13905ba42a509e25d54a60896c9f1ecd9aed702f90c5970824a40f',
+      '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AbstractAddSuffixRector.php' => 'a7a64a9de37cb89cf02c2cbad5170041479cdbdd9df361372c2a632c5a7137a3',
     ),
   ),
 ));

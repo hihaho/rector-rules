@@ -6,6 +6,7 @@ namespace Hihaho\RectorRules\Rector\NamingClasses;
 
 use PhpParser\Node;
 use PhpParser\Node\Identifier;
+use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\Class_;
 use PHPStan\Reflection\ReflectionProvider;
 use Rector\Rector\AbstractRector;
@@ -36,7 +37,7 @@ abstract class AbstractAddSuffixRector extends AbstractRector
             return null;
         }
 
-        if ($node->name === null) {
+        if (! $node->name instanceof Identifier) {
             return null;
         }
 
@@ -58,7 +59,7 @@ abstract class AbstractAddSuffixRector extends AbstractRector
 
     private function extendsBaseClass(Class_ $node): bool
     {
-        if ($node->extends === null) {
+        if (! $node->extends instanceof Name) {
             return false;
         }
 

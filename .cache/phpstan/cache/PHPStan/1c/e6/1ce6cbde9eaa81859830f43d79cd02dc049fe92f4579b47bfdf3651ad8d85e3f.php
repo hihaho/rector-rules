@@ -13,8 +13,11 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addresourcesuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddResourceSuffixRector\\AddResourceSuffixRectorTest',
+          'jsonresource' => 'Illuminate\\Http\\Resources\\Json\\JsonResource',
+          'resourcecollection' => 'Illuminate\\Http\\Resources\\Json\\ResourceCollection',
           'node' => 'PhpParser\\Node',
           'identifier' => 'PhpParser\\Node\\Identifier',
+          'name' => 'PhpParser\\Node\\Name',
           'class_' => 'PhpParser\\Node\\Stmt\\Class_',
           'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
           'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -43,8 +46,11 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addresourcesuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddResourceSuffixRector\\AddResourceSuffixRectorTest',
+          'jsonresource' => 'Illuminate\\Http\\Resources\\Json\\JsonResource',
+          'resourcecollection' => 'Illuminate\\Http\\Resources\\Json\\ResourceCollection',
           'node' => 'PhpParser\\Node',
           'identifier' => 'PhpParser\\Node\\Identifier',
+          'name' => 'PhpParser\\Node\\Name',
           'class_' => 'PhpParser\\Node\\Stmt\\Class_',
           'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
           'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -62,8 +68,11 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
            'uses' => 
           array (
             'addresourcesuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddResourceSuffixRector\\AddResourceSuffixRectorTest',
+            'jsonresource' => 'Illuminate\\Http\\Resources\\Json\\JsonResource',
+            'resourcecollection' => 'Illuminate\\Http\\Resources\\Json\\ResourceCollection',
             'node' => 'PhpParser\\Node',
             'identifier' => 'PhpParser\\Node\\Identifier',
+            'name' => 'PhpParser\\Node\\Name',
             'class_' => 'PhpParser\\Node\\Stmt\\Class_',
             'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
             'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -102,8 +111,11 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addresourcesuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddResourceSuffixRector\\AddResourceSuffixRectorTest',
+          'jsonresource' => 'Illuminate\\Http\\Resources\\Json\\JsonResource',
+          'resourcecollection' => 'Illuminate\\Http\\Resources\\Json\\ResourceCollection',
           'node' => 'PhpParser\\Node',
           'identifier' => 'PhpParser\\Node\\Identifier',
+          'name' => 'PhpParser\\Node\\Name',
           'class_' => 'PhpParser\\Node\\Stmt\\Class_',
           'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
           'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -121,8 +133,11 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
            'uses' => 
           array (
             'addresourcesuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddResourceSuffixRector\\AddResourceSuffixRectorTest',
+            'jsonresource' => 'Illuminate\\Http\\Resources\\Json\\JsonResource',
+            'resourcecollection' => 'Illuminate\\Http\\Resources\\Json\\ResourceCollection',
             'node' => 'PhpParser\\Node',
             'identifier' => 'PhpParser\\Node\\Identifier',
+            'name' => 'PhpParser\\Node\\Name',
             'class_' => 'PhpParser\\Node\\Stmt\\Class_',
             'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
             'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -161,8 +176,11 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addresourcesuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddResourceSuffixRector\\AddResourceSuffixRectorTest',
+          'jsonresource' => 'Illuminate\\Http\\Resources\\Json\\JsonResource',
+          'resourcecollection' => 'Illuminate\\Http\\Resources\\Json\\ResourceCollection',
           'node' => 'PhpParser\\Node',
           'identifier' => 'PhpParser\\Node\\Identifier',
+          'name' => 'PhpParser\\Node\\Name',
           'class_' => 'PhpParser\\Node\\Stmt\\Class_',
           'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
           'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -180,8 +198,11 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
            'uses' => 
           array (
             'addresourcesuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddResourceSuffixRector\\AddResourceSuffixRectorTest',
+            'jsonresource' => 'Illuminate\\Http\\Resources\\Json\\JsonResource',
+            'resourcecollection' => 'Illuminate\\Http\\Resources\\Json\\ResourceCollection',
             'node' => 'PhpParser\\Node',
             'identifier' => 'PhpParser\\Node\\Identifier',
+            'name' => 'PhpParser\\Node\\Name',
             'class_' => 'PhpParser\\Node\\Stmt\\Class_',
             'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
             'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -220,8 +241,11 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addresourcesuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddResourceSuffixRector\\AddResourceSuffixRectorTest',
+          'jsonresource' => 'Illuminate\\Http\\Resources\\Json\\JsonResource',
+          'resourcecollection' => 'Illuminate\\Http\\Resources\\Json\\ResourceCollection',
           'node' => 'PhpParser\\Node',
           'identifier' => 'PhpParser\\Node\\Identifier',
+          'name' => 'PhpParser\\Node\\Name',
           'class_' => 'PhpParser\\Node\\Stmt\\Class_',
           'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
           'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -239,8 +263,11 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
            'uses' => 
           array (
             'addresourcesuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddResourceSuffixRector\\AddResourceSuffixRectorTest',
+            'jsonresource' => 'Illuminate\\Http\\Resources\\Json\\JsonResource',
+            'resourcecollection' => 'Illuminate\\Http\\Resources\\Json\\ResourceCollection',
             'node' => 'PhpParser\\Node',
             'identifier' => 'PhpParser\\Node\\Identifier',
+            'name' => 'PhpParser\\Node\\Name',
             'class_' => 'PhpParser\\Node\\Stmt\\Class_',
             'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
             'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -279,8 +306,11 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addresourcesuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddResourceSuffixRector\\AddResourceSuffixRectorTest',
+          'jsonresource' => 'Illuminate\\Http\\Resources\\Json\\JsonResource',
+          'resourcecollection' => 'Illuminate\\Http\\Resources\\Json\\ResourceCollection',
           'node' => 'PhpParser\\Node',
           'identifier' => 'PhpParser\\Node\\Identifier',
+          'name' => 'PhpParser\\Node\\Name',
           'class_' => 'PhpParser\\Node\\Stmt\\Class_',
           'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
           'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -298,8 +328,11 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
            'uses' => 
           array (
             'addresourcesuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddResourceSuffixRector\\AddResourceSuffixRectorTest',
+            'jsonresource' => 'Illuminate\\Http\\Resources\\Json\\JsonResource',
+            'resourcecollection' => 'Illuminate\\Http\\Resources\\Json\\ResourceCollection',
             'node' => 'PhpParser\\Node',
             'identifier' => 'PhpParser\\Node\\Identifier',
+            'name' => 'PhpParser\\Node\\Name',
             'class_' => 'PhpParser\\Node\\Stmt\\Class_',
             'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
             'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -338,8 +371,11 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addresourcesuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddResourceSuffixRector\\AddResourceSuffixRectorTest',
+          'jsonresource' => 'Illuminate\\Http\\Resources\\Json\\JsonResource',
+          'resourcecollection' => 'Illuminate\\Http\\Resources\\Json\\ResourceCollection',
           'node' => 'PhpParser\\Node',
           'identifier' => 'PhpParser\\Node\\Identifier',
+          'name' => 'PhpParser\\Node\\Name',
           'class_' => 'PhpParser\\Node\\Stmt\\Class_',
           'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
           'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -357,8 +393,11 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
            'uses' => 
           array (
             'addresourcesuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddResourceSuffixRector\\AddResourceSuffixRectorTest',
+            'jsonresource' => 'Illuminate\\Http\\Resources\\Json\\JsonResource',
+            'resourcecollection' => 'Illuminate\\Http\\Resources\\Json\\ResourceCollection',
             'node' => 'PhpParser\\Node',
             'identifier' => 'PhpParser\\Node\\Identifier',
+            'name' => 'PhpParser\\Node\\Name',
             'class_' => 'PhpParser\\Node\\Stmt\\Class_',
             'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
             'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -397,8 +436,11 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'uses' => 
         array (
           'addresourcesuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddResourceSuffixRector\\AddResourceSuffixRectorTest',
+          'jsonresource' => 'Illuminate\\Http\\Resources\\Json\\JsonResource',
+          'resourcecollection' => 'Illuminate\\Http\\Resources\\Json\\ResourceCollection',
           'node' => 'PhpParser\\Node',
           'identifier' => 'PhpParser\\Node\\Identifier',
+          'name' => 'PhpParser\\Node\\Name',
           'class_' => 'PhpParser\\Node\\Stmt\\Class_',
           'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
           'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -416,8 +458,11 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
            'uses' => 
           array (
             'addresourcesuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddResourceSuffixRector\\AddResourceSuffixRectorTest',
+            'jsonresource' => 'Illuminate\\Http\\Resources\\Json\\JsonResource',
+            'resourcecollection' => 'Illuminate\\Http\\Resources\\Json\\ResourceCollection',
             'node' => 'PhpParser\\Node',
             'identifier' => 'PhpParser\\Node\\Identifier',
+            'name' => 'PhpParser\\Node\\Name',
             'class_' => 'PhpParser\\Node\\Stmt\\Class_',
             'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
             'abstractrector' => 'Rector\\Rector\\AbstractRector',
@@ -453,7 +498,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     1 => 
     array (
-      '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AddResourceSuffixRector.php' => '0169e6e009c2b7f7c35f8af298de16fe352208dc91998b4c42bcd2044ffd9a75',
+      '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AddResourceSuffixRector.php' => '7da376576364eb9a847fa2b3e9d2e86f169621ef38fbc53dbbda4034b3274cc3',
     ),
   ),
 ));
