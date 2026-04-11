@@ -20,6 +20,7 @@ abstract class AbstractAddSuffixRector extends AbstractRector
 
     abstract protected function suffix(): string;
 
+    /** @return array<class-string<Node>> */
     public function getNodeTypes(): array
     {
         return [Class_::class];

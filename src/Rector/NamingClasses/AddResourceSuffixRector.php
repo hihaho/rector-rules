@@ -55,6 +55,7 @@ CODE_SAMPLE,
         );
     }
 
+    /** @return array<class-string<Node>> */
     public function getNodeTypes(): array
     {
         return [Class_::class];

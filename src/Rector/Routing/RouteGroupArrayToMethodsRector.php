@@ -59,6 +59,7 @@ CODE_SAMPLE,
         );
     }
 
+    /** @return array<class-string<Node>> */
     public function getNodeTypes(): array
     {
         return [StaticCall::class];
@@ -94,7 +95,7 @@ CODE_SAMPLE,
             return null;
         }
 
-        return $this->createGroupChain($methodCalls, $secondArg);
+        return $this->createGroupChain($node->class, $methodCalls, $secondArg);
     }
 
     private function isRouteGroupWithArray(StaticCall $node): bool
@@ -161,12 +162,12 @@ CODE_SAMPLE,
     /**
      * @param non-empty-list<array{method: string, args: list<Arg>}> $methodCalls
      */
-    private function createGroupChain(array $methodCalls, Arg $closureArg): MethodCall
+    private function createGroupChain(Node\Expr|Name $routeClass, array $methodCalls, Arg $closureArg): MethodCall
     {
         $firstMethod = array_shift($methodCalls);
 
         $current = new StaticCall(
-            new Name('Route'),
+            $routeClass,
             new Identifier($firstMethod['method']),
             $firstMethod['args'],
         );
