@@ -1,0 +1,62 @@
+{
+    "name": "hihaho/rector-rules",
+    "description": "Hihaho Rector rules for auto-fixing code conventions",
+    "homepage": "https://guidelines.hihaho.com",
+    "type": "rector-extension",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Hihaho\\RectorRules\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Hihaho\\RectorRules\\Tests\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "hihaho",
+            "email": "info@hihaho.com",
+            "homepage": "https://www.hihaho.com/",
+            "role": "Organisation"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+        "php": "^8.2",
+        "rector/rector": "^2.0",
+        "symplify/rule-doc-generator-contracts": "^11.2"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.21",
+        "nikic/php-parser": "^5.4",
+        "phpstan/extension-installer": "^1.4",
+        "phpstan/phpstan": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpunit/phpunit": "^11.5",
+        "rector/type-perfect": "^2.0",
+        "roave/security-advisories": "dev-latest",
+        "tomasvotruba/cognitive-complexity": "^1.0",
+        "tomasvotruba/type-coverage": "^2.0"
+    },
+    "scripts": {
+        "fix-cs": "vendor/bin/pint",
+        "phpstan": "vendor/bin/phpstan analyse",
+        "test": "vendor/bin/phpunit"
+    },
+    "extra": {
+        "rector": {
+            "includes": [
+                "config/config.php"
+            ]
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "phpstan/extension-installer": true,
+            "rector/extension-installer": true
+        },
+        "sort-packages": true
+    }
+}
