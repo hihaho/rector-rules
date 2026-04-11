@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Hihaho\RectorRules\Rector\NamingClasses;
 
 use Hihaho\RectorRules\Tests\Rector\NamingClasses\AddNotificationSuffixRector\AddNotificationSuffixRectorTest;
+use Illuminate\Notifications\Notification;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 
@@ -15,7 +16,7 @@ final class AddNotificationSuffixRector extends AbstractAddSuffixRector
 {
     protected function baseClass(): string
     {
-        return 'Illuminate\Notifications\Notification';
+        return Notification::class;
     }
 
     protected function suffix(): string

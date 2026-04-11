@@ -1,0 +1,44 @@
+name: Fix PHP code style issues
+
+on:
+  push:
+    paths:
+      - '**.php'
+      - 'pint.json'
+  pull_request:
+    paths:
+      - '**.php'
+      - 'pint.json'
+
+permissions:
+  contents: write
+
+jobs:
+  php-code-styling:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Fix PHP code style issues
+        uses: aglipanci/laravel-pint-action@2.6
+        with:
+          configPath: pint.json
+          verboseMode: true
+
+      - name: Pull latest changes
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          git stash
+          git pull --rebase origin "$BRANCH"
+          git stash pop || true
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: 'chore: pint'

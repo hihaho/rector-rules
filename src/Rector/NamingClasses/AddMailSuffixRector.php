@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Hihaho\RectorRules\Rector\NamingClasses;
 
 use Hihaho\RectorRules\Tests\Rector\NamingClasses\AddMailSuffixRector\AddMailSuffixRectorTest;
+use Illuminate\Mail\Mailable;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 
@@ -15,7 +16,7 @@ final class AddMailSuffixRector extends AbstractAddSuffixRector
 {
     protected function baseClass(): string
     {
-        return 'Illuminate\Mail\Mailable';
+        return Mailable::class;
     }
 
     protected function suffix(): string
