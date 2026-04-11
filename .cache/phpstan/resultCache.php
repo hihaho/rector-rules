@@ -1231,7 +1231,7 @@ return [
       ),
       5 => 
       array (
-        0 => 2,
+        0 => 3,
         1 => 
         array (
         ),
@@ -1373,7 +1373,7 @@ return [
 	'dependencies' => array (
   '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AbstractAddSuffixRector.php' => 
   array (
-    'fileHash' => 'ccb643fffde3de242cec1048393c017ad51f8a7ae9bd5622c654f2b069e4887f',
+    'fileHash' => 'e636a1fa8f13905ba42a509e25d54a60896c9f1ecd9aed702f90c5970824a40f',
     'dependentFiles' => 
     array (
       0 => '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AddCommandSuffixRector.php',
@@ -1404,7 +1404,7 @@ return [
   ),
   '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AddResourceSuffixRector.php' => 
   array (
-    'fileHash' => '1716800f0359d4c72ffe53bfcc65f7535b35cc8c37de694a4543d1144d09f66d',
+    'fileHash' => '0169e6e009c2b7f7c35f8af298de16fe352208dc91998b4c42bcd2044ffd9a75',
     'dependentFiles' => 
     array (
     ),
@@ -1425,14 +1425,14 @@ return [
   ),
   '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/Routing/NormalizeRoutePathRector.php' => 
   array (
-    'fileHash' => '93461ee459aae7836991d852ffd57fb5d1c9728576eda8bcbb98a8b8ca87696d',
+    'fileHash' => 'cd4cebe7dc43243c0745664cbcd5a41cd392b38d7f5607e45c00c8b039a81d24',
     'dependentFiles' => 
     array (
     ),
   ),
   '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/Routing/RouteGroupArrayToMethodsRector.php' => 
   array (
-    'fileHash' => '8b6c950d51e49f6d02068058aeacfd0bf5d80261bc68b0d42da057303f6fc111',
+    'fileHash' => '57d22c613368c9df767e64f00e03b0b7f245074ab573d434f23ea9754ffbd95c',
     'dependentFiles' => 
     array (
     ),
@@ -1534,7 +1534,22 @@ return [
         3 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'getNodeTypes',
-           'phpDoc' => NULL,
+           'phpDoc' => 
+          \PHPStan\Dependency\ExportedNode\ExportedPhpDocNode::__set_state(array(
+             'phpDocString' => '/** @return array<class-string<Node>> */',
+             'namespace' => 'Hihaho\\RectorRules\\Rector\\NamingClasses',
+             'uses' => 
+            array (
+              'node' => 'PhpParser\\Node',
+              'identifier' => 'PhpParser\\Node\\Identifier',
+              'class_' => 'PhpParser\\Node\\Stmt\\Class_',
+              'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
+              'abstractrector' => 'Rector\\Rector\\AbstractRector',
+            ),
+             'constUses' => 
+            array (
+            ),
+          )),
            'byRef' => false,
            'public' => true,
            'private' => false,
@@ -1988,7 +2003,25 @@ return [
         2 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'getNodeTypes',
-           'phpDoc' => NULL,
+           'phpDoc' => 
+          \PHPStan\Dependency\ExportedNode\ExportedPhpDocNode::__set_state(array(
+             'phpDocString' => '/** @return array<class-string<Node>> */',
+             'namespace' => 'Hihaho\\RectorRules\\Rector\\NamingClasses',
+             'uses' => 
+            array (
+              'addresourcesuffixrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\NamingClasses\\AddResourceSuffixRector\\AddResourceSuffixRectorTest',
+              'node' => 'PhpParser\\Node',
+              'identifier' => 'PhpParser\\Node\\Identifier',
+              'class_' => 'PhpParser\\Node\\Stmt\\Class_',
+              'reflectionprovider' => 'PHPStan\\Reflection\\ReflectionProvider',
+              'abstractrector' => 'Rector\\Rector\\AbstractRector',
+              'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
+              'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
+            ),
+             'constUses' => 
+            array (
+            ),
+          )),
            'byRef' => false,
            'public' => true,
            'private' => false,
@@ -2120,7 +2153,25 @@ return [
         1 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'getNodeTypes',
-           'phpDoc' => NULL,
+           'phpDoc' => 
+          \PHPStan\Dependency\ExportedNode\ExportedPhpDocNode::__set_state(array(
+             'phpDocString' => '/** @return array<class-string<Node>> */',
+             'namespace' => 'Hihaho\\RectorRules\\Rector\\Routing',
+             'uses' => 
+            array (
+              'checksroutecontext' => 'Hihaho\\RectorRules\\Rector\\Routing\\Concerns\\ChecksRouteContext',
+              'normalizeroutepathrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\Routing\\NormalizeRoutePathRector\\NormalizeRoutePathRectorTest',
+              'node' => 'PhpParser\\Node',
+              'staticcall' => 'PhpParser\\Node\\Expr\\StaticCall',
+              'string_' => 'PhpParser\\Node\\Scalar\\String_',
+              'abstractrector' => 'Rector\\Rector\\AbstractRector',
+              'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
+              'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
+            ),
+             'constUses' => 
+            array (
+            ),
+          )),
            'byRef' => false,
            'public' => true,
            'private' => false,
@@ -2237,7 +2288,30 @@ return [
         1 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'getNodeTypes',
-           'phpDoc' => NULL,
+           'phpDoc' => 
+          \PHPStan\Dependency\ExportedNode\ExportedPhpDocNode::__set_state(array(
+             'phpDocString' => '/** @return array<class-string<Node>> */',
+             'namespace' => 'Hihaho\\RectorRules\\Rector\\Routing',
+             'uses' => 
+            array (
+              'checksroutecontext' => 'Hihaho\\RectorRules\\Rector\\Routing\\Concerns\\ChecksRouteContext',
+              'routegrouparraytomethodsrectortest' => 'Hihaho\\RectorRules\\Tests\\Rector\\Routing\\RouteGroupArrayToMethodsRector\\RouteGroupArrayToMethodsRectorTest',
+              'node' => 'PhpParser\\Node',
+              'arg' => 'PhpParser\\Node\\Arg',
+              'array_' => 'PhpParser\\Node\\Expr\\Array_',
+              'methodcall' => 'PhpParser\\Node\\Expr\\MethodCall',
+              'staticcall' => 'PhpParser\\Node\\Expr\\StaticCall',
+              'identifier' => 'PhpParser\\Node\\Identifier',
+              'name' => 'PhpParser\\Node\\Name',
+              'string_' => 'PhpParser\\Node\\Scalar\\String_',
+              'abstractrector' => 'Rector\\Rector\\AbstractRector',
+              'codesample' => 'Symplify\\RuleDocGenerator\\ValueObject\\CodeSample\\CodeSample',
+              'ruledefinition' => 'Symplify\\RuleDocGenerator\\ValueObject\\RuleDefinition',
+            ),
+             'constUses' => 
+            array (
+            ),
+          )),
            'byRef' => false,
            'public' => true,
            'private' => false,

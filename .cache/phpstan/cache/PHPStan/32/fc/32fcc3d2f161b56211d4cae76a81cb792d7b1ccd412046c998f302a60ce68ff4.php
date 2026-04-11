@@ -345,7 +345,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     1 => 
     array (
-      '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/Routing/NormalizeRoutePathRector.php' => '93461ee459aae7836991d852ffd57fb5d1c9728576eda8bcbb98a8b8ca87696d',
+      '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/Routing/NormalizeRoutePathRector.php' => 'cd4cebe7dc43243c0745664cbcd5a41cd392b38d7f5607e45c00c8b039a81d24',
       '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/Routing/Concerns/ChecksRouteContext.php' => '3d013efa01bd8c215cf380dcfdb0c50cd07fb22166cdab055ed2689c4a1a92a6',
     ),
   ),

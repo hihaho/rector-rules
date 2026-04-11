@@ -725,7 +725,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     1 => 
     array (
-      '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/Routing/RouteGroupArrayToMethodsRector.php' => '8b6c950d51e49f6d02068058aeacfd0bf5d80261bc68b0d42da057303f6fc111',
+      '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/Routing/RouteGroupArrayToMethodsRector.php' => '57d22c613368c9df767e64f00e03b0b7f245074ab573d434f23ea9754ffbd95c',
       '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/Routing/Concerns/ChecksRouteContext.php' => '3d013efa01bd8c215cf380dcfdb0c50cd07fb22166cdab055ed2689c4a1a92a6',
     ),
   ),

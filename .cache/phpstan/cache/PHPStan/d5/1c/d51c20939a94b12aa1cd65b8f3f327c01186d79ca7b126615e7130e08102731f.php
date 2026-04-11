@@ -7,7 +7,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
   array (
     '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AbstractAddSuffixRector.php' => 
     array (
-      0 => 'ccb643fffde3de242cec1048393c017ad51f8a7ae9bd5622c654f2b069e4887f',
+      0 => 'e636a1fa8f13905ba42a509e25d54a60896c9f1ecd9aed702f90c5970824a40f',
       1 => 
       array (
         0 => 'hihaho\\rectorrules\\rector\\namingclasses\\abstractaddsuffixrector',
@@ -79,7 +79,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/NamingClasses/AddResourceSuffixRector.php' => 
     array (
-      0 => '1716800f0359d4c72ffe53bfcc65f7535b35cc8c37de694a4543d1144d09f66d',
+      0 => '0169e6e009c2b7f7c35f8af298de16fe352208dc91998b4c42bcd2044ffd9a75',
       1 => 
       array (
         0 => 'hihaho\\rectorrules\\rector\\namingclasses\\addresourcesuffixrector',
@@ -100,7 +100,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/Routing/NormalizeRoutePathRector.php' => 
     array (
-      0 => '93461ee459aae7836991d852ffd57fb5d1c9728576eda8bcbb98a8b8ca87696d',
+      0 => 'cd4cebe7dc43243c0745664cbcd5a41cd392b38d7f5607e45c00c8b039a81d24',
       1 => 
       array (
         0 => 'hihaho\\rectorrules\\rector\\routing\\normalizeroutepathrector',
@@ -117,7 +117,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/sandermuller/Documents/GitHub/rector-rules/src/Rector/Routing/RouteGroupArrayToMethodsRector.php' => 
     array (
-      0 => '8b6c950d51e49f6d02068058aeacfd0bf5d80261bc68b0d42da057303f6fc111',
+      0 => '57d22c613368c9df767e64f00e03b0b7f245074ab573d434f23ea9754ffbd95c',
       1 => 
       array (
         0 => 'hihaho\\rectorrules\\rector\\routing\\routegrouparraytomethodsrector',
