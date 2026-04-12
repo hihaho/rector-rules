@@ -16,27 +16,31 @@ return RectorConfig::configure()
         __DIR__ . '/src',
         __DIR__ . '/tests',
     ])
+    ->withSkip([
+        AddArrowFunctionReturnTypeRector::class,
+        EncapsedStringsToSprintfRector::class,
+        ExplicitBoolCompareRector::class,
+        InlineArrayReturnAssignRector::class,
+        NullToStrictStringFuncCallArgRector::class,
+        PrivatizeFinalClassMethodRector::class,
+        RemoveUselessParamTagRector::class,
+        RemoveUselessReturnTagRector::class,
+    ])
     ->withPreparedSets(
         deadCode: true,
         codeQuality: true,
         codingStyle: true,
         typeDeclarations: true,
+        typeDeclarationDocblocks: true,
         privatization: true,
         instanceOf: true,
         earlyReturn: true,
         rectorPreset: true,
         phpunitCodeQuality: true,
     )
+    ->withAttributesSets()
+    ->withImportNames()
+    ->withEditorUrl('phpstorm://open?file=%file%&line=%line%')
     ->withParallel(300, 15, 15)
     ->withMemoryLimit('3G')
-    ->withPhpSets(php82: true)
-    ->withSkip([
-        NullToStrictStringFuncCallArgRector::class,
-        AddArrowFunctionReturnTypeRector::class,
-        EncapsedStringsToSprintfRector::class,
-        ExplicitBoolCompareRector::class,
-        InlineArrayReturnAssignRector::class,
-        PrivatizeFinalClassMethodRector::class,
-        RemoveUselessParamTagRector::class,
-        RemoveUselessReturnTagRector::class,
-    ]);
+    ->withPhpSets(php83: true);

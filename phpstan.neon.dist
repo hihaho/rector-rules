@@ -1,5 +1,4 @@
 includes:
-    - phpstan-baseline.neon
     - phar://phpstan.phar/conf/bleedingEdge.neon
     - vendor/spaze/phpstan-disallowed-calls/disallowed-dangerous-calls.neon
     - vendor/spaze/phpstan-disallowed-calls/disallowed-execution-calls.neon
@@ -18,7 +17,7 @@ parameters:
         return: 100
         param: 100
         property: 100
-        constant: 0
+        constant: 100
         declare: 100
 
     type_perfect:
