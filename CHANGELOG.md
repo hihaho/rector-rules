@@ -2,6 +2,35 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.1.4 - 2026-04-12
+
+### Fixed
+
+`AliasImportRector` now removes duplicate imports of the same FQCN rather than leaving the unaliased one as dead code. A file like:
+
+```php
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
+```
+becomes:
+
+```php
+use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
+```
+In 0.1.3 the rule skipped rewriting the unaliased line and relied on Pint's `no_unused_imports` to clean it up. That falls apart when the same file references a different-FQCN type with the same short name (e.g. `\Illuminate\Contracts\Database\Eloquent\Builder` on a closure parameter) — Pint's `fully_qualified_strict_types` adds its own `use …\Builder;` while the old one is still sitting there, producing a PHP-fatal `Cannot use X as Y because the name is already in use`.
+
+The fix removes the redundant `UseItem` during the rewrite, so the dead import never reaches Pint. Body references of the removed short name are still renamed to the alias (nothing dangles).
+
+Covers three shapes:
+
+- An unaliased import alongside the correctly-aliased one.
+- A wrongly-aliased import alongside the correctly-aliased one.
+- A grouped `use X\{Builder, Collection};` where only `Builder` is duplicated elsewhere — the `Builder` item gets removed from the group, `Collection` survives.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.1.3...0.1.4
+
 ## 0.1.3 - 2026-04-12
 
 ### Fixed
@@ -21,6 +50,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 ```
@@ -105,6 +135,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -112,6 +143,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
