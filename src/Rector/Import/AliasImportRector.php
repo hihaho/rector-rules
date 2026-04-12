@@ -214,20 +214,46 @@ CODE_SAMPLE,
         $currentAlias = $useItem->alias?->toString();
 
         if ($currentAlias === $desiredAlias) {
-            // Already aliased correctly — still register for Name resolution.
-            $this->activeAliases[$fqcn] = [
-                'oldShortName' => $desiredAlias,
-                'newAlias' => $desiredAlias,
-            ];
+            // Already aliased correctly — still register for Name resolution,
+            // but don't clobber a "needs rename" entry that another use
+            // item of the same FQCN already recorded (happens when a file
+            // has both un-aliased and aliased imports of the same class).
+            $existing = $this->activeAliases[$fqcn] ?? null;
+            $existingNeedsRename = $existing !== null
+                && $existing['oldShortName'] !== $existing['newAlias'];
+
+            if (! $existingNeedsRename) {
+                $this->activeAliases[$fqcn] = [
+                    'oldShortName' => $desiredAlias,
+                    'newAlias' => $desiredAlias,
+                ];
+            }
 
             return false;
         }
 
-        // Collision guard: applying this alias would shadow an existing
-        // unrelated import with the same short name — PHP fatal. Leave alone.
+        // Collision guard: the desired alias is already in use by another
+        // import in this file.
         $collidingFqcn = $this->importedShortNames[$desiredAlias] ?? null;
 
-        if ($collidingFqcn !== null && $collidingFqcn !== $fqcn) {
+        if ($collidingFqcn !== null) {
+            if ($collidingFqcn !== $fqcn) {
+                // Different FQCN — rewriting produces "Cannot use X as Y
+                // because the name is already in use" fatal. Leave alone.
+                return false;
+            }
+
+            // Same FQCN — the file has both the un-aliased and aliased
+            // form of this class. Rewriting would create a duplicate
+            // `use X as Alias;` line (fatal). Leave the use item alone,
+            // but still rename body references of the un-aliased short
+            // name to the alias — the aliased import already covers them.
+            $oldShortName = $currentAlias ?? $useItem->name->getLast();
+
+            if ($oldShortName !== $desiredAlias) {
+                $this->shortNameRenames[$oldShortName] = $desiredAlias;
+            }
+
             return false;
         }
 
@@ -452,10 +478,20 @@ CODE_SAMPLE,
         $currentAlias = $useItem->alias?->toString();
         $oldShortName = $currentAlias ?? $useItem->name->getLast();
 
-        $this->activeAliases[$fqcn] = [
-            'oldShortName' => $oldShortName,
-            'newAlias' => $desiredAlias,
-        ];
+        // Preserve any existing "needs rename" entry — the same FQCN might
+        // be imported twice (unaliased + aliased) and the "needs rename"
+        // entry from the unaliased import must win so body references of
+        // the unaliased short name get rewritten.
+        $existing = $this->activeAliases[$fqcn] ?? null;
+        $existingNeedsRename = $existing !== null
+            && $existing['oldShortName'] !== $existing['newAlias'];
+
+        if (! $existingNeedsRename) {
+            $this->activeAliases[$fqcn] = [
+                'oldShortName' => $oldShortName,
+                'newAlias' => $desiredAlias,
+            ];
+        }
 
         if ($oldShortName !== $desiredAlias) {
             $this->shortNameRenames[$oldShortName] = $desiredAlias;
