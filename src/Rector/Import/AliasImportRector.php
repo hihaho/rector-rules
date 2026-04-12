@@ -11,14 +11,23 @@ use PhpParser\Node\Name;
 use PhpParser\Node\Name\FullyQualified;
 use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\ClassMethod;
+use PhpParser\Node\Stmt\Do_;
+use PhpParser\Node\Stmt\Echo_;
 use PhpParser\Node\Stmt\Enum_;
+use PhpParser\Node\Stmt\Expression;
+use PhpParser\Node\Stmt\For_;
+use PhpParser\Node\Stmt\Foreach_;
 use PhpParser\Node\Stmt\Function_;
 use PhpParser\Node\Stmt\GroupUse;
+use PhpParser\Node\Stmt\If_;
 use PhpParser\Node\Stmt\Interface_;
 use PhpParser\Node\Stmt\Namespace_;
 use PhpParser\Node\Stmt\Property;
+use PhpParser\Node\Stmt\Return_;
+use PhpParser\Node\Stmt\Switch_;
 use PhpParser\Node\Stmt\Trait_;
 use PhpParser\Node\Stmt\Use_;
+use PhpParser\Node\Stmt\While_;
 use PhpParser\Node\UseItem;
 use PHPStan\PhpDocParser\Ast\Node as PhpDocAstNode;
 use PHPStan\PhpDocParser\Ast\Type\IdentifierTypeNode;
@@ -120,6 +129,8 @@ CODE_SAMPLE,
             Use_::class,
             GroupUse::class,
             Name::class,
+            // Class-like and callable-like declarations (host @method /
+            // @property / @mixin and @param / @return docblocks).
             ClassMethod::class,
             Property::class,
             Class_::class,
@@ -127,6 +138,17 @@ CODE_SAMPLE,
             Trait_::class,
             Enum_::class,
             Function_::class,
+            // Statement nodes that carry inline docblocks such as
+            // `/** @var Foo $bar */` attached to the next expression.
+            Expression::class,
+            Foreach_::class,
+            If_::class,
+            While_::class,
+            For_::class,
+            Do_::class,
+            Switch_::class,
+            Return_::class,
+            Echo_::class,
         ];
     }
 
