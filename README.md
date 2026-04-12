@@ -3,7 +3,7 @@
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/hihaho/rector-rules.svg?style=flat-square)](https://packagist.org/packages/hihaho/rector-rules)
 [![Tests](https://img.shields.io/github/actions/workflow/status/hihaho/rector-rules/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/hihaho/rector-rules/actions/workflows/run-tests.yml)
 [![Total Downloads](https://img.shields.io/packagist/dt/hihaho/rector-rules.svg?style=flat-square)](https://packagist.org/packages/hihaho/rector-rules)
-[![License](https://img.shields.io/packagist/l/hihaho/rector-rules.svg?style=flat-square)](LICENSE)
+[![License](https://img.shields.io/github/license/hihaho/rector-rules.svg?style=flat-square)](LICENSE)
 
 [Rector](https://getrector.com/) rules that enforce the Laravel conventions from the [Hihaho Development Guidelines](https://guidelines.hihaho.com/): naming, routing, migration safety, and import aliasing.
 
