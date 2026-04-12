@@ -18,7 +18,6 @@ final class MixedImportsService
 
 namespace App\Services;
 
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 final class MixedImportsService

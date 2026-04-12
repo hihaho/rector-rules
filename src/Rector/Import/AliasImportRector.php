@@ -29,6 +29,7 @@ use PhpParser\Node\Stmt\Trait_;
 use PhpParser\Node\Stmt\Use_;
 use PhpParser\Node\Stmt\While_;
 use PhpParser\Node\UseItem;
+use PhpParser\NodeVisitor;
 use PHPStan\PhpDocParser\Ast\Node as PhpDocAstNode;
 use PHPStan\PhpDocParser\Ast\Type\IdentifierTypeNode;
 use Rector\BetterPhpDocParser\PhpDocInfo\PhpDocInfo;
@@ -52,6 +53,12 @@ final class AliasImportRector extends AbstractRector implements ConfigurableRect
      * so refactorName() won't mistake them for usages in code.
      */
     private const string IMPORT_PATH_ATTR = 'hihaho_alias_import_path';
+
+    /**
+     * Attribute flag set on UseItem nodes that should be removed because the
+     * same FQCN is already correctly aliased elsewhere in the file.
+     */
+    private const string REDUNDANT_ATTR = 'hihaho_alias_redundant_use_item';
 
     /** @var array<string, string> FQCN → desired alias */
     private array $aliasMap = [];
@@ -152,7 +159,8 @@ CODE_SAMPLE,
         ];
     }
 
-    public function refactor(Node $node): ?Node
+    /** @return NodeVisitor::REMOVE_NODE|Node|null */
+    public function refactor(Node $node): Node|int|null
     {
         $this->ensureFileState();
 
@@ -171,7 +179,8 @@ CODE_SAMPLE,
         return $this->refactorDocBlock($node);
     }
 
-    private function refactorUse(Use_ $node): ?Use_
+    /** @return Use_|NodeVisitor::REMOVE_NODE|null */
+    private function refactorUse(Use_ $node): Use_|int|null
     {
         foreach ($node->uses as $useItem) {
             $useItem->name->setAttribute(self::IMPORT_PATH_ATTR, true);
@@ -189,10 +198,11 @@ CODE_SAMPLE,
             }
         }
 
-        return $changed ? $node : null;
+        return $this->pruneRedundantItems($node, $changed);
     }
 
-    private function refactorGroupUse(GroupUse $node): ?GroupUse
+    /** @return GroupUse|NodeVisitor::REMOVE_NODE|null */
+    private function refactorGroupUse(GroupUse $node): GroupUse|int|null
     {
         $node->prefix->setAttribute(self::IMPORT_PATH_ATTR, true);
 
@@ -220,6 +230,36 @@ CODE_SAMPLE,
             if ($this->applyAliasToUseItem($useItem, $fqcn)) {
                 $changed = true;
             }
+        }
+
+        return $this->pruneRedundantItems($node, $changed);
+    }
+
+    /**
+     * Drop UseItems flagged as redundant (same FQCN already correctly aliased
+     * elsewhere in the file). If the statement becomes empty, signal removal.
+     *
+     * @template T of Use_|GroupUse
+     *
+     * @param T $node
+     *
+     * @return T|NodeVisitor::REMOVE_NODE|null
+     */
+    private function pruneRedundantItems(Use_|GroupUse $node, bool $changed): Use_|GroupUse|int|null
+    {
+        $originalCount = count($node->uses);
+
+        $node->uses = array_values(array_filter(
+            $node->uses,
+            static fn (UseItem $useItem): bool => $useItem->getAttribute(self::REDUNDANT_ATTR) !== true,
+        ));
+
+        if ($node->uses === []) {
+            return NodeVisitor::REMOVE_NODE;
+        }
+
+        if (count($node->uses) !== $originalCount) {
+            return $node;
         }
 
         return $changed ? $node : null;
@@ -517,6 +557,19 @@ CODE_SAMPLE,
 
         if ($oldShortName !== $desiredAlias) {
             $this->shortNameRenames[$oldShortName] = $desiredAlias;
+        }
+
+        // Flag this useItem as redundant when the file ALSO has the
+        // correctly-aliased form of the same FQCN elsewhere (e.g. both
+        // `use X\Builder;` and `use X\Builder as EQB;`). Keeping both
+        // post-rewrite causes PHP-CS-Fixer's fully_qualified_strict_types
+        // to collide with the dead unaliased import when shortening a
+        // different FQN that shares the short name. Remove it to keep the
+        // file composition-safe with downstream formatters.
+        if ($oldShortName !== $desiredAlias
+            && ($this->importedShortNames[$desiredAlias] ?? null) === $fqcn
+        ) {
+            $useItem->setAttribute(self::REDUNDANT_ATTR, true);
         }
     }
 }
