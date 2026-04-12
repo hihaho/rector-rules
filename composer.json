@@ -41,7 +41,7 @@
     "prefer-stable": true,
     "require": {
         "php": "^8.3",
-        "rector/rector": "^2.0",
+        "rector/rector": "^2.4.1",
         "symplify/rule-doc-generator-contracts": "^11.2"
     },
     "require-dev": {
@@ -51,7 +51,7 @@
         "orchestra/testbench": "^9.0||^10.11||^11.0",
         "pestphp/pest": "^3.0||^4.4",
         "phpstan/extension-installer": "^1.4",
-        "phpstan/phpstan": "^2.0",
+        "phpstan/phpstan": "^2.1",
         "phpstan/phpstan-deprecation-rules": "^2.0",
         "phpstan/phpstan-phpunit": "^2.0",
         "phpstan/phpstan-strict-rules": "^2.0",
