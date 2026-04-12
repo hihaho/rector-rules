@@ -4,23 +4,46 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\Import;
 
-use Hihaho\RectorRules\Tests\Rector\Import\AliasImportRector\AliasImportRectorTest;
+use Illuminate\Database\Eloquent\Builder;
 use PhpParser\Node;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PhpParser\Node\Name\FullyQualified;
+use PhpParser\Node\Stmt\Class_;
+use PhpParser\Node\Stmt\ClassMethod;
+use PhpParser\Node\Stmt\Enum_;
+use PhpParser\Node\Stmt\Function_;
+use PhpParser\Node\Stmt\GroupUse;
+use PhpParser\Node\Stmt\Interface_;
+use PhpParser\Node\Stmt\Namespace_;
+use PhpParser\Node\Stmt\Property;
+use PhpParser\Node\Stmt\Trait_;
 use PhpParser\Node\Stmt\Use_;
+use PhpParser\Node\UseItem;
+use PHPStan\PhpDocParser\Ast\Node as PhpDocAstNode;
+use PHPStan\PhpDocParser\Ast\Type\IdentifierTypeNode;
+use Rector\BetterPhpDocParser\PhpDocInfo\PhpDocInfo;
+use Rector\BetterPhpDocParser\PhpDocInfo\PhpDocInfoFactory;
+use Rector\Comments\NodeDocBlock\DocBlockUpdater;
 use Rector\Contract\Rector\ConfigurableRectorInterface;
+use Rector\PhpDocParser\PhpDocParser\PhpDocNodeTraverser;
+use Rector\PhpParser\Node\FileNode;
 use Rector\Rector\AbstractRector;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\ConfiguredCodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 use Webmozart\Assert\Assert;
 
 /**
- * @see AliasImportRectorTest
+ * @see \Hihaho\RectorRules\Tests\Rector\Import\AliasImportRector\AliasImportRectorTest
  */
 final class AliasImportRector extends AbstractRector implements ConfigurableRectorInterface
 {
+    /**
+     * Attribute flag set on Name nodes that appear inside a use declaration,
+     * so refactorName() won't mistake them for usages in code.
+     */
+    private const string IMPORT_PATH_ATTR = 'hihaho_alias_import_path';
+
     /** @var array<string, string> FQCN → desired alias */
     private array $aliasMap = [];
 
@@ -31,7 +54,28 @@ final class AliasImportRector extends AbstractRector implements ConfigurableRect
      */
     private array $activeAliases = [];
 
+    /**
+     * Per-file: short-name renames for Name and PHPDoc IdentifierTypeNode rewriting.
+     * Only includes entries where the old name differs from the new alias.
+     *
+     * @var array<string, string>
+     */
+    private array $shortNameRenames = [];
+
+    /**
+     * Per-file: every import's effective short name → FQCN. Used to detect
+     * collisions before applying an alias that would cause a PHP fatal.
+     *
+     * @var array<string, string>
+     */
+    private array $importedShortNames = [];
+
     private string $currentFile = '';
+
+    public function __construct(
+        private readonly PhpDocInfoFactory $phpDocInfoFactory,
+        private readonly DocBlockUpdater $docBlockUpdater,
+    ) {}
 
     public function getRuleDefinition(): RuleDefinition
     {
@@ -54,18 +98,17 @@ function query(EloquentQueryBuilder $query): EloquentQueryBuilder
 }
 CODE_SAMPLE,
                     [
-                        'Illuminate\Database\Eloquent\Builder' => 'EloquentQueryBuilder',
+                        Builder::class => 'EloquentQueryBuilder',
                     ],
                 ),
             ],
         );
     }
 
-    /** @param array<string, string> $configuration */
     public function configure(array $configuration): void
     {
         Assert::allString($configuration);
-        Assert::allString(array_keys($configuration));
+        Assert::isMap($configuration);
 
         $this->aliasMap = $configuration;
     }
@@ -73,7 +116,18 @@ CODE_SAMPLE,
     /** @return array<class-string<Node>> */
     public function getNodeTypes(): array
     {
-        return [Use_::class, Name::class];
+        return [
+            Use_::class,
+            GroupUse::class,
+            Name::class,
+            ClassMethod::class,
+            Property::class,
+            Class_::class,
+            Interface_::class,
+            Trait_::class,
+            Enum_::class,
+            Function_::class,
+        ];
     }
 
     public function refactor(Node $node): ?Node
@@ -84,15 +138,23 @@ CODE_SAMPLE,
             return $this->refactorUse($node);
         }
 
+        if ($node instanceof GroupUse) {
+            return $this->refactorGroupUse($node);
+        }
+
         if ($node instanceof Name) {
             return $this->refactorName($node);
         }
 
-        return null;
+        return $this->refactorDocBlock($node);
     }
 
     private function refactorUse(Use_ $node): ?Use_
     {
+        foreach ($node->uses as $useItem) {
+            $useItem->name->setAttribute(self::IMPORT_PATH_ATTR, true);
+        }
+
         if ($node->type !== Use_::TYPE_NORMAL) {
             return null;
         }
@@ -100,41 +162,96 @@ CODE_SAMPLE,
         $changed = false;
 
         foreach ($node->uses as $useItem) {
-            $fqcn = $useItem->name->toString();
-            $desiredAlias = $this->aliasMap[$fqcn] ?? null;
-
-            if ($desiredAlias === null) {
-                continue;
+            if ($this->applyAliasToUseItem($useItem, $useItem->name->toString())) {
+                $changed = true;
             }
-
-            $currentAlias = $useItem->alias?->toString();
-
-            if ($currentAlias === $desiredAlias) {
-                // Already aliased correctly — still register for Name resolution
-                $this->activeAliases[$fqcn] = [
-                    'oldShortName' => $desiredAlias,
-                    'newAlias' => $desiredAlias,
-                ];
-
-                continue;
-            }
-
-            $oldShortName = $currentAlias ?? $useItem->name->getLast();
-            $useItem->alias = new Identifier($desiredAlias);
-            $changed = true;
-
-            $this->activeAliases[$fqcn] = [
-                'oldShortName' => $oldShortName,
-                'newAlias' => $desiredAlias,
-            ];
         }
 
         return $changed ? $node : null;
     }
 
+    private function refactorGroupUse(GroupUse $node): ?GroupUse
+    {
+        $node->prefix->setAttribute(self::IMPORT_PATH_ATTR, true);
+
+        foreach ($node->uses as $useItem) {
+            $useItem->name->setAttribute(self::IMPORT_PATH_ATTR, true);
+        }
+
+        if ($node->type !== Use_::TYPE_UNKNOWN && $node->type !== Use_::TYPE_NORMAL) {
+            return null;
+        }
+
+        $prefix = $node->prefix->toString();
+        $changed = false;
+
+        foreach ($node->uses as $useItem) {
+            // Per-item type is only meaningful when the group's type is unknown.
+            $itemType = $node->type === Use_::TYPE_UNKNOWN ? $useItem->type : $node->type;
+
+            if ($itemType !== Use_::TYPE_NORMAL) {
+                continue;
+            }
+
+            $fqcn = $prefix . '\\' . $useItem->name->toString();
+
+            if ($this->applyAliasToUseItem($useItem, $fqcn)) {
+                $changed = true;
+            }
+        }
+
+        return $changed ? $node : null;
+    }
+
+    private function applyAliasToUseItem(UseItem $useItem, string $fqcn): bool
+    {
+        $desiredAlias = $this->aliasMap[$fqcn] ?? null;
+
+        if ($desiredAlias === null) {
+            return false;
+        }
+
+        $currentAlias = $useItem->alias?->toString();
+
+        if ($currentAlias === $desiredAlias) {
+            // Already aliased correctly — still register for Name resolution.
+            $this->activeAliases[$fqcn] = [
+                'oldShortName' => $desiredAlias,
+                'newAlias' => $desiredAlias,
+            ];
+
+            return false;
+        }
+
+        // Collision guard: applying this alias would shadow an existing
+        // unrelated import with the same short name — PHP fatal. Leave alone.
+        $collidingFqcn = $this->importedShortNames[$desiredAlias] ?? null;
+
+        if ($collidingFqcn !== null && $collidingFqcn !== $fqcn) {
+            return false;
+        }
+
+        $oldShortName = $currentAlias ?? $useItem->name->getLast();
+        $useItem->alias = new Identifier($desiredAlias);
+
+        $this->activeAliases[$fqcn] = [
+            'oldShortName' => $oldShortName,
+            'newAlias' => $desiredAlias,
+        ];
+        $this->shortNameRenames[$oldShortName] = $desiredAlias;
+
+        return true;
+    }
+
     private function refactorName(Name $node): ?Name
     {
-        if ($this->activeAliases === []) {
+        if ($this->shortNameRenames === []) {
+            return null;
+        }
+
+        // Skip Name nodes that are part of a use declaration — those are
+        // handled in refactorUse/refactorGroupUse.
+        if ($node->getAttribute(self::IMPORT_PATH_ATTR) === true) {
             return null;
         }
 
@@ -143,11 +260,7 @@ CODE_SAMPLE,
             $fqcn = $node->toString();
             $alias = $this->activeAliases[$fqcn] ?? null;
 
-            if ($alias === null) {
-                return null;
-            }
-
-            if ($alias['oldShortName'] === $alias['newAlias']) {
+            if ($alias === null || $alias['oldShortName'] === $alias['newAlias']) {
                 return null;
             }
 
@@ -155,15 +268,56 @@ CODE_SAMPLE,
         }
 
         // Short name: check if it matches any old import short name
-        $shortName = $node->toString();
+        $newAlias = $this->shortNameRenames[$node->toString()] ?? null;
 
-        foreach ($this->activeAliases as $alias) {
-            if ($alias['oldShortName'] === $shortName && $alias['oldShortName'] !== $alias['newAlias']) {
-                return new Name($alias['newAlias']);
-            }
+        if ($newAlias === null) {
+            return null;
         }
 
-        return null;
+        return new Name($newAlias);
+    }
+
+    private function refactorDocBlock(Node $node): ?Node
+    {
+        if ($this->shortNameRenames === []) {
+            return null;
+        }
+
+        $phpDocInfo = $this->phpDocInfoFactory->createFromNode($node);
+
+        if (! $phpDocInfo instanceof PhpDocInfo) {
+            return null;
+        }
+
+        $renames = $this->shortNameRenames;
+        $hasChanged = false;
+
+        $traverser = new PhpDocNodeTraverser();
+        $traverser->traverseWithCallable(
+            $phpDocInfo->getPhpDocNode(),
+            '',
+            static function (PhpDocAstNode $docNode) use ($renames, &$hasChanged): ?IdentifierTypeNode {
+                if (! $docNode instanceof IdentifierTypeNode) {
+                    return null;
+                }
+
+                if (! isset($renames[$docNode->name])) {
+                    return null;
+                }
+
+                $hasChanged = true;
+
+                return new IdentifierTypeNode($renames[$docNode->name]);
+            },
+        );
+
+        if (! $hasChanged) {
+            return null;
+        }
+
+        $this->docBlockUpdater->updateRefactoredNodeWithPhpDocInfo($node);
+
+        return $node;
     }
 
     private function ensureFileState(): void
@@ -173,6 +327,8 @@ CODE_SAMPLE,
         if ($this->currentFile !== $filePath) {
             $this->currentFile = $filePath;
             $this->activeAliases = [];
+            $this->shortNameRenames = [];
+            $this->importedShortNames = [];
 
             // Pre-scan: detect existing imports for our target FQCNs
             $this->scanExistingImports();
@@ -183,42 +339,126 @@ CODE_SAMPLE,
     {
         $stmts = $this->getFile()->getNewStmts();
 
+        // Rector wraps the real AST in a FileNode; unwrap before scanning.
+        if (count($stmts) === 1 && $stmts[0] instanceof FileNode) {
+            $stmts = $stmts[0]->stmts;
+        }
+
         foreach ($stmts as $stmt) {
-            if ($stmt instanceof Node\Stmt\Namespace_) {
+            if ($stmt instanceof Namespace_) {
                 $this->scanStmtsForImports($stmt->stmts);
+
+                return;
             }
         }
 
+        // No namespace — scan top-level statements.
         $this->scanStmtsForImports($stmts);
     }
 
     /** @param Node\Stmt[] $stmts */
     private function scanStmtsForImports(array $stmts): void
     {
+        /** @var list<array{UseItem, string}> $targetImports */
+        $targetImports = [];
+
+        // Pass 1: mark Name nodes inside use declarations and collect every
+        // import's effective short name. We need the full picture before we
+        // can answer "does this alias collide with an existing import?".
         foreach ($stmts as $stmt) {
-            if (! $stmt instanceof Use_) {
+            if ($stmt instanceof Use_) {
+                $this->collectFlatUse($stmt, $targetImports);
+
                 continue;
             }
 
-            if ($stmt->type !== Use_::TYPE_NORMAL) {
+            if ($stmt instanceof GroupUse) {
+                $this->collectGroupUse($stmt, $targetImports);
+            }
+        }
+
+        // Pass 2: register only imports in our alias map that won't collide.
+        foreach ($targetImports as [$useItem, $fqcn]) {
+            $this->registerExistingImport($useItem, $fqcn);
+        }
+    }
+
+    /** @param list<array{UseItem, string}> $targetImports */
+    private function collectFlatUse(Use_ $stmt, array &$targetImports): void
+    {
+        foreach ($stmt->uses as $useItem) {
+            $useItem->name->setAttribute(self::IMPORT_PATH_ATTR, true);
+        }
+
+        if ($stmt->type !== Use_::TYPE_NORMAL) {
+            return;
+        }
+
+        foreach ($stmt->uses as $useItem) {
+            $fqcn = $useItem->name->toString();
+            $shortName = $useItem->alias?->toString() ?? $useItem->name->getLast();
+            $this->importedShortNames[$shortName] = $fqcn;
+            $targetImports[] = [$useItem, $fqcn];
+        }
+    }
+
+    /** @param list<array{UseItem, string}> $targetImports */
+    private function collectGroupUse(GroupUse $stmt, array &$targetImports): void
+    {
+        $stmt->prefix->setAttribute(self::IMPORT_PATH_ATTR, true);
+
+        foreach ($stmt->uses as $useItem) {
+            $useItem->name->setAttribute(self::IMPORT_PATH_ATTR, true);
+        }
+
+        if ($stmt->type !== Use_::TYPE_UNKNOWN && $stmt->type !== Use_::TYPE_NORMAL) {
+            return;
+        }
+
+        $prefix = $stmt->prefix->toString();
+
+        foreach ($stmt->uses as $useItem) {
+            $itemType = $stmt->type === Use_::TYPE_UNKNOWN ? $useItem->type : $stmt->type;
+
+            if ($itemType !== Use_::TYPE_NORMAL) {
                 continue;
             }
 
-            foreach ($stmt->uses as $useItem) {
-                $fqcn = $useItem->name->toString();
+            $fqcn = $prefix . '\\' . $useItem->name->toString();
+            $shortName = $useItem->alias?->toString() ?? $useItem->name->getLast();
+            $this->importedShortNames[$shortName] = $fqcn;
+            $targetImports[] = [$useItem, $fqcn];
+        }
+    }
 
-                if (! isset($this->aliasMap[$fqcn])) {
-                    continue;
-                }
+    private function registerExistingImport(UseItem $useItem, string $fqcn): void
+    {
+        if (! isset($this->aliasMap[$fqcn])) {
+            return;
+        }
 
-                $currentAlias = $useItem->alias?->toString();
-                $oldShortName = $currentAlias ?? $useItem->name->getLast();
+        $desiredAlias = $this->aliasMap[$fqcn];
 
-                $this->activeAliases[$fqcn] = [
-                    'oldShortName' => $oldShortName,
-                    'newAlias' => $this->aliasMap[$fqcn],
-                ];
-            }
+        // Collision guard mirrors applyAliasToUseItem(): if another import
+        // already uses the target short name, we won't rewrite this one, so
+        // don't register any renames that refactorName/refactorDocBlock would
+        // otherwise apply to usages in the file body.
+        $collidingFqcn = $this->importedShortNames[$desiredAlias] ?? null;
+
+        if ($collidingFqcn !== null && $collidingFqcn !== $fqcn) {
+            return;
+        }
+
+        $currentAlias = $useItem->alias?->toString();
+        $oldShortName = $currentAlias ?? $useItem->name->getLast();
+
+        $this->activeAliases[$fqcn] = [
+            'oldShortName' => $oldShortName,
+            'newAlias' => $desiredAlias,
+        ];
+
+        if ($oldShortName !== $desiredAlias) {
+            $this->shortNameRenames[$oldShortName] = $desiredAlias;
         }
     }
 }
