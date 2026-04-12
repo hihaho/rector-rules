@@ -4,6 +4,21 @@
     "homepage": "https://guidelines.hihaho.com",
     "type": "rector-extension",
     "license": "MIT",
+    "keywords": [
+        "rector",
+        "rector-rules",
+        "rector-extension",
+        "laravel",
+        "code-style",
+        "conventions",
+        "static-analysis",
+        "hihaho"
+    ],
+    "support": {
+        "issues": "https://github.com/hihaho/rector-rules/issues",
+        "source": "https://github.com/hihaho/rector-rules",
+        "docs": "https://guidelines.hihaho.com"
+    },
     "autoload": {
         "psr-4": {
             "Hihaho\\RectorRules\\": "src/"
@@ -23,8 +38,9 @@
         }
     ],
     "minimum-stability": "stable",
+    "prefer-stable": true,
     "require": {
-        "php": "^8.2",
+        "php": "^8.3",
         "rector/rector": "^2.0",
         "symplify/rule-doc-generator-contracts": "^11.2"
     },
@@ -32,7 +48,7 @@
         "laravel/boost": "^2.4",
         "laravel/pint": "^1.29",
         "nikic/php-parser": "^5.4",
-        "orchestra/testbench": "^9.0||^10.11",
+        "orchestra/testbench": "^9.0||^10.11||^11.0",
         "pestphp/pest": "^3.0||^4.4",
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan": "^2.0",
