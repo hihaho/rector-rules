@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\NamingClasses;
 
+use Hihaho\RectorRules\Rector\NamingClasses\Concerns\ChecksClassHierarchy;
 use PhpParser\Node;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
@@ -13,8 +14,10 @@ use Rector\Rector\AbstractRector;
 
 abstract class AbstractAddSuffixRector extends AbstractRector
 {
+    use ChecksClassHierarchy;
+
     public function __construct(
-        private readonly ReflectionProvider $reflectionProvider,
+        protected readonly ReflectionProvider $reflectionProvider,
     ) {}
 
     abstract protected function baseClass(): string;
@@ -63,19 +66,7 @@ abstract class AbstractAddSuffixRector extends AbstractRector
             return false;
         }
 
-        $parentClassName = $this->getName($node->extends);
-
-        if ($parentClassName === $this->baseClass()) {
-            return true;
-        }
-
-        if (! $this->reflectionProvider->hasClass($parentClassName)) {
-            return false;
-        }
-
-        $parentReflection = $this->reflectionProvider->getClass($parentClassName);
-
-        return $parentReflection->isSubclassOf($this->baseClass());
+        return $this->isSubclassOf($this->getName($node->extends), $this->baseClass());
     }
 
     protected function buildNewName(string $currentName): string

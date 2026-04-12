@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\NamingClasses;
 
-use Hihaho\RectorRules\Tests\Rector\NamingClasses\AddNotificationSuffixRector\AddNotificationSuffixRectorTest;
 use Illuminate\Notifications\Notification;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 
 /**
- * @see AddNotificationSuffixRectorTest
+ * @see \Hihaho\RectorRules\Tests\Rector\NamingClasses\AddNotificationSuffixRector\AddNotificationSuffixRectorTest
  */
 final class AddNotificationSuffixRector extends AbstractAddSuffixRector
 {
