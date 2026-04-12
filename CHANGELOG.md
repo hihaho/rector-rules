@@ -2,6 +2,16 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.1.1 - 2026-04-12
+
+### 0.1.1
+
+#### Fixed
+
+`AddResourceSuffixRector` no longer appends `Resource` to `JsonResource` subclasses that already end in a deliberate role suffix (`Transformer`, `Presenter`, `Formatter`, `Serializer`, `Mapper`, `Normalizer`). In 0.1.0 a class like `SubtitleTransformer` would become `SubtitleTransformerResource`; it's now left alone. Caught by [@SanderMuller](https://github.com/SanderMuller) running a dry-run against the Hihaho main repo after 0.1.0 shipped.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.1.0...0.1.1
+
 ## 0.1.0 - 2026-04-12
 
 Initial public release of `hihaho/rector-rules`.
@@ -57,6 +67,7 @@ Configurable import aliasing.
 ```bash
 composer require hihaho/rector-rules --dev
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -64,6 +75,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 ```
 Pick individual sets for narrower scope. See the [README](../../README.md) for per-set behaviour, including what each rule deliberately skips.
