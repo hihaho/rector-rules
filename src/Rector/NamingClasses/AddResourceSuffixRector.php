@@ -27,6 +27,23 @@ final class AddResourceSuffixRector extends AbstractRector
 
     private const string RESOURCE_COLLECTION = ResourceCollection::class;
 
+    /**
+     * Role-like suffixes that signal the developer intentionally named the
+     * class for a different concept. Appending "Resource" would produce
+     * awkward double-suffix names (e.g. "FooTransformerResource") and
+     * misrepresent the class's intent. Let a human rename these.
+     *
+     * @var list<string>
+     */
+    private const array DELIBERATE_SUFFIXES = [
+        'Transformer',
+        'Presenter',
+        'Formatter',
+        'Serializer',
+        'Mapper',
+        'Normalizer',
+    ];
+
     public function __construct(
         protected readonly ReflectionProvider $reflectionProvider,
     ) {}
@@ -131,6 +148,12 @@ CODE_SAMPLE,
         // Don't silently produce "FooCollectionResource" — leave it alone.
         if (str_ends_with($className, 'Collection')) {
             return null;
+        }
+
+        foreach (self::DELIBERATE_SUFFIXES as $suffix) {
+            if (str_ends_with($className, $suffix)) {
+                return null;
+            }
         }
 
         $node->name = new Identifier($className . 'Resource');
