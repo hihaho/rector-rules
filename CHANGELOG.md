@@ -2,6 +2,30 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.1.2 - 2026-04-12
+
+### Fixed
+
+`AliasImportRector` no longer produces duplicate `use X as Alias;` lines when a file contains both the unaliased and aliased form of the same class. In 0.1.1 a file like:
+
+```php
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
+```
+would have the first line rewritten too, resulting in two identical aliased imports and a PHP fatal at boot. Now it leaves the duplicate `use` alone while still renaming body references to the alias — the unaliased import becomes dead code that Pint's `no_unused_imports` can prune.
+
+### Changed
+
+Minimum versions raised:
+
+- `rector/rector` from `^2.0` to `^2.4.1` — the scanner uses `Rector\PhpParser\Node\FileNode` and `AbstractRector::getFile()`, both added in 2.4.1.
+- `phpstan/phpstan` from `^2.0` to `^2.1` — the naming rules use `ClassReflection::isSubclassOfClass()`, which replaces the deprecated string-arg variant and was added in 2.1.
+
+If your project pins lower minors of either, bump before upgrading.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.1.0...0.1.2
+
 ## 0.1.1 - 2026-04-12
 
 ### 0.1.1
@@ -68,6 +92,7 @@ Configurable import aliasing.
 composer require hihaho/rector-rules --dev
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -75,6 +100,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 ```
