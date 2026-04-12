@@ -38,7 +38,9 @@ jobs:
       - name: Cache Rector results
         uses: actions/cache@v5
         with:
-          path: .cache/rector/
+          path: |
+            .cache/rector/
+            .cache/rectorContainer/
           key: rector-cache-${{ hashFiles('rector.php') }}
           restore-keys: rector-cache-
 
@@ -48,6 +50,9 @@ jobs:
           path: .cache/pint/
           key: pint-cache-${{ hashFiles('pint.json') }}
           restore-keys: pint-cache-
+
+      - name: Ensure Rector cache directories exist
+        run: mkdir -p .cache/rector .cache/rectorContainer
 
       - name: Run Rector
         run: vendor/bin/rector process --no-diffs
