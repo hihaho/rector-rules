@@ -8,6 +8,12 @@ trait ChecksMigrationContext
 {
     private function isInMigrationsDirectory(): bool
     {
-        return str_contains($this->getFile()->getFilePath(), '/migrations/');
+        $filePath = $this->getFile()->getFilePath();
+
+        if (str_contains($filePath, '/vendor/')) {
+            return false;
+        }
+
+        return str_contains($filePath, '/migrations/');
     }
 }
