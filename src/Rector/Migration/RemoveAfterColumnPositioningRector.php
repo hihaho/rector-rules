@@ -5,16 +5,17 @@ declare(strict_types=1);
 namespace Hihaho\RectorRules\Rector\Migration;
 
 use Hihaho\RectorRules\Rector\Migration\Concerns\ChecksMigrationContext;
-use Hihaho\RectorRules\Tests\Rector\Migration\RemoveAfterColumnPositioningRector\RemoveAfterColumnPositioningRectorTest;
+use Illuminate\Database\Schema\ColumnDefinition;
 use PhpParser\Node;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Identifier;
+use PHPStan\Type\ObjectType;
 use Rector\Rector\AbstractRector;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 
 /**
- * @see RemoveAfterColumnPositioningRectorTest
+ * @see \Hihaho\RectorRules\Tests\Rector\Migration\RemoveAfterColumnPositioningRector\RemoveAfterColumnPositioningRectorTest
  */
 final class RemoveAfterColumnPositioningRector extends AbstractRector
 {
@@ -58,6 +59,13 @@ CODE_SAMPLE,
         }
 
         if ($node->name->toString() !== 'after') {
+            return null;
+        }
+
+        // Only rewrite ColumnDefinition::after($column). Leaves Blueprint's
+        // scoping `after($column, Closure)` and unrelated `->after()` calls
+        // (e.g., Collection::after) alone.
+        if (! $this->isObjectType($node->var, new ObjectType(ColumnDefinition::class))) {
             return null;
         }
 
