@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Hihaho\RectorRules\Rector\Routing;
 
 use Hihaho\RectorRules\Rector\Routing\Concerns\ChecksRouteContext;
-use Hihaho\RectorRules\Tests\Rector\Routing\NormalizeRoutePathRector\NormalizeRoutePathRectorTest;
 use PhpParser\Node;
+use PhpParser\Node\Arg;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Scalar\String_;
 use Rector\Rector\AbstractRector;
@@ -14,7 +14,7 @@ use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 
 /**
- * @see NormalizeRoutePathRectorTest
+ * @see \Hihaho\RectorRules\Tests\Rector\Routing\NormalizeRoutePathRector\NormalizeRoutePathRectorTest
  */
 final class NormalizeRoutePathRector extends AbstractRector
 {
@@ -70,7 +70,7 @@ CODE_SAMPLE,
 
         $firstArg = $node->args[0];
 
-        if (! $firstArg instanceof Node\Arg) {
+        if (! $firstArg instanceof Arg) {
             return null;
         }
 
@@ -86,11 +86,19 @@ CODE_SAMPLE,
             return $node;
         }
 
-        if ($path === '/') {
-            return null;
-        }
+        // Collapse consecutive slashes, then strip leading/trailing ones.
+        $normalized = trim((string) preg_replace('#/+#', '/', $path), '/');
 
-        $normalized = trim($path, '/');
+        if ($normalized === '') {
+            // Path was all slashes (e.g. "/", "//", "///") — keep root form.
+            if ($path === '/') {
+                return null;
+            }
+
+            $firstArg->value = new String_('/');
+
+            return $node;
+        }
 
         if ($normalized === $path) {
             return null;

@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Hihaho\RectorRules\Rector\Routing;
 
 use Hihaho\RectorRules\Rector\Routing\Concerns\ChecksRouteContext;
-use Hihaho\RectorRules\Tests\Rector\Routing\RouteGroupArrayToMethodsRector\RouteGroupArrayToMethodsRectorTest;
 use PhpParser\Node;
 use PhpParser\Node\Arg;
+use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\Array_;
+use PhpParser\Node\Expr\ConstFetch;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Identifier;
@@ -19,7 +20,7 @@ use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 
 /**
- * @see RouteGroupArrayToMethodsRectorTest
+ * @see \Hihaho\RectorRules\Tests\Rector\Routing\RouteGroupArrayToMethodsRector\RouteGroupArrayToMethodsRectorTest
  */
 final class RouteGroupArrayToMethodsRector extends AbstractRector
 {
@@ -162,7 +163,7 @@ CODE_SAMPLE,
     /**
      * @param non-empty-list<array{method: string, args: list<Arg>}> $methodCalls
      */
-    private function createGroupChain(Node\Expr|Name $routeClass, array $methodCalls, Arg $closureArg): MethodCall
+    private function createGroupChain(Expr|Name $routeClass, array $methodCalls, Arg $closureArg): MethodCall
     {
         $firstMethod = array_shift($methodCalls);
 
@@ -187,7 +188,7 @@ CODE_SAMPLE,
         );
     }
 
-    private function resolveArrayKey(Node\Expr $key): ?string
+    private function resolveArrayKey(Expr $key): ?string
     {
         if ($key instanceof String_) {
             return $key->value;
@@ -196,9 +197,9 @@ CODE_SAMPLE,
         return $this->getName($key);
     }
 
-    private function isFalseValue(Node\Expr $expr): bool
+    private function isFalseValue(Expr $expr): bool
     {
-        if ($expr instanceof Node\Expr\ConstFetch) {
+        if ($expr instanceof ConstFetch) {
             return $this->isName($expr, 'false');
         }
 
