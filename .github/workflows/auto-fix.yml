@@ -22,21 +22,24 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ github.head_ref || github.ref_name }}
+          # Push-only workflow: head_ref is only set on pull_request events,
+          # which we don't trigger on. ref_name is always the pushed branch
+          # in our own repo, so there's no untrusted-fork surface here.
+          ref: ${{ github.ref_name }}
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # 2.37.0
         with:
           php-version: '8.4'
           coverage: none
 
       - name: Install composer dependencies
-        uses: ramsey/composer-install@v4
+        uses: ramsey/composer-install@5c2bcf28d7b060ef3c601d7b476d5430a7b46c27 # v4 (4.0.0)
 
       - name: Cache Rector results
-        uses: actions/cache@v5
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: |
             .cache/rector/
@@ -45,7 +48,7 @@ jobs:
           restore-keys: rector-cache-
 
       - name: Cache Pint results
-        uses: actions/cache@v5
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: .cache/pint/
           key: pint-cache-${{ hashFiles('pint.json') }}
@@ -58,12 +61,12 @@ jobs:
         run: vendor/bin/rector process --no-diffs
 
       - name: Run Pint
-        uses: aglipanci/laravel-pint-action@2.6
+        uses: aglipanci/laravel-pint-action@36de00d5f5a8a4e12d443e01671daa12a18f4c79 # 2.6
         with:
           configPath: pint.json
           verboseMode: true
 
       - name: Commit changes
-        uses: stefanzweifel/git-auto-commit-action@v7
+        uses: stefanzweifel/git-auto-commit-action@04702edda442b2e678b25b537cec683a1493fcb9 # v7.1.0
         with:
           commit_message: 'chore: auto-fix'
