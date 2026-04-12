@@ -2,6 +2,16 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.1.3 - 2026-04-12
+
+### Fixed
+
+`AliasImportRector` now rewrites inline `/** @var Foo $x */` docblocks attached to statement nodes (assignments, `foreach`, `return`, etc.) in addition to the class-level and method-level docblocks it already handled. Previously the alias was applied to the `use` import and code references but the inline docblock kept the unaliased short name, leaving an undefined symbol that IDE and PHPStan would flag after the rewrite.
+
+Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_`, `Switch_`, `Return_`, `Echo_`. If you hit an inline docblock that still slips through after upgrading, open an issue with the node type and I'll widen the list.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.1.2...0.1.3
+
 ## 0.1.2 - 2026-04-12
 
 ### Fixed
@@ -11,6 +21,7 @@ All notable changes to `hihaho/rector-rules` will be documented in this file.
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 ```
 would have the first line rewritten too, resulting in two identical aliased imports and a PHP fatal at boot. Now it leaves the duplicate `use` alone while still renaming body references to the alias — the unaliased import becomes dead code that Pint's `no_unused_imports` can prune.
@@ -93,6 +104,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -100,6 +112,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
