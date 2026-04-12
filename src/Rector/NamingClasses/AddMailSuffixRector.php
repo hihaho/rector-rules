@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\NamingClasses;
 
-use Hihaho\RectorRules\Tests\Rector\NamingClasses\AddMailSuffixRector\AddMailSuffixRectorTest;
 use Illuminate\Mail\Mailable;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 
 /**
- * @see AddMailSuffixRectorTest
+ * @see \Hihaho\RectorRules\Tests\Rector\NamingClasses\AddMailSuffixRector\AddMailSuffixRectorTest
  */
 final class AddMailSuffixRector extends AbstractAddSuffixRector
 {

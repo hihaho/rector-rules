@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\NamingClasses;
 
-use Hihaho\RectorRules\Tests\Rector\NamingClasses\AddResourceSuffixRector\AddResourceSuffixRectorTest;
+use Hihaho\RectorRules\Rector\NamingClasses\Concerns\ChecksClassHierarchy;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 use PhpParser\Node;
@@ -17,16 +17,18 @@ use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 
 /**
- * @see AddResourceSuffixRectorTest
+ * @see \Hihaho\RectorRules\Tests\Rector\NamingClasses\AddResourceSuffixRector\AddResourceSuffixRectorTest
  */
 final class AddResourceSuffixRector extends AbstractRector
 {
+    use ChecksClassHierarchy;
+
     private const string JSON_RESOURCE = JsonResource::class;
 
     private const string RESOURCE_COLLECTION = ResourceCollection::class;
 
     public function __construct(
-        private readonly ReflectionProvider $reflectionProvider,
+        protected readonly ReflectionProvider $reflectionProvider,
     ) {}
 
     public function getRuleDefinition(): RuleDefinition
@@ -124,21 +126,15 @@ CODE_SAMPLE,
             return null;
         }
 
+        // A JsonResource subclass named "*Collection" is most likely a design
+        // mistake (ResourceCollection is the correct parent for collections).
+        // Don't silently produce "FooCollectionResource" — leave it alone.
+        if (str_ends_with($className, 'Collection')) {
+            return null;
+        }
+
         $node->name = new Identifier($className . 'Resource');
 
         return $node;
-    }
-
-    private function isSubclassOf(string $className, string $baseClass): bool
-    {
-        if ($className === $baseClass) {
-            return true;
-        }
-
-        if (! $this->reflectionProvider->hasClass($className)) {
-            return false;
-        }
-
-        return $this->reflectionProvider->getClass($className)->isSubclassOf($baseClass);
     }
 }

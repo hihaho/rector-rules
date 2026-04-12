@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\NamingClasses;
 
-use Hihaho\RectorRules\Tests\Rector\NamingClasses\AddCommandSuffixRector\AddCommandSuffixRectorTest;
 use Illuminate\Console\Command;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 
 /**
- * @see AddCommandSuffixRectorTest
+ * @see \Hihaho\RectorRules\Tests\Rector\NamingClasses\AddCommandSuffixRector\AddCommandSuffixRectorTest
  */
 final class AddCommandSuffixRector extends AbstractAddSuffixRector
 {
