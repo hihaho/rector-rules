@@ -167,6 +167,20 @@ use Hihaho\RectorRules\Rector\Import\AliasImportRector;
 ])
 ```
 
+## Covered by upstream Rector
+
+Some rules in [`hihaho/phpstan-rules`](https://github.com/hihaho/phpstan-rules) have no counterpart here because the fix already ships in an upstream Rector set. Enable the upstream set instead of waiting for a rule in this package.
+
+| PHPStan rule                   | Upstream set                                           | Notes                                                                          |
+|--------------------------------|--------------------------------------------------------|--------------------------------------------------------------------------------|
+| `onlyAllowFacadeAliasInBlade`  | `LaravelSetList::LARAVEL_FACADE_ALIASES_TO_FULL_NAMES` | Rewrites `use Route;` to `use Illuminate\Support\Facades\Route;` (and siblings) |
+
+```php
+use RectorLaravel\Set\LaravelSetList;
+
+->withSets([LaravelSetList::LARAVEL_FACADE_ALIASES_TO_FULL_NAMES])
+```
+
 ## Testing
 
 ```bash
