@@ -236,11 +236,8 @@ CODE_SAMPLE,
         // (class, method) — a single test class with many database assertions then
         // runs the reflection once instead of once per assertion.
         $cacheKey = $classReflection->getName() . '|' . $methodName;
-        if (isset($this->testContextCache[$cacheKey])) {
-            return $this->testContextCache[$cacheKey];
-        }
 
-        return $this->testContextCache[$cacheKey] = $this->computeTestContext($classReflection, $methodName);
+        return $this->testContextCache[$cacheKey] ?? $this->testContextCache[$cacheKey] = $this->computeTestContext($classReflection, $methodName);
     }
 
     private function computeTestContext(ClassReflection $classReflection, string $methodName): bool
