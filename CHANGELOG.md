@@ -2,6 +2,29 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.2.0 - 2026-06-08
+
+<!-- verified-sha: 60cb1deb008175323a6903ea2e2336b3e254b84c -->
+Five new Rector rules across three sets, a cross-platform fix for the migration and routing rules, and a tightened supported-Laravel range.
+
+### Added
+
+- **`RemoveUnnecessaryNullsafeOperatorRector`** (new `CodeQuality` set) — removes a `?->` operator when the receiver can never be null. Defaults to native/certain types only; the `trust_phpdoc_types` option (strict boolean opt-in) additionally trusts phpdoc-derived non-nullability such as Eloquent `@property` annotations.
+- **`NestedArrayEagerLoadingRector`** (`Eloquent` set) — converts dot-notation eager loading to the nested-array form when two or more relations share a parent, for `with`/`load`/`loadMissing`/`loadCount`. Only rewrites calls on an Eloquent `Builder`/`Model`/`Relation`/`Collection` receiver.
+- **`RelationNameToClassConstantRector`** (`Eloquent` set) — replaces a string relation name with the model's existing class constant of the same value, making relation usages rename-safe and navigable.
+- **`FlagColumnToBooleanRector`** (`Migration` set) — converts flag-style `tinyInteger` columns (names like `is_*`, `has_*`, `enable_*`, `*_enabled`) with a `0`/`1`/`true`/`false` default to `boolean`. Opt-in and MySQL/MariaDB-only via `confirm_mysql_compatible`; a no-op until enabled.
+- **`AssertDatabaseTableToModelClassRector`** (new `Testing` set) — rewrites a database-assertion table string to the matching Eloquent model class for `assertDatabaseHas`/`assertDatabaseMissing`/`assertDatabaseCount`. Strict verify-or-skip: only converts when the model's table, connection, and construction are provably equivalent, so a missed conversion is preferred over a wrong one. Configurable `model_namespace` (default `App\Models`) and a `table_to_model` override map.
+
+### Fixed
+
+- The migration and routing rules now fire on Windows. Their context gates matched the file path against `/migrations/` and `/routes/` using forward slashes only, so on Windows backslash paths the gates never matched and the rules silently did nothing.
+
+### Changed
+
+- Dropped Laravel 11 from the supported range — this package now requires Laravel `^12` or `^13`. The rules transform `Illuminate\…` class names that are stable across those versions; the change reflects the test matrix (PHPUnit 12 / Pest 4 / Testbench 10+), which no longer exercises a Laravel 11 lane.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.1.4...0.2.0
+
 ## 0.1.4 - 2026-04-12
 
 ### Fixed
@@ -12,11 +35,13 @@ All notable changes to `hihaho/rector-rules` will be documented in this file.
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 ```
 In 0.1.3 the rule skipped rewriting the unaliased line and relied on Pint's `no_unused_imports` to clean it up. That falls apart when the same file references a different-FQCN type with the same short name (e.g. `\Illuminate\Contracts\Database\Eloquent\Builder` on a closure parameter) — Pint's `fully_qualified_strict_types` adds its own `use …\Builder;` while the old one is still sitting there, producing a PHP-fatal `Cannot use X as Y because the name is already in use`.
@@ -50,6 +75,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -136,6 +162,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -143,6 +170,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
