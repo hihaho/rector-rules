@@ -16,7 +16,9 @@ trait ChecksRouteContext
 
     private function isInRoutesDirectory(): bool
     {
-        $filePath = $this->getFile()->getFilePath();
+        // Normalise separators — getFilePath() returns backslash paths on Windows,
+        // which would never match the forward-slash markers below.
+        $filePath = str_replace('\\', '/', $this->getFile()->getFilePath());
 
         if (str_contains($filePath, '/vendor/')) {
             return false;
