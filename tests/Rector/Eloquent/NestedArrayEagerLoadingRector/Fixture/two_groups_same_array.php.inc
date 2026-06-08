@@ -2,6 +2,8 @@
 
 namespace Hihaho\RectorRules\Tests\Rector\Eloquent\NestedArrayEagerLoadingRector\Fixture;
 
+use Illuminate\Database\Eloquent\Builder;
+
 class Rel
 {
     public const string A = 'a';
@@ -12,17 +14,22 @@ class Rel
     public const string Q = 'q';
 }
 
-$query->with([
-    Rel::A . '.' . Rel::X,
-    Rel::B . '.' . Rel::P,
-    Rel::A . '.' . Rel::Y,
-    Rel::B . '.' . Rel::Q,
-]);
+function eager(Builder $query): void
+{
+    $query->with([
+        Rel::A . '.' . Rel::X,
+        Rel::B . '.' . Rel::P,
+        Rel::A . '.' . Rel::Y,
+        Rel::B . '.' . Rel::Q,
+    ]);
+}
 -----
 <?php
 
 namespace Hihaho\RectorRules\Tests\Rector\Eloquent\NestedArrayEagerLoadingRector\Fixture;
 
+use Illuminate\Database\Eloquent\Builder;
+
 class Rel
 {
     public const string A = 'a';
@@ -33,4 +40,7 @@ class Rel
     public const string Q = 'q';
 }
 
-$query->with([Rel::A => [Rel::X, Rel::Y], Rel::B => [Rel::P, Rel::Q]]);
+function eager(Builder $query): void
+{
+    $query->with([Rel::A => [Rel::X, Rel::Y], Rel::B => [Rel::P, Rel::Q]]);
+}

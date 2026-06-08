@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\Eloquent;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use PhpParser\Node;
 use PhpParser\Node\ArrayItem;
 use PhpParser\Node\Expr;
@@ -11,6 +15,7 @@ use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\BinaryOp\Concat;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Scalar\String_;
+use PHPStan\Type\ObjectType;
 use Rector\Rector\AbstractRector;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
@@ -23,6 +28,21 @@ final class NestedArrayEagerLoadingRector extends AbstractRector
     /** @var list<string> */
     private const array EAGER_LOAD_METHODS = ['with', 'load', 'loadMissing', 'loadCount'];
 
+    /**
+     * The reshape only makes sense for Eloquent eager loading. Without a receiver-type
+     * gate, any unrelated fluent `with([...])`/`load([...])` (a view, response, or DTO
+     * builder) whose array happened to hold dot-string concatenations would be
+     * silently rewritten. Require a known Eloquent receiver; skip otherwise.
+     *
+     * @var list<class-string>
+     */
+    private const array ELOQUENT_RECEIVERS = [
+        Builder::class,
+        Model::class,
+        Relation::class,
+        Collection::class,
+    ];
+
     public function getRuleDefinition(): RuleDefinition
     {
         return new RuleDefinition(
@@ -31,20 +51,18 @@ final class NestedArrayEagerLoadingRector extends AbstractRector
                 new CodeSample(
                     <<<'CODE_SAMPLE'
 $query->with([
-    ArticleAiTask::ARTICLE . '.' . Article::CONTAINER,
-    ArticleAiTask::ARTICLE . '.' . Article::TAGS,
-    ArticleAiTask::ARTICLE . '.' . Article::INITIAL_ARTICLE_FOR_UPLOAD,
-    ArticleAiTask::USER,
+    Article::COMMENTS . '.' . Comment::AUTHOR,
+    Article::COMMENTS . '.' . Comment::REPLIES,
+    Article::AUTHOR,
 ]);
 CODE_SAMPLE,
                     <<<'CODE_SAMPLE'
 $query->with([
-    ArticleAiTask::ARTICLE => [
-        Article::CONTAINER,
-        Article::TAGS,
-        Article::INITIAL_ARTICLE_FOR_UPLOAD,
+    Article::COMMENTS => [
+        Comment::AUTHOR,
+        Comment::REPLIES,
     ],
-    ArticleAiTask::USER,
+    Article::AUTHOR,
 ]);
 CODE_SAMPLE,
                 ),
@@ -68,6 +86,10 @@ CODE_SAMPLE,
             return null;
         }
 
+        if (! $this->isEloquentReceiver($node->var)) {
+            return null;
+        }
+
         $args = $node->getArgs();
         if (! isset($args[0]) || ! $args[0]->value instanceof Array_) {
             return null;
@@ -81,6 +103,17 @@ CODE_SAMPLE,
         $args[0]->value = $newArray;
 
         return $node;
+    }
+
+    private function isEloquentReceiver(Expr $var): bool
+    {
+        foreach (self::ELOQUENT_RECEIVERS as $class) {
+            if ($this->isObjectType($var, new ObjectType($class))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function refactorArray(Array_ $array): ?Array_

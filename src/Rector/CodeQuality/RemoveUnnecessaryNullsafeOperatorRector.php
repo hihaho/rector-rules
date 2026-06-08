@@ -18,6 +18,7 @@ use Rector\ValueObject\PhpVersionFeature;
 use Rector\VersionBonding\Contract\MinPhpVersionInterface;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\ConfiguredCodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
+use Webmozart\Assert\Assert;
 
 /**
  * @see \Hihaho\RectorRules\Tests\Rector\CodeQuality\RemoveUnnecessaryNullsafeOperatorRector\RemoveUnnecessaryNullsafeOperatorRectorTest
@@ -35,7 +36,12 @@ final class RemoveUnnecessaryNullsafeOperatorRector extends AbstractRector imple
 
     public function configure(array $configuration): void
     {
-        $this->trustPhpDocTypes = (bool) ($configuration[self::TRUST_PHPDOC_TYPES] ?? false);
+        // Strict opt-in: only a literal `true` enables phpdoc trust. Casting would let
+        // a truthy string like 'false' silently turn it on, and trusting stale phpdoc
+        // can strip a load-bearing `?->` and introduce a runtime null dereference.
+        $trust = $configuration[self::TRUST_PHPDOC_TYPES] ?? false;
+        Assert::boolean($trust);
+        $this->trustPhpDocTypes = $trust;
     }
 
     public function getRuleDefinition(): RuleDefinition

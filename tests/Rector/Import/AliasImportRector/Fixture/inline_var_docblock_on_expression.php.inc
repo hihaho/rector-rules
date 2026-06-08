@@ -8,11 +8,11 @@ final class ProcessArticleJob
 {
     public function handle(): void
     {
-        /** @var Collection<int, \App\Models\Question> $questions */
-        $questions = $this->loadQuestions();
+        /** @var Collection<int, \App\Models\Article> $articles */
+        $articles = $this->loadArticles();
     }
 
-    private function loadQuestions(): mixed
+    private function loadArticles(): mixed
     {
         return null;
     }
@@ -29,11 +29,11 @@ final class ProcessArticleJob
 {
     public function handle(): void
     {
-        /** @var EloquentCollection<int, \App\Models\Question> $questions */
-        $questions = $this->loadQuestions();
+        /** @var EloquentCollection<int, \App\Models\Article> $articles */
+        $articles = $this->loadArticles();
     }
 
-    private function loadQuestions(): mixed
+    private function loadArticles(): mixed
     {
         return null;
     }

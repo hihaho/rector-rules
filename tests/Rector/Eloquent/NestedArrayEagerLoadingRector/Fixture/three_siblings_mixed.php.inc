@@ -2,48 +2,54 @@
 
 namespace Hihaho\RectorRules\Tests\Rector\Eloquent\NestedArrayEagerLoadingRector\Fixture;
 
-class ArticleAiTask
+use Illuminate\Database\Eloquent\Builder;
+
+class Post
 {
-    public const string ARTICLE = 'article';
-    public const string USER = 'user';
+    public const string COMMENTS = 'comments';
+    public const string AUTHOR = 'author';
 }
 
-class ArticleB
+class Comment
 {
-    public const string CONTAINER = 'container';
-    public const string TAGS = 'tags';
-    public const string INITIAL_ARTICLE_FOR_UPLOAD = 'initialArticleForUpload';
+    public const string REPLIES = 'replies';
+    public const string REACTIONS = 'reactions';
+    public const string ATTACHMENTS = 'attachments';
 }
 
-$query->with([
-    ArticleAiTask::ARTICLE . '.' . ArticleB::CONTAINER,
-    ArticleAiTask::ARTICLE . '.' . ArticleB::TAGS,
-    ArticleAiTask::ARTICLE . '.' . ArticleB::INITIAL_ARTICLE_FOR_UPLOAD,
-    ArticleAiTask::USER,
-]);
-
-?>
+function eager(Builder $query): void
+{
+    $query->with([
+        Post::COMMENTS . '.' . Comment::REPLIES,
+        Post::COMMENTS . '.' . Comment::REACTIONS,
+        Post::COMMENTS . '.' . Comment::ATTACHMENTS,
+        Post::AUTHOR,
+    ]);
+}
 -----
 <?php
 
 namespace Hihaho\RectorRules\Tests\Rector\Eloquent\NestedArrayEagerLoadingRector\Fixture;
 
-class ArticleAiTask
+use Illuminate\Database\Eloquent\Builder;
+
+class Post
 {
-    public const string ARTICLE = 'article';
-    public const string USER = 'user';
+    public const string COMMENTS = 'comments';
+    public const string AUTHOR = 'author';
 }
 
-class ArticleB
+class Comment
 {
-    public const string CONTAINER = 'container';
-    public const string TAGS = 'tags';
-    public const string INITIAL_ARTICLE_FOR_UPLOAD = 'initialArticleForUpload';
+    public const string REPLIES = 'replies';
+    public const string REACTIONS = 'reactions';
+    public const string ATTACHMENTS = 'attachments';
 }
 
-$query->with([
-    ArticleAiTask::ARTICLE => [ArticleB::CONTAINER, ArticleB::TAGS, ArticleB::INITIAL_ARTICLE_FOR_UPLOAD],
-    ArticleAiTask::USER,
-]);
-
-?>
+function eager(Builder $query): void
+{
+    $query->with([
+        Post::COMMENTS => [Comment::REPLIES, Comment::REACTIONS, Comment::ATTACHMENTS],
+        Post::AUTHOR,
+    ]);
+}

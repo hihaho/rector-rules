@@ -2,6 +2,8 @@
 
 namespace Hihaho\RectorRules\Tests\Rector\Eloquent\NestedArrayEagerLoadingRector\Fixture;
 
+use Illuminate\Database\Eloquent\Builder;
+
 class ModelA
 {
     public const string X = 'x';
@@ -19,18 +21,21 @@ class ModelC
     public const string W = 'w';
 }
 
-$query->with([
-    ModelA::X . '.' . ModelB::Y . '.' . ModelC::Z,
-    ModelA::X . '.' . ModelB::Y . '.' . ModelC::W,
-    ModelA::X . '.' . ModelB::Q,
-]);
-
-?>
+function eager(Builder $query): void
+{
+    $query->with([
+        ModelA::X . '.' . ModelB::Y . '.' . ModelC::Z,
+        ModelA::X . '.' . ModelB::Y . '.' . ModelC::W,
+        ModelA::X . '.' . ModelB::Q,
+    ]);
+}
 -----
 <?php
 
 namespace Hihaho\RectorRules\Tests\Rector\Eloquent\NestedArrayEagerLoadingRector\Fixture;
 
+use Illuminate\Database\Eloquent\Builder;
+
 class ModelA
 {
     public const string X = 'x';
@@ -48,6 +53,7 @@ class ModelC
     public const string W = 'w';
 }
 
-$query->with([ModelA::X => [ModelB::Y => [ModelC::Z, ModelC::W], ModelB::Q]]);
-
-?>
+function eager(Builder $query): void
+{
+    $query->with([ModelA::X => [ModelB::Y => [ModelC::Z, ModelC::W], ModelB::Q]]);
+}

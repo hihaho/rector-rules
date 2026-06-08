@@ -193,8 +193,8 @@ Enforces self-contained, production-safe migrations. Only applies to files in th
 Converts flag-style integer columns to `boolean` in migrations:
 
 ```diff
--$table->tinyInteger('enable_answer_image_zoom')->default(1);
-+$table->boolean('enable_answer_image_zoom')->default(true);
+-$table->tinyInteger('is_published')->default(1);
++$table->boolean('is_published')->default(true);
 ```
 
 This rule is **deliberately not in the `MIGRATIONS` set** and is a **no-op until you

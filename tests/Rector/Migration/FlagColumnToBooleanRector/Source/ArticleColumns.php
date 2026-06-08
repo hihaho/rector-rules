@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Tests\Rector\Migration\FlagColumnToBooleanRector\Source;
 
-final class QuestionColumns
+final class ArticleColumns
 {
-    public const string ENABLE_ANSWER_IMAGE_ZOOM = 'enable_answer_image_zoom';
+    public const string IS_PUBLISHED = 'is_published';
 }

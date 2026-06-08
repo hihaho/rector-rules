@@ -102,10 +102,10 @@ final class FlagColumnToBooleanRector extends AbstractRector implements Configur
             [
                 new ConfiguredCodeSample(
                     <<<'CODE_SAMPLE'
-$table->tinyInteger('enable_answer_image_zoom')->default(1);
+$table->tinyInteger('is_published')->default(1);
 CODE_SAMPLE,
                     <<<'CODE_SAMPLE'
-$table->boolean('enable_answer_image_zoom')->default(true);
+$table->boolean('is_published')->default(true);
 CODE_SAMPLE,
                     [self::CONFIRM_MYSQL_COMPATIBLE => true],
                 ),

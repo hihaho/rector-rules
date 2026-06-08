@@ -2,33 +2,39 @@
 
 namespace Hihaho\RectorRules\Tests\Rector\Eloquent\NestedArrayEagerLoadingRector\Fixture;
 
-class Playlist
+use Illuminate\Database\Eloquent\Model;
+
+class Category
 {
     public const string CHILDREN = 'children';
     public const string PARENT = 'parent';
 }
 
-$model->loadMissing([
-    Playlist::CHILDREN . '.' . Playlist::PARENT,
-    Playlist::CHILDREN . '.' . Playlist::CHILDREN,
-    Playlist::PARENT,
-]);
-
-?>
+function eager(Model $model): void
+{
+    $model->loadMissing([
+        Category::CHILDREN . '.' . Category::PARENT,
+        Category::CHILDREN . '.' . Category::CHILDREN,
+        Category::PARENT,
+    ]);
+}
 -----
 <?php
 
 namespace Hihaho\RectorRules\Tests\Rector\Eloquent\NestedArrayEagerLoadingRector\Fixture;
 
-class Playlist
+use Illuminate\Database\Eloquent\Model;
+
+class Category
 {
     public const string CHILDREN = 'children';
     public const string PARENT = 'parent';
 }
 
-$model->loadMissing([
-    Playlist::CHILDREN => [Playlist::PARENT, Playlist::CHILDREN],
-    Playlist::PARENT,
-]);
-
-?>
+function eager(Model $model): void
+{
+    $model->loadMissing([
+        Category::CHILDREN => [Category::PARENT, Category::CHILDREN],
+        Category::PARENT,
+    ]);
+}
