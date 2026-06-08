@@ -50,15 +50,13 @@ CODE_SAMPLE,
             return null;
         }
 
+        // Cheapest, most-selective gate first: almost no method call is named
+        // `after`, so bail on the name before the per-node directory string scan.
+        if (! $node->name instanceof Identifier || $node->name->toString() !== 'after') {
+            return null;
+        }
+
         if (! $this->isInMigrationsDirectory()) {
-            return null;
-        }
-
-        if (! $node->name instanceof Identifier) {
-            return null;
-        }
-
-        if ($node->name->toString() !== 'after') {
             return null;
         }
 
