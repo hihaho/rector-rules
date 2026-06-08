@@ -15,7 +15,7 @@ use Rector\NodeTypeResolver\Node\AttributeKey;
 use Rector\NodeTypeResolver\PHPStan\ParametersAcceptorSelectorVariantsWrapper;
 use Rector\Rector\AbstractRector;
 use Rector\Reflection\ReflectionResolver;
-use Rector\ValueObject\PhpVersionFeature;
+use Rector\ValueObject\PhpVersion;
 use Rector\VersionBonding\Contract\MinPhpVersionInterface;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\ConfiguredCodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
@@ -136,7 +136,7 @@ CODE_SAMPLE,
 
     public function provideMinPhpVersion(): int
     {
-        return PhpVersionFeature::NAMED_ARGUMENTS;
+        return PhpVersion::PHP_80;
     }
 
     private function isFirstParty(MethodReflection $methodReflection): bool
