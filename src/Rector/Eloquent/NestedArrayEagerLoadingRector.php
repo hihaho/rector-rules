@@ -14,6 +14,7 @@ use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\BinaryOp\Concat;
 use PhpParser\Node\Expr\MethodCall;
+use PhpParser\Node\Identifier;
 use PhpParser\Node\Scalar\String_;
 use PHPStan\Type\ObjectType;
 use Rector\Rector\AbstractRector;
@@ -82,7 +83,11 @@ CODE_SAMPLE,
             return null;
         }
 
-        if (! $this->isNames($node->name, self::EAGER_LOAD_METHODS)) {
+        // Literal method names are always Identifier nodes; gating on that
+        // directly avoids the generic name-resolver machinery isNames() runs on
+        // every visited call. The eager-load list holds no wildcards, so a plain
+        // in_array is behaviour-equivalent.
+        if (! $node->name instanceof Identifier || ! in_array($node->name->toString(), self::EAGER_LOAD_METHODS, true)) {
             return null;
         }
 

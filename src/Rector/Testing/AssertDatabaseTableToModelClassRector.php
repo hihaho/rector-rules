@@ -13,6 +13,7 @@ use PhpParser\Node\Expr\ClassConstFetch;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Expr\Variable;
+use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PhpParser\Node\Name\FullyQualified;
 use PhpParser\Node\Scalar\String_;
@@ -139,16 +140,21 @@ CODE_SAMPLE,
             return null;
         }
 
-        if (! $this->isNames($node->name, self::ASSERTION_METHODS)) {
+        // Literal method names are always Identifier nodes; gating on that
+        // directly avoids the generic name-resolver machinery isNames()/getName()
+        // run on every visited call. The assertion list holds no wildcards, so a
+        // plain in_array is behaviour-equivalent — and the resolved name is
+        // reused below instead of a second getName() call.
+        if (! $node->name instanceof Identifier) {
+            return null;
+        }
+
+        $methodName = $node->name->toString();
+        if (! in_array($methodName, self::ASSERTION_METHODS, true)) {
             return null;
         }
 
         if (! $this->isOnTestCaseReceiver($node)) {
-            return null;
-        }
-
-        $methodName = $this->getName($node->name);
-        if ($methodName === null) {
             return null;
         }
 
