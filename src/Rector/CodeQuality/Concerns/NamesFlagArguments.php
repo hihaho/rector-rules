@@ -21,7 +21,7 @@ trait NamesFlagArguments
      */
     private function isBareBoolOrNullFlag(Arg $arg): bool
     {
-        if ($arg->name !== null || $arg->unpack) {
+        if ($arg->name instanceof Identifier || $arg->unpack) {
             return false;
         }
 

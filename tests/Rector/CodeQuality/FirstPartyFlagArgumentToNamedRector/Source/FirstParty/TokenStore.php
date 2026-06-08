@@ -11,12 +11,10 @@ final class TokenStore
         return $inherit ? $platform : null;
     }
 
-    public static function make(string $platform, bool $shared): self
+    public static function make(): self
     {
         return new self();
     }
-
-    public function cache(string $key, ?int $ttl): void {}
 
     public function toggle(bool $mobile): bool
     {
