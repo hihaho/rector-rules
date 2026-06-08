@@ -90,6 +90,15 @@ final class AssertDatabaseTableToModelClassRector extends AbstractRector impleme
     /** @var array<string, string> */
     private array $tableToModel = [];
 
+    /**
+     * Memoised `isInTestContext()` verdicts keyed by "class|method". The check
+     * depends only on the enclosing class and assertion name, so it is constant
+     * across every assertion in the same test class.
+     *
+     * @var array<string, bool>
+     */
+    private array $testContextCache = [];
+
     public function __construct(
         private readonly ReflectionProvider $reflectionProvider,
     ) {}
@@ -219,6 +228,20 @@ CODE_SAMPLE,
             return false;
         }
 
+        // Every assertion in a test class resolves to the same enclosing class, so
+        // the class-level reflection below is identical across them. Memoise on
+        // (class, method) — a single test class with many database assertions then
+        // runs the reflection once instead of once per assertion.
+        $cacheKey = $classReflection->getName() . '|' . $methodName;
+        if (isset($this->testContextCache[$cacheKey])) {
+            return $this->testContextCache[$cacheKey];
+        }
+
+        return $this->testContextCache[$cacheKey] = $this->computeTestContext($classReflection, $methodName);
+    }
+
+    private function computeTestContext(ClassReflection $classReflection, string $methodName): bool
+    {
         if (! $this->reflectionProvider->hasClass(self::TEST_CASE_CLASS)) {
             return false;
         }
