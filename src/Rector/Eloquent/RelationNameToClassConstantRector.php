@@ -13,6 +13,7 @@ use PhpParser\Node\Expr\ClassConstFetch;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Expr\Variable;
+use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PhpParser\Node\Name\FullyQualified;
 use PhpParser\Node\Scalar\String_;
@@ -74,7 +75,11 @@ CODE_SAMPLE,
             return null;
         }
 
-        if (! $this->isNames($node->name, self::RELATION_METHODS)) {
+        // Literal method names are always Identifier nodes; gating on that
+        // directly avoids the generic name-resolver machinery isNames() runs
+        // on every visited call. The relation list holds no wildcards, so a
+        // plain in_array is behaviour-equivalent.
+        if (! $node->name instanceof Identifier || ! in_array($node->name->toString(), self::RELATION_METHODS, true)) {
             return null;
         }
 
