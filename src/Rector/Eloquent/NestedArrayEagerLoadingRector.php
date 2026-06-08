@@ -26,8 +26,13 @@ use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
  */
 final class NestedArrayEagerLoadingRector extends AbstractRector
 {
-    /** @var list<string> */
-    private const array EAGER_LOAD_METHODS = ['with', 'load', 'loadMissing', 'loadCount'];
+    /**
+     * Eager-load methods this rule targets, lowercased — PHP method names are
+     * case-insensitive, so the gate compares the lowercased call name.
+     *
+     * @var list<string>
+     */
+    private const array EAGER_LOAD_METHODS = ['with', 'load', 'loadmissing', 'loadcount'];
 
     /**
      * The reshape only makes sense for Eloquent eager loading. Without a receiver-type
@@ -85,9 +90,9 @@ CODE_SAMPLE,
 
         // Literal method names are always Identifier nodes; gating on that
         // directly avoids the generic name-resolver machinery isNames() runs on
-        // every visited call. The eager-load list holds no wildcards, so a plain
-        // in_array is behaviour-equivalent.
-        if (! $node->name instanceof Identifier || ! in_array($node->name->toString(), self::EAGER_LOAD_METHODS, true)) {
+        // every visited call. Match case-insensitively (as isNames() did) since
+        // PHP method names are case-insensitive.
+        if (! $node->name instanceof Identifier || ! in_array(strtolower($node->name->toString()), self::EAGER_LOAD_METHODS, true)) {
             return null;
         }
 

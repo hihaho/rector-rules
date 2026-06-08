@@ -57,9 +57,11 @@ trait ChecksRouteContext
         }
 
         // Resolve the class name once and compare, rather than running the
-        // name-resolver twice (once per accepted spelling) via isName().
+        // name-resolver twice (once per accepted spelling) via isName(). Compare
+        // case-insensitively, as isName() did — PHP class names are case-insensitive.
         $className = $this->getName($node->class);
 
-        return $className === Route::class || $className === 'Route';
+        return $className !== null
+            && (strcasecmp($className, Route::class) === 0 || strcasecmp($className, 'Route') === 0);
     }
 }

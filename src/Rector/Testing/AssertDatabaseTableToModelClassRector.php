@@ -77,12 +77,15 @@ final class AssertDatabaseTableToModelClassRector extends AbstractRector impleme
      * fail on a non-soft-deletable model), so a table+connection match does not prove
      * behaviour is preserved.
      *
+     * Lowercased — PHP method names are case-insensitive, so the gate compares
+     * the lowercased call name (mirroring what isNames() did via strcasecmp).
+     *
      * @var list<string>
      */
     private const array ASSERTION_METHODS = [
-        'assertDatabaseHas',
-        'assertDatabaseMissing',
-        'assertDatabaseCount',
+        'assertdatabasehas',
+        'assertdatabasemissing',
+        'assertdatabasecount',
     ];
 
     private string $modelNamespace = self::DEFAULT_MODEL_NAMESPACE;
@@ -151,15 +154,15 @@ CODE_SAMPLE,
 
         // Literal method names are always Identifier nodes; gating on that
         // directly avoids the generic name-resolver machinery isNames()/getName()
-        // run on every visited call. The assertion list holds no wildcards, so a
-        // plain in_array is behaviour-equivalent — and the resolved name is
-        // reused below instead of a second getName() call.
+        // run on every visited call. Match case-insensitively (as isNames() did)
+        // since PHP method names are case-insensitive; the resolved name is reused
+        // below (reflection lookups are themselves case-insensitive).
         if (! $node->name instanceof Identifier) {
             return null;
         }
 
         $methodName = $node->name->toString();
-        if (! in_array($methodName, self::ASSERTION_METHODS, true)) {
+        if (! in_array(strtolower($methodName), self::ASSERTION_METHODS, true)) {
             return null;
         }
 

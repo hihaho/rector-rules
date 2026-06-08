@@ -30,16 +30,22 @@ use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
  */
 final class RelationNameToClassConstantRector extends AbstractRector
 {
-    /** @var list<string> */
+    /**
+     * The Eloquent relation methods this rule targets, lowercased: PHP method
+     * names are case-insensitive, so the gate compares the lowercased call name
+     * against this list (mirroring what isNames() did via strcasecmp).
+     *
+     * @var list<string>
+     */
     private const array RELATION_METHODS = [
         'with',
         'load',
-        'loadMissing',
-        'loadCount',
-        'relationLoaded',
-        'getRelation',
-        'setRelation',
-        'unsetRelation',
+        'loadmissing',
+        'loadcount',
+        'relationloaded',
+        'getrelation',
+        'setrelation',
+        'unsetrelation',
     ];
 
     public function __construct(
@@ -76,10 +82,10 @@ CODE_SAMPLE,
         }
 
         // Literal method names are always Identifier nodes; gating on that
-        // directly avoids the generic name-resolver machinery isNames() runs
-        // on every visited call. The relation list holds no wildcards, so a
-        // plain in_array is behaviour-equivalent.
-        if (! $node->name instanceof Identifier || ! in_array($node->name->toString(), self::RELATION_METHODS, true)) {
+        // directly avoids the generic name-resolver machinery isNames() runs on
+        // every visited call. Match case-insensitively (as isNames() did) since
+        // PHP method names are case-insensitive.
+        if (! $node->name instanceof Identifier || ! in_array(strtolower($node->name->toString()), self::RELATION_METHODS, true)) {
             return null;
         }
 
