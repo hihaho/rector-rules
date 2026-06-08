@@ -12,7 +12,7 @@ use PhpParser\Node\Name;
 
 trait ChecksRouteContext
 {
-    abstract protected function isName(Node $node, string $name): bool;
+    abstract protected function getName(Node $node): ?string;
 
     private function isInRoutesDirectory(): bool
     {
@@ -29,19 +29,13 @@ trait ChecksRouteContext
 
     private function isRouteStaticCall(StaticCall $node, string $method): bool
     {
-        if (! $node->class instanceof Name) {
+        // Cheapest gate first: the method-name Identifier check bails the bulk of
+        // static calls before the class name has to be resolved.
+        if (! $node->name instanceof Identifier || $node->name->toString() !== $method) {
             return false;
         }
 
-        if (! $this->isName($node->class, Route::class) && ! $this->isName($node->class, 'Route')) {
-            return false;
-        }
-
-        if (! $node->name instanceof Identifier) {
-            return false;
-        }
-
-        return $node->name->toString() === $method;
+        return $this->isRouteClass($node);
     }
 
     /**
@@ -49,18 +43,23 @@ trait ChecksRouteContext
      */
     private function isRouteStaticCallForMethods(StaticCall $node, array $methods): bool
     {
+        if (! $node->name instanceof Identifier || ! in_array($node->name->toString(), $methods, true)) {
+            return false;
+        }
+
+        return $this->isRouteClass($node);
+    }
+
+    private function isRouteClass(StaticCall $node): bool
+    {
         if (! $node->class instanceof Name) {
             return false;
         }
 
-        if (! $this->isName($node->class, Route::class) && ! $this->isName($node->class, 'Route')) {
-            return false;
-        }
+        // Resolve the class name once and compare, rather than running the
+        // name-resolver twice (once per accepted spelling) via isName().
+        $className = $this->getName($node->class);
 
-        if (! $node->name instanceof Identifier) {
-            return false;
-        }
-
-        return in_array($node->name->toString(), $methods, true);
+        return $className === Route::class || $className === 'Route';
     }
 }
