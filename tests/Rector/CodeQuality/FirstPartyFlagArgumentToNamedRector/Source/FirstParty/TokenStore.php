@@ -6,14 +6,25 @@ namespace Hihaho\RectorRules\Tests\Rector\CodeQuality\FirstPartyFlagArgumentToNa
 
 final class TokenStore
 {
+    /** @var array<string, ?int> */
+    private array $cached = [];
+
     public function resolve(string $platform, bool $inherit): ?string
     {
-        return $inherit ? $platform : null;
+        return $inherit && array_key_exists($platform, $this->cached) ? $platform : null;
     }
 
-    public static function make(): self
+    public static function make(string $platform, bool $shared): self
     {
-        return new self();
+        $store = new self();
+        $store->cache($platform, $shared ? 60 : null);
+
+        return $store;
+    }
+
+    public function cache(string $key, ?int $ttl): void
+    {
+        $this->cached[$key] = $ttl;
     }
 
     public function toggle(bool $mobile): bool
