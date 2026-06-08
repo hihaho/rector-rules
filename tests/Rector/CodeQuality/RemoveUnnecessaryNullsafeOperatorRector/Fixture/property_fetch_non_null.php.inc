@@ -4,7 +4,7 @@ namespace Hihaho\RectorRules\Tests\Rector\CodeQuality\RemoveUnnecessaryNullsafeO
 
 use Hihaho\RectorRules\Tests\Rector\CodeQuality\RemoveUnnecessaryNullsafeOperatorRector\Source\ArticleResource;
 
-// PR #9290 shape: multi-hop native property chain, poster is non-null
+// Multi-hop native property chain, poster is non-null
 function thumbnail(ArticleResource $resource): string
 {
     return $resource->poster?->original;
@@ -16,7 +16,7 @@ namespace Hihaho\RectorRules\Tests\Rector\CodeQuality\RemoveUnnecessaryNullsafeO
 
 use Hihaho\RectorRules\Tests\Rector\CodeQuality\RemoveUnnecessaryNullsafeOperatorRector\Source\ArticleResource;
 
-// PR #9290 shape: multi-hop native property chain, poster is non-null
+// Multi-hop native property chain, poster is non-null
 function thumbnail(ArticleResource $resource): string
 {
     return $resource->poster->original;
