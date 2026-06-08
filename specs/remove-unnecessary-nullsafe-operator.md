@@ -5,7 +5,7 @@
 A Rector rule that rewrites `$x?->prop` / `$x?->method()` to `$x->prop` /
 `$x->method()` when the receiver `$x` can never be `null`. This automates a
 recurring human review nit (finding #5 in `docs/review-automation-findings.md`,
-seen in PRs #9290 and #8219) where reviewers manually flag a nullsafe operator
+seen in real review threads) where reviewers manually flag a nullsafe operator
 applied to a value the type system already guarantees is non-null. PHPStan can
 *report* this under bleeding-edge; this rule *fixes* it.
 
@@ -14,7 +14,7 @@ applied to a value the type system already guarantees is non-null. PHPStan can
 ## 1. Current State
 
 There is no rule for this in `src/Rector/`. Reviewers flag it by hand, e.g.
-PR #9290:
+the source review:
 
 ```php
 // poster is a non-nullable property, so the nullsafe is noise
@@ -27,7 +27,7 @@ Rector core ships `Rector\CodeQuality\Rector\NullsafeMethodCall\CleanupUnneededN
 but it is **too narrow** to cover this:
 
 - It only targets `NullsafeMethodCall` (`?->method()`) — **not** `NullsafePropertyFetch`
-  (`?->prop`), which is the PR #9290 case.
+  (`?->prop`), which is the source review case.
 - It only fires when the receiver `$node->var` is a `FuncCall`, `MethodCall`, or
   `StaticCall` (a *call*), via `ReturnStrictTypeAnalyzer::resolveMethodCallReturnType`.
   It ignores variables and property fetches such as `$this->resource->poster`.
@@ -52,7 +52,7 @@ Questions 1).** The rule defaults to **native/certain types only** via
 `getType()` trusts phpdoc (`@property`, `@var`); a stale `@property` on a nullable
 Eloquent relation would let the rule strip a load-bearing `?->`, and PHPStan would
 not catch the result because it trusts the same wrong annotation → a production
-null error. Native-only still fixes the motivating case (PR #9290 uses native
+null error. Native-only still fixes the motivating case (the source review uses native
 property types). Phpdoc-derived non-nullability is **opt-in** via
 `ConfigurableRectorInterface` (`trust_phpdoc_types`, default `false`) for codebases
 that want to cover Eloquent magic properties and accept the risk. (Confirm the
@@ -137,7 +137,7 @@ Mirror how the Eloquent rules were added this session:
 
 ## 4. Non-Goals
 
-- **Never *add* a nullsafe operator.** The reverse direction (PR #8219 wanted
+- **Never *add* a nullsafe operator.** The reverse direction (the source review wanted
   `?->` added on a nullable receiver) is a correctness change that can mask real
   bugs; leave it to PHPStan's possibly-null reporting. This rule only *removes*.
 - Do not touch nullsafe where the receiver type is `mixed`, unknown, or possibly
@@ -155,8 +155,8 @@ NPE risk lives. Do not register the rule in any set until every fixture below pa
 - [x] Create `RemoveUnnecessaryNullsafeOperatorRector` in `src/Rector/CodeQuality/` — handles `NullsafePropertyFetch` + `NullsafeMethodCall`, replaces with `PropertyFetch`/`MethodCall` when `! containsNull(receiverType) && receiverType->isObject()->yes()`.
 - [x] **Resolve the type from the PHPStan `Scope` directly** — default `$scope->getNativeType($node->var)`; `ConfigurableRectorInterface` with `trust_phpdoc_types` (default `false`) opts into `$scope->getType($node->var)`. **Deviation from spec:** Rector's `$this->getNativeType()`/`$this->getType()` wrappers both DROP `null` from `?Foo` in some cases (unsafe); the raw Scope methods preserve it. See Findings.
 - [x] Implement `MinPhpVersionInterface::provideMinPhpVersion()` returning `PhpVersionFeature::NULLSAFE_OPERATOR` — nullsafe is PHP 8.0+ (mirror the core rule).
-- [x] Write `getRuleDefinition()` (a `ConfiguredCodeSample`) based on the PR #9290 property-fetch example.
-- [x] Tests (convert) — (a) `?->prop` on a **native** non-null typed property → converted (the #9290 case, multi-hop native — confirms OQ2 positively); (b) `?->method()` on a non-null variable → converted; (c) `$this?->method()` → converted; (d) dynamic name `$obj?->{$name}` on a non-null receiver → converted.
+- [x] Write `getRuleDefinition()` (a `ConfiguredCodeSample`) based on the source review property-fetch example.
+- [x] Tests (convert) — (a) `?->prop` on a **native** non-null typed property → converted (the motivating case, multi-hop native — confirms OQ2 positively); (b) `?->method()` on a non-null variable → converted; (c) `$this?->method()` → converted; (d) dynamic name `$obj?->{$name}` on a non-null receiver → converted.
 - [x] Tests (skip — safety boundary) — (e) receiver `Foo|null` → skipped (both a nullable property AND a nullable variable method call, per review feedback); (f) `mixed`/untyped receiver → skipped; (g) **phpdoc-only non-null** (`@property Foo $x`) → skipped by default (native → `mixed`), converted with `trust_phpdoc_types: true` (separate test class); (h) covered by (g) — under the native default a stale `@property` resolves to `mixed` and is skipped; (i) already-plain `->` no-change file.
 - [x] Tests (chains — core correctness) — (j) `$a?->b?->c` with `$a` nullable → both `?->` preserved; (k) `$nonNull?->maybeNull?->c` → inner removed, outer preserved (load-bearing); (l) full chain on all-non-null receivers → all removed; (m) chain with trailing `?? default` (`$x->y ?? ''`) → coalesce tail preserved.
 
@@ -191,7 +191,7 @@ None — both resolved during implementation (see below).
    PHPStan cannot catch afterward (it trusts the same annotation the rule trusted).
    Stale `@property` on nullable Eloquent relations is a plausible real-world hazard,
    so phpdoc is not trusted by default. Native typing still covers the motivating
-   case (PR #9290). Surfaced by the Codex review of this spec.
+   case (from the PR research). Surfaced by the Codex review of this spec.
 
 2. **Guard against overlap with core `CleanupUnneededNullsafeOperatorRector`?**
    **Decision:** No exclusion needed; document the overlap and add a co-existence
@@ -208,7 +208,7 @@ None — both resolved during implementation (see below).
    `trust_phpdoc_types`. **Rationale:** Rector's `$this->getNativeType()` and
    `$this->getType()` wrappers both drop `null` from `?Foo` in some cases (unsafe);
    the Scope methods are accurate. `$scope->getNativeType()` resolves the multi-hop
-   #9290 shape to non-null (converts) and phpdoc-only to `mixed` (skips), satisfying
+   that shape to non-null (converts) and phpdoc-only to `mixed` (skips), satisfying
    the native-only intent of Resolved Questions 1. See Findings.
 
 ## Findings
@@ -237,7 +237,7 @@ None — both resolved during implementation (see below).
   anti-stale-phpdoc safety the spec wanted (Resolved Questions 1).
 
 - **OQ2 resolved positively:** `$scope->getNativeType()` resolves the multi-hop
-  `$resource->poster` (#9290 shape) to a non-null `Poster` when both hops are
+  `$resource->poster` (that shape) to a non-null `Poster` when both hops are
   natively typed → the motivating case converts.
 
 - Phase 1: 14 tests pass (13 default fixtures + 1 trust-mode fixture, across two

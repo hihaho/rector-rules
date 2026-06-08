@@ -6,14 +6,14 @@ A Rector rule that rewrites flag-style integer columns in migrations —
 `$table->tinyInteger('enable_x')->default(1)` → `$table->boolean('enable_x')->default(true)`
 — so boolean flags use the `boolean()` column type and `true`/`false` defaults
 instead of a `tinyInteger` + `0`/`1`. Automates finding #7 in
-`docs/review-automation-findings.md` (PR #7936). It lives next to the existing
+`docs/review-automation-findings.md` (from the PR research). It lives next to the existing
 migration rules and reuses their migration-directory gating.
 
 ---
 
 ## 1. Current State
 
-No rule exists. Reviewers flag it by hand, e.g. PR #7936:
+No rule exists. Reviewers flag it by hand, e.g. the source review:
 
 ```php
 - $table->tinyInteger('is_published')->default(1);
@@ -60,7 +60,7 @@ column untouched**:
    column is **skipped** (not converted) — its name alone is too weak: a
    `tinyInteger('is_type')`/`tinyInteger('has_count')` with no default could be
    multi-valued, and converting would silently narrow it. Requiring the 0/1 default
-   is the boolean evidence (PR #7936's column had `->default(1)`).
+   is the boolean evidence (the source review's column had `->default(1)`).
 4. **No `->change()` in the chain** — that ALTERs an existing column's type on a
    migrated table (not a fresh definition); silently changing its declared type is
    out of scope and unsafe.
@@ -130,7 +130,7 @@ prototype — see Findings / Resolved Questions 1.)
 ## 5. Non-Goals
 
 - **Model `$casts`.** Syncing a `'enable_x' => 'boolean'` cast on the model is a
-  separate concern (PR #7936's reviewer only touched the migration). Out of scope
+  separate concern (the source review's reviewer only touched the migration). Out of scope
   (though the model cast is the strongest *evidence* a column is boolean — see Open
   Questions 3).
 - **Non-MySQL drivers.** On PostgreSQL `tinyInteger`→`smallint` and `boolean` is a
@@ -150,7 +150,7 @@ prototype — see Findings / Resolved Questions 1.)
 The gate ships with the rewrite — the rule is not viable until the skip fixtures
 pass, since they are what prevents a non-boolean `tinyInteger` from being cast.
 The prototype confirmed the type rename and the default normalisation happen
-together in one walk-down pass, so they are one phase (matching PR #7936's atomic
+together in one walk-down pass, so they are one phase (matching the source review's atomic
 change), not two.
 
 - [x] Create `FlagColumnToBooleanRector` in `src/Rector/Migration/` with `use ChecksMigrationContext` — node type `Stmt\Expression`, gated by `isInMigrationsDirectory()`; implements `ConfigurableRectorInterface` and returns early unless `confirm_mysql_compatible === true` (default off).
@@ -158,7 +158,7 @@ change), not two.
 - [x] Flag-name gate against configurable prefix/suffix set (`name_prefixes`/`name_suffixes`).
 - [x] Chain scan: skip unless a `->default(N∈{0,1,true,false})` is present, no `->change()`, no `->autoIncrement()` and the type-call 2nd arg is not `true`.
 - [x] Rename type call to `boolean` and normalise `->default(0)`→`false`/`->default(1)`→`true` in one pass; other chain calls preserved.
-- [x] Tests (convert) — `convert_enable` → `boolean('is_published')->default(true)` (exact PR #7936); `convert_nullable` → `boolean('should_loop')->nullable()->default(false)`.
+- [x] Tests (convert) — `convert_enable` → `boolean('is_published')->default(true)` (an exact real-world case); `convert_nullable` → `boolean('should_loop')->nullable()->default(false)`.
 - [x] Tests (skip, blocking) — non-flag name, default(2), defaultless, wider type, `->change()`, auto-increment (2nd-arg + `->autoIncrement()`), non-`String_` name, split form, outside-migrations-dir, and `confirm_mysql_compatible` off (separate disabled test class). All unchanged. (d) `has_count`/`is_type` residual: see Findings — these DO convert under the name gate and are an accepted residual, so no skip fixture asserts otherwise.
 
 ### Phase 2: Extensions (Priority: MEDIUM)
@@ -213,7 +213,7 @@ change), not two.
 4. **Defaultless flag columns.** **Decision:** require an explicit
    `->default(0|1|true|false)`; skip defaultless columns. **Rationale:** a flag name
    alone is weak evidence (`has_count`/`is_type` could be multi-valued); the 0/1
-   default is the boolean signal, and PR #7936's column had one. (Codex review.)
+   default is the boolean signal, and the source review's column had one. (Codex review.)
 
 ## Resolved Questions
 
@@ -231,7 +231,7 @@ change), not two.
 
 - **Phase 1 + 2 implemented; 13 tests pass** (11 default fixtures + 1 constant
   fixture + 1 disabled-config fixture, across two test classes). `convert_enable`
-  reproduces the exact PR #7936 result.
+  reproduces the exact real-world result.
 - **`ValueResolver` is not on `AbstractRector`** — it must be constructor-injected
   (`Rector\PhpParser\Node\Value\ValueResolver`). Used only to resolve a
   `ClassConstFetch` column name; `String_` is read directly.

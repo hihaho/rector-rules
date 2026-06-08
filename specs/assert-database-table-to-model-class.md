@@ -8,13 +8,13 @@ assertions — `assertDatabaseHas('users', …)` → `assertDatabaseHas(User::cl
 matches. Laravel's database assertions accept a model class in place of a table
 name and resolve the table from it, so this is behaviour-preserving while making
 the reference rename-safe and IDE-navigable. Automates finding #10 in
-`docs/review-automation-findings.md` (PR #7863).
+`docs/review-automation-findings.md` (from the PR research).
 
 ---
 
 ## 1. Current State
 
-No rule exists. Reviewers flag the magic string by hand, e.g. PR #7863
+No rule exists. Reviewers flag the magic string by hand, e.g. the source review
 (`tests/.../SocialAuthControllerTest.php`):
 
 ```php
@@ -107,7 +107,7 @@ literal string is left exactly as-is.
 > while the real runtime table differs, the rewrite would mis-target. This is rare
 > and an anti-pattern, but the static algorithm cannot detect it; accept it as a
 > known limitation or require a static `$table` default for conversion (stricter,
-> but misses the common convention-only model — the PR #7863 case).
+> but misses the common convention-only model — the source review case).
 
 **Inflection dependency.** `Str::singular`/`pluralStudly` come from
 `illuminate/support`. It is not a direct dependency of this package today, but the
