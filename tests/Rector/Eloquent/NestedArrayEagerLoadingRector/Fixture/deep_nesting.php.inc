@@ -55,5 +55,11 @@ class ModelC
 
 function eager(Builder $query): void
 {
-    $query->with([ModelA::X => [ModelB::Y => [ModelC::Z, ModelC::W], ModelB::Q]]);
+    $query->with([ModelA::X => [
+        ModelB::Y => [
+            ModelC::Z,
+            ModelC::W,
+        ],
+        ModelB::Q,
+    ]]);
 }

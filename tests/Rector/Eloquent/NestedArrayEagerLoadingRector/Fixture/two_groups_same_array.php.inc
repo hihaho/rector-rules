@@ -42,5 +42,14 @@ class Rel
 
 function eager(Builder $query): void
 {
-    $query->with([Rel::A => [Rel::X, Rel::Y], Rel::B => [Rel::P, Rel::Q]]);
+    $query->with([
+        Rel::A => [
+            Rel::X,
+            Rel::Y,
+        ],
+        Rel::B => [
+            Rel::P,
+            Rel::Q,
+        ],
+    ]);
 }

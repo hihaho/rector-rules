@@ -22,7 +22,10 @@ use Illuminate\Database\Eloquent\Builder;
 function eager(Builder $query): void
 {
     $query->with([
-        'container' => ['users', 'ancestors'],
+        'container' => [
+            'users',
+            'ancestors',
+        ],
         'tags',
     ]);
 }

@@ -49,7 +49,11 @@ class Comment
 function eager(Builder $query): void
 {
     $query->with([
-        Post::COMMENTS => [Comment::REPLIES, Comment::REACTIONS, Comment::ATTACHMENTS],
+        Post::COMMENTS => [
+            Comment::REPLIES,
+            Comment::REACTIONS,
+            Comment::ATTACHMENTS,
+        ],
         Post::AUTHOR,
     ]);
 }

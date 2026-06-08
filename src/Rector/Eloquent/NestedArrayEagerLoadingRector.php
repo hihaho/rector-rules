@@ -17,6 +17,7 @@ use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Scalar\String_;
 use PHPStan\Type\ObjectType;
+use Rector\NodeTypeResolver\Node\AttributeKey;
 use Rector\Rector\AbstractRector;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
@@ -110,9 +111,22 @@ CODE_SAMPLE,
             return null;
         }
 
-        $args[0]->value = $newArray;
+        $args[0]->value = $this->formatArray($newArray);
 
         return $node;
+    }
+
+    /**
+     * Flag the array for Rector's multi-line printer, but only past a single
+     * item so short arrays are left inline.
+     */
+    private function formatArray(Array_ $array): Array_
+    {
+        if (count($array->items) > 1) {
+            $array->setAttribute(AttributeKey::NEWLINED_ARRAY_PRINT, true);
+        }
+
+        return $array;
     }
 
     private function isEloquentReceiver(Expr $var): bool
@@ -218,7 +232,7 @@ CODE_SAMPLE,
             );
             $nestedArray = $this->refactorArray(new Array_($nestedItems)) ?? new Array_($nestedItems);
 
-            $newItems[] = new ArrayItem($nestedArray, $groupPrefixes[$groupId]);
+            $newItems[] = new ArrayItem($this->formatArray($nestedArray), $groupPrefixes[$groupId]);
             $emittedGroups[$groupId] = true;
         }
 

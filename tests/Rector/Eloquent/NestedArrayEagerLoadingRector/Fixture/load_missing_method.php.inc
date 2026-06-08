@@ -34,7 +34,10 @@ class Category
 function eager(Model $model): void
 {
     $model->loadMissing([
-        Category::CHILDREN => [Category::PARENT, Category::CHILDREN],
+        Category::CHILDREN => [
+            Category::PARENT,
+            Category::CHILDREN,
+        ],
         Category::PARENT,
     ]);
 }

@@ -36,7 +36,10 @@ class Pivot
 function eager(Builder $query): void
 {
     $query->with([
-        Pivot::RELATION => [Pivot::CHILD, Pivot::SIBLING],
+        Pivot::RELATION => [
+            Pivot::CHILD,
+            Pivot::SIBLING,
+        ],
         'pivot' => ['id', 'created_at'],
     ]);
 }

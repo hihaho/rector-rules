@@ -42,5 +42,8 @@ class ArticleContainer
 
 function eagerTwoSiblings(Builder $query): void
 {
-    $query->with([Article::CONTAINER => [ArticleContainer::USERS, ArticleContainer::ANCESTORS . '.' . ArticleContainer::USERS]]);
+    $query->with([Article::CONTAINER => [
+        ArticleContainer::USERS,
+        ArticleContainer::ANCESTORS . '.' . ArticleContainer::USERS,
+    ]]);
 }
