@@ -48,21 +48,25 @@
         "laravel/boost": "^2.4",
         "laravel/pint": "^1.29",
         "nikic/php-parser": "^5.4",
-        "orchestra/testbench": "^9.0||^10.11||^11.0",
-        "pestphp/pest": "^3.0||^4.4",
+        "orchestra/testbench": "^10.11||^11.0",
+        "pestphp/pest": "^4.4",
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan": "^2.1",
         "phpstan/phpstan-deprecation-rules": "^2.0",
         "phpstan/phpstan-phpunit": "^2.0",
         "phpstan/phpstan-strict-rules": "^2.0",
-        "phpunit/phpunit": "^11.5",
+        "phpunit/phpunit": "^12.0",
         "rector/type-perfect": "^2.0",
         "roave/security-advisories": "dev-latest",
-        "sandermuller/package-boost": "^0.2",
+        "sandermuller/boost-skills": "^2.4",
+        "sandermuller/package-boost-laravel": "^1.0",
         "spaze/phpstan-disallowed-calls": "^4.10",
         "symplify/phpstan-extensions": "^12.0",
         "tomasvotruba/cognitive-complexity": "^1.0",
         "tomasvotruba/type-coverage": "^2.0"
+    },
+    "suggest": {
+        "illuminate/support": "Used by AssertDatabaseTableToModelClassRector to resolve table names; always present in the Laravel projects this package targets"
     },
     "scripts": {
         "format": "vendor/bin/pint",
@@ -72,7 +76,14 @@
         "rector": "vendor/bin/rector process",
         "test": "vendor/bin/pest",
         "test-coverage": "vendor/bin/pest --coverage",
-        "qa": ["@format", "@rector", "@phpstan"]
+        "qa": ["@format", "@rector", "@phpstan"],
+        "sync-ai": "vendor/bin/boost sync",
+        "post-install-cmd": [
+            "SanderMuller\\PackageBoostLaravel\\Scripts\\AutoSync::run"
+        ],
+        "post-update-cmd": [
+            "SanderMuller\\PackageBoostLaravel\\Scripts\\AutoSync::run"
+        ]
     },
     "extra": {
         "rector": {

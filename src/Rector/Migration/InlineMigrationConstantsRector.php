@@ -36,10 +36,10 @@ final class InlineMigrationConstantsRector extends AbstractRector
             [
                 new CodeSample(
                     <<<'CODE_SAMPLE'
-$table->boolean(Video::CALIPER_ENABLED)->nullable();
+$table->boolean(Article::COMMENTS_ENABLED)->nullable();
 CODE_SAMPLE,
                     <<<'CODE_SAMPLE'
-$table->boolean('caliper_enabled')->nullable();
+$table->boolean('comments_enabled')->nullable();
 CODE_SAMPLE,
                 ),
             ],

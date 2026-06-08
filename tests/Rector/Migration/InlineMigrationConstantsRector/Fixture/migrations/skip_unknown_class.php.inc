@@ -5,6 +5,6 @@ namespace migrations;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-Schema::table('videos', function (Blueprint $table): void {
+Schema::table('articles', function (Blueprint $table): void {
     $table->string(UnknownModel::NAME);
 });

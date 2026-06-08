@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
  * @property Builder $queryBuilder
  * @mixin Builder
  */
-final class Video
+final class Article
 {
 }
 
@@ -25,6 +25,6 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
  * @property EloquentQueryBuilder $queryBuilder
  * @mixin EloquentQueryBuilder
  */
-final class Video
+final class Article
 {
 }

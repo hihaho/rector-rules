@@ -4,7 +4,7 @@ namespace App\Jobs;
 
 use Illuminate\Database\Eloquent\Collection;
 
-final class ProcessVideoJob
+final class ProcessArticleJob
 {
     public function handle(): void
     {
@@ -25,7 +25,7 @@ namespace App\Jobs;
 
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 
-final class ProcessVideoJob
+final class ProcessArticleJob
 {
     public function handle(): void
     {

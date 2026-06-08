@@ -31,20 +31,20 @@ final class NestedArrayEagerLoadingRector extends AbstractRector
                 new CodeSample(
                     <<<'CODE_SAMPLE'
 $query->with([
-    VideoAiTask::VIDEO . '.' . Video::CONTAINER,
-    VideoAiTask::VIDEO . '.' . Video::SUBTITLES,
-    VideoAiTask::VIDEO . '.' . Video::INITIAL_VIDEO_FOR_UPLOAD,
-    VideoAiTask::USER,
+    ArticleAiTask::ARTICLE . '.' . Article::CONTAINER,
+    ArticleAiTask::ARTICLE . '.' . Article::TAGS,
+    ArticleAiTask::ARTICLE . '.' . Article::INITIAL_ARTICLE_FOR_UPLOAD,
+    ArticleAiTask::USER,
 ]);
 CODE_SAMPLE,
                     <<<'CODE_SAMPLE'
 $query->with([
-    VideoAiTask::VIDEO => [
-        Video::CONTAINER,
-        Video::SUBTITLES,
-        Video::INITIAL_VIDEO_FOR_UPLOAD,
+    ArticleAiTask::ARTICLE => [
+        Article::CONTAINER,
+        Article::TAGS,
+        Article::INITIAL_ARTICLE_FOR_UPLOAD,
     ],
-    VideoAiTask::USER,
+    ArticleAiTask::USER,
 ]);
 CODE_SAMPLE,
                 ),
@@ -74,7 +74,7 @@ CODE_SAMPLE,
         }
 
         $newArray = $this->refactorArray($args[0]->value);
-        if ($newArray === null) {
+        if (! $newArray instanceof Array_) {
             return null;
         }
 
@@ -94,7 +94,15 @@ CODE_SAMPLE,
         $hasChanges = false;
 
         foreach ($array->items as $idx => $item) {
-            if (! $item instanceof ArrayItem || $item->key !== null || ! $item->value instanceof Concat) {
+            if (! $item instanceof ArrayItem) {
+                continue;
+            }
+
+            if ($item->key instanceof Expr) {
+                continue;
+            }
+
+            if (! $item->value instanceof Concat) {
                 continue;
             }
 
@@ -131,25 +139,27 @@ CODE_SAMPLE,
             return null;
         }
 
+        $array->items = $this->buildGroupedItems($array->items, $groupPrefixes, $groupRemainders, $itemGroupIds);
+
+        return $array;
+    }
+
+    /**
+     * @param array<ArrayItem> $items
+     * @param array<int<0, max>, Expr> $groupPrefixes
+     * @param array<int<0, max>, list<Expr>> $groupRemainders
+     * @param array<int<0, max>> $itemGroupIds
+     * @return list<ArrayItem>
+     */
+    private function buildGroupedItems(array $items, array $groupPrefixes, array $groupRemainders, array $itemGroupIds): array
+    {
         $emittedGroups = [];
         $newItems = [];
 
-        foreach ($array->items as $idx => $item) {
-            if (! $item instanceof ArrayItem) {
-                $newItems[] = $item;
-
-                continue;
-            }
-
+        foreach ($items as $idx => $item) {
             $groupId = $itemGroupIds[$idx] ?? null;
 
-            if ($groupId === null) {
-                $newItems[] = $item;
-
-                continue;
-            }
-
-            if (count($groupRemainders[$groupId]) < 2) {
+            if ($groupId === null || count($groupRemainders[$groupId]) < 2) {
                 $newItems[] = $item;
 
                 continue;
@@ -169,9 +179,7 @@ CODE_SAMPLE,
             $emittedGroups[$groupId] = true;
         }
 
-        $array->items = $newItems;
-
-        return $array;
+        return $newItems;
     }
 
     /**

@@ -4,7 +4,7 @@ namespace App\QueryBuilders;
 
 use Illuminate\Database\Eloquent\Builder;
 
-final class VideoQueryBuilder extends Builder
+final class ArticleQueryBuilder extends Builder
 {
     /** @param Builder $query */
     public function forContainer($query): Builder
@@ -20,7 +20,7 @@ namespace App\QueryBuilders;
 
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
-final class VideoQueryBuilder extends EloquentQueryBuilder
+final class ArticleQueryBuilder extends EloquentQueryBuilder
 {
     /** @param EloquentQueryBuilder $query */
     public function forContainer($query): EloquentQueryBuilder

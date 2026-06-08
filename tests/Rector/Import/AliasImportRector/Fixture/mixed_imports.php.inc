@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use function array_map;
 use const PHP_INT_MAX;
 
-final class VideoService
+final class ArticleService
 {
     public function query(Builder $query): Builder
     {
@@ -25,7 +25,7 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 use function array_map;
 use const PHP_INT_MAX;
 
-final class VideoService
+final class ArticleService
 {
     public function query(EloquentQueryBuilder $query): EloquentQueryBuilder
     {

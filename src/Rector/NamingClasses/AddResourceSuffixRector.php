@@ -59,7 +59,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class Video extends JsonResource
+class Article extends JsonResource
 {
 }
 CODE_SAMPLE,
@@ -68,7 +68,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class VideoResource extends JsonResource
+class ArticleResource extends JsonResource
 {
 }
 CODE_SAMPLE,

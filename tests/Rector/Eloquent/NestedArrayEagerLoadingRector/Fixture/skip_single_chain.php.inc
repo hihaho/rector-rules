@@ -2,16 +2,16 @@
 
 namespace Hihaho\RectorRules\Tests\Rector\Eloquent\NestedArrayEagerLoadingRector\Fixture;
 
-class Interaction
+class Post
 {
-    public const string ADAPTIVE_COMPARE_CONDITION = 'adaptiveCompareCondition';
+    public const string FEATURED_CATEGORY = 'featuredCategory';
 }
 
-class AdaptiveCompareCondition
+class FeaturedCategory
 {
     public const string TARGETS = 'targets';
 }
 
 $query->with([
-    Interaction::ADAPTIVE_COMPARE_CONDITION . '.' . AdaptiveCompareCondition::TARGETS,
+    Post::FEATURED_CATEGORY . '.' . FeaturedCategory::TARGETS,
 ]);

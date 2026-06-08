@@ -14,7 +14,7 @@ For the static-analysis counterparts (rules that flag code but don't rewrite it)
 
 - PHP `^8.3`
 - Rector `^2.0`
-- Laravel `^11`, `^12`, or `^13` (rules reference `Illuminate\…` classes)
+- Laravel `^12` or `^13` (rules reference `Illuminate\…` classes)
 
 ## Installation
 
@@ -40,6 +40,8 @@ Or pick individual sets:
 
 ```php
 ->withSets([
+    HihahoSetList::CODE_QUALITY,
+    HihahoSetList::ELOQUENT,
     HihahoSetList::NAMING,
     HihahoSetList::ROUTING,
     HihahoSetList::MIGRATIONS,
@@ -48,6 +50,70 @@ Or pick individual sets:
 ```
 
 ## Rule Sets
+
+### Code Quality (`HihahoSetList::CODE_QUALITY`)
+
+General code-quality conventions.
+
+| Rule                                    | Description                                                          |
+|-----------------------------------------|----------------------------------------------------------------------|
+| `RemoveUnnecessaryNullsafeOperatorRector` | Remove the nullsafe operator (`?->`) when the receiver can never be null |
+
+```diff
+-return $this->resource->poster?->original;
++return $this->resource->poster->original;
+```
+
+**Why?** A `?->` on a value the type system guarantees is non-null is dead noise —
+it reads as "this might be null" when it can't be. PHPStan already *reports* this at
+`level: max` under bleeding-edge (`nullsafe.neverNull`, "Using nullsafe … on
+non-nullable type"); this rule *fixes* it, so the two complement each other.
+
+**Scope & safety:**
+
+- Handles both `?->property` and `?->method()`, and converts only the segment whose
+  immediate receiver is provably non-null — so in a chain like
+  `$resource?->maybePoster?->original` only the load-bearing nullsafe survives.
+- Nullability is read from the PHPStan `Scope` (`getNativeType`), which resolves a
+  `?Foo` receiver to `Foo|null` and leaves it untouched. A receiver that is
+  `mixed`/unknown, a union with a scalar, or possibly-null is always left alone —
+  the rule only removes a `?->` it can prove is redundant.
+- By default it ignores phpdoc-only non-nullability (e.g. an Eloquent `@property`),
+  so a stale annotation can't cause a wrong removal. Pass
+  `['trust_phpdoc_types' => true]` via `withConfiguredRule()` to also trust phpdoc.
+
+### Eloquent (`HihahoSetList::ELOQUENT`)
+
+Enforces conventions for Eloquent relation usage.
+
+| Rule                                  | Description                                                                                    |
+|---------------------------------------|------------------------------------------------------------------------------------------------|
+| `NestedArrayEagerLoadingRector`       | Convert dot-notation eager loading to nested-array form when multiple relations share a parent |
+| `RelationNameToClassConstantRector`   | Replace string relation names with the existing class constant of the model                    |
+
+```diff
+ $query->with([
+-    Article::COMMENTS . '.' . Comment::AUTHOR,
+-    Article::COMMENTS . '.' . Comment::TAGS,
++    Article::COMMENTS => [
++        Comment::AUTHOR,
++        Comment::TAGS,
++    ],
+     Article::AUTHOR,
+ ]);
+```
+
+```diff
+-$article->loadMissing('relatedArticles');
++$article->loadMissing(Article::RELATED_ARTICLES);
+```
+
+**Why?** Nested-array form states the shared parent once instead of repeating it per relation, so adding or removing a child relation is a one-line diff. Class constants make relation usages findable with "find usages" and rename-safe, where string literals silently break when a relation is renamed.
+
+**Scope:**
+
+- `NestedArrayEagerLoadingRector` applies to `with`, `load`, `loadMissing`, and `loadCount`. It only groups when two or more entries share the same parent prefix — a single dot-notation chain without siblings stays as-is. Grouping is applied recursively, so deeper shared prefixes nest further.
+- `RelationNameToClassConstantRector` additionally covers `relationLoaded`, `getRelation`, `setRelation`, and `unsetRelation`, on both instance calls (`$model->load(...)`) and static calls (`Model::with(...)`, `self::with(...)`). It only fires when the receiver resolves to a single concrete class **and** that class has a *public* constant whose value equals the string — it never invents constants and never references a non-public one (which would be a fatal access error). Inside the model it emits `self::`/`static::`; elsewhere the class name. Only the relation-name argument is touched — eager-load constraint callbacks are left alone. When multiple constants share the value, only a constant named like the SCREAMING_SNAKE_CASE form of the relation is trusted; otherwise the string is left alone. Dot-notation strings (`'parent.child'`) span multiple models and are not converted.
 
 ### Naming (`HihahoSetList::NAMING`)
 
@@ -109,9 +175,9 @@ Enforces self-contained, production-safe migrations. Only applies to files in th
 ```diff
  Schema::table('users', function (Blueprint $table): void {
 -    $table->string('description')->after('name');
--    $table->boolean(Video::CALIPER_ENABLED)->nullable();
+-    $table->boolean(Article::COMMENTS_ENABLED)->nullable();
 +    $table->string('description');
-+    $table->boolean('caliper_enabled')->nullable();
++    $table->boolean('comments_enabled')->nullable();
  });
 ```
 
@@ -121,6 +187,42 @@ Enforces self-contained, production-safe migrations. Only applies to files in th
 
 - `RemoveAfterColumnPositioningRector` only strips `->after()` calls whose receiver is a `ColumnDefinition` (e.g. `$table->string('x')->after('y')`). Blueprint's two-arg scoping form (`$table->after($col, Closure)`) and unrelated `->after()` methods (e.g. `Collection::after`) are left alone.
 - `InlineMigrationConstantsRector` skips enum cases so `Status::Active` keeps its enum semantics instead of silently becoming a string literal.
+
+#### Opt-in: `FlagColumnToBooleanRector` (not in any set)
+
+Converts flag-style integer columns to `boolean` in migrations:
+
+```diff
+-$table->tinyInteger('enable_answer_image_zoom')->default(1);
++$table->boolean('enable_answer_image_zoom')->default(true);
+```
+
+This rule is **deliberately not in the `MIGRATIONS` set** and is a **no-op until you
+opt in**, because it is only safe under **MySQL/MariaDB** (where `tinyInteger` is
+`tinyint` and `boolean` is `tinyint(1)` — identical storage). On PostgreSQL it would
+be an incompatible `smallint`→`boolean` change. Register it explicitly as a one-time
+normalisation:
+
+```php
+->withConfiguredRule(FlagColumnToBooleanRector::class, [
+    FlagColumnToBooleanRector::CONFIRM_MYSQL_COMPATIBLE => true,
+])
+```
+
+**Caveat — historical migrations.** Editing an already-run migration does not change
+production (it won't re-run); it only changes freshly-built databases, so prod stays
+`tinyint` while a fresh DB gets `tinyint(1)`. On MySQL this is cosmetic (display
+width), but treat the run as a deliberate one-time normalisation, not a routine pass.
+
+**Scope:** only signed `tinyInteger` columns whose name matches a flag pattern
+(`is_`/`has_`/`should_`/`enable_`/… prefixes, `_enabled`/`_disabled`/`_required`
+suffixes — configurable via `name_prefixes`/`name_suffixes`) **and** that carry an
+explicit `->default(0|1|true|false)`. `unsignedTinyInteger` is intentionally **out of
+scope** — its 0-255 range would be lost if a misclassified flag-named column were
+narrowed to a signed `tinyint(1)` (signed `tinyInteger`→`boolean` is storage-identical,
+so it has no such risk). Defaultless, auto-increment, `->change()`, wider-type, and
+non-flag columns are left untouched. The name + default heuristic still isn't proof a
+column is boolean (e.g. `has_count`), so review the diff.
 
 ### Imports (`HihahoSetList::IMPORTS`)
 
@@ -166,6 +268,27 @@ use Hihaho\RectorRules\Rector\Import\AliasImportRector;
     'Illuminate\Database\Eloquent\Collection' => 'EloquentCollection',
 ])
 ```
+
+### Testing (`HihahoSetList::TESTING`)
+
+Replaces magic table-name strings in database assertions with the model class.
+
+| Rule                                    | Description                                                                       |
+|-----------------------------------------|-----------------------------------------------------------------------------------|
+| `AssertDatabaseTableToModelClassRector` | Replace a database-assertion table string with the matching Eloquent model class  |
+
+```diff
+-$this->assertDatabaseHas('users', ['email' => $email]);
++$this->assertDatabaseHas(User::class, ['email' => $email]);
+```
+
+**Why?** A model class is rename-safe and navigable with "find usages", where a table string silently rots when the table is renamed. Laravel resolves the table from the model, so the assertion's behaviour is unchanged.
+
+**Scope:**
+
+- Applies to `assertDatabaseHas`, `assertDatabaseMissing`, `assertDatabaseCount`, `assertSoftDeleted`, and `assertNotSoftDeleted`, called as `$this->…` or `self::…`/`static::…` inside a PHPUnit `TestCase` subclass.
+- **Verify-or-skip:** the string is rewritten only when the resolved model's own table *provably* equals it. A model with a mismatched `$table`, an overridden `getTable()`, or no resolvable model at all is left untouched — a missed conversion is acceptable, a wrong one is not.
+- Configurable: `model_namespace` (default `App\Models`) and a `table_to_model` map for tables the singularise-and-studly convention can't resolve. A map entry is still verified, never trusted blindly.
 
 ## Covered by upstream Rector
 

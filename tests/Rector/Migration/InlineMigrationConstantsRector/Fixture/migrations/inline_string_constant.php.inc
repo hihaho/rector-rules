@@ -2,13 +2,13 @@
 
 namespace migrations;
 
-use Hihaho\RectorRules\Tests\Rector\Migration\InlineMigrationConstantsRector\Source\VideoModel;
+use Hihaho\RectorRules\Tests\Rector\Migration\InlineMigrationConstantsRector\Source\ArticleModel;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-Schema::table('videos', function (Blueprint $table): void {
-    $table->boolean(VideoModel::CALIPER_ENABLED)->nullable();
-    $table->string(VideoModel::STATUS);
+Schema::table('articles', function (Blueprint $table): void {
+    $table->boolean(ArticleModel::COMMENTS_ENABLED)->nullable();
+    $table->string(ArticleModel::STATUS);
 });
 
 -----
@@ -16,11 +16,11 @@ Schema::table('videos', function (Blueprint $table): void {
 
 namespace migrations;
 
-use Hihaho\RectorRules\Tests\Rector\Migration\InlineMigrationConstantsRector\Source\VideoModel;
+use Hihaho\RectorRules\Tests\Rector\Migration\InlineMigrationConstantsRector\Source\ArticleModel;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-Schema::table('videos', function (Blueprint $table): void {
-    $table->boolean('caliper_enabled')->nullable();
+Schema::table('articles', function (Blueprint $table): void {
+    $table->boolean('comments_enabled')->nullable();
     $table->string('status');
 });

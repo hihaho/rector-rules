@@ -5,7 +5,7 @@ namespace App\QueryBuilders;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 
-final class VideoQueryBuilder extends Builder
+final class ArticleQueryBuilder extends Builder
 {
     public function withSubQuery(QueryBuilder $subQuery): Builder
     {
@@ -21,7 +21,7 @@ namespace App\QueryBuilders;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 
-final class VideoQueryBuilder extends EloquentQueryBuilder
+final class ArticleQueryBuilder extends EloquentQueryBuilder
 {
     public function withSubQuery(QueryBuilder $subQuery): EloquentQueryBuilder
     {

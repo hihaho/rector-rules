@@ -24,7 +24,7 @@ final class ChecksMigrationContextTest extends TestCase
     public static function providePaths(): iterable
     {
         yield 'laravel migrations dir' => [
-            '/app/database/migrations/2026_01_01_create_videos.php',
+            '/app/database/migrations/2026_01_01_create_articles.php',
             true,
         ];
 
@@ -34,12 +34,12 @@ final class ChecksMigrationContextTest extends TestCase
         ];
 
         yield 'rooted migrations dir' => [
-            '/migrations/2026_01_01_create_videos.php',
+            '/migrations/2026_01_01_create_articles.php',
             true,
         ];
 
         yield 'outside migrations' => [
-            '/app/Http/Controllers/VideoController.php',
+            '/app/Http/Controllers/ArticleController.php',
             false,
         ];
 

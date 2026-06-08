@@ -41,7 +41,7 @@ final class ChecksRouteContextTest extends TestCase
         ];
 
         yield 'outside routes' => [
-            '/app/Http/Controllers/VideoController.php',
+            '/app/Http/Controllers/ArticleController.php',
             false,
         ];
 

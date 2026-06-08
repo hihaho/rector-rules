@@ -4,7 +4,7 @@ namespace App\Services;
 
 use Illuminate\Database\Eloquent\{Builder, Collection};
 
-final class VideoService
+final class ArticleService
 {
     public function query(Builder $query): Collection
     {
@@ -19,7 +19,7 @@ namespace App\Services;
 
 use Illuminate\Database\Eloquent\{Builder as EloquentQueryBuilder, Collection as EloquentCollection};
 
-final class VideoService
+final class ArticleService
 {
     public function query(EloquentQueryBuilder $query): EloquentCollection
     {

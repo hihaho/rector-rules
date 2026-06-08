@@ -2,20 +2,20 @@
 
 namespace Hihaho\RectorRules\Tests\Rector\Eloquent\NestedArrayEagerLoadingRector\Fixture;
 
-class Video
+class Article
 {
     public const string CONTAINER = 'container';
 }
 
-class VideoContainer
+class ArticleContainer
 {
     public const string USERS = 'users';
     public const string ANCESTORS = 'ancestors';
 }
 
 $query->with([
-    Video::CONTAINER . '.' . VideoContainer::USERS,
-    Video::CONTAINER . '.' . VideoContainer::ANCESTORS . '.' . VideoContainer::USERS,
+    Article::CONTAINER . '.' . ArticleContainer::USERS,
+    Article::CONTAINER . '.' . ArticleContainer::ANCESTORS . '.' . ArticleContainer::USERS,
 ]);
 
 ?>
@@ -24,17 +24,17 @@ $query->with([
 
 namespace Hihaho\RectorRules\Tests\Rector\Eloquent\NestedArrayEagerLoadingRector\Fixture;
 
-class Video
+class Article
 {
     public const string CONTAINER = 'container';
 }
 
-class VideoContainer
+class ArticleContainer
 {
     public const string USERS = 'users';
     public const string ANCESTORS = 'ancestors';
 }
 
-$query->with([Video::CONTAINER => [VideoContainer::USERS, VideoContainer::ANCESTORS . '.' . VideoContainer::USERS]]);
+$query->with([Article::CONTAINER => [ArticleContainer::USERS, ArticleContainer::ANCESTORS . '.' . ArticleContainer::USERS]]);
 
 ?>

@@ -2,12 +2,12 @@
 
 namespace migrations;
 
-use Hihaho\RectorRules\Tests\Rector\Migration\InlineMigrationConstantsRector\Source\VideoModel;
+use Hihaho\RectorRules\Tests\Rector\Migration\InlineMigrationConstantsRector\Source\ArticleModel;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-Schema::table('videos', function (Blueprint $table): void {
-    $table->integer(VideoModel::MAX_DURATION)->default(0);
+Schema::table('articles', function (Blueprint $table): void {
+    $table->integer(ArticleModel::MAX_DURATION)->default(0);
 });
 
 -----
@@ -15,10 +15,10 @@ Schema::table('videos', function (Blueprint $table): void {
 
 namespace migrations;
 
-use Hihaho\RectorRules\Tests\Rector\Migration\InlineMigrationConstantsRector\Source\VideoModel;
+use Hihaho\RectorRules\Tests\Rector\Migration\InlineMigrationConstantsRector\Source\ArticleModel;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-Schema::table('videos', function (Blueprint $table): void {
+Schema::table('articles', function (Blueprint $table): void {
     $table->integer(3600)->default(0);
 });

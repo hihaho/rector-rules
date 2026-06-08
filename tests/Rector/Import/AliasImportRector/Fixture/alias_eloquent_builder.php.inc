@@ -4,7 +4,7 @@ namespace App\QueryBuilders;
 
 use Illuminate\Database\Eloquent\Builder;
 
-final class VideoQueryBuilder extends Builder
+final class ArticleQueryBuilder extends Builder
 {
     public function whichIsPublished(Builder $query): Builder
     {
@@ -19,7 +19,7 @@ namespace App\QueryBuilders;
 
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
-final class VideoQueryBuilder extends EloquentQueryBuilder
+final class ArticleQueryBuilder extends EloquentQueryBuilder
 {
     public function whichIsPublished(EloquentQueryBuilder $query): EloquentQueryBuilder
     {

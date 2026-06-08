@@ -2,6 +2,6 @@
 
 namespace App\Http\Resources;
 
-final class VideoPresenter
+final class ArticlePresenter
 {
 }
