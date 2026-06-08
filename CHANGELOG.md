@@ -2,6 +2,21 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.2.1 - 2026-06-08
+
+<!-- verified-sha: 592b7bbfb26d4e645ac0c06672f99bad5cd8288e -->
+A performance pass over the whole rule set and an output-formatting refinement for the nested eager-loading rule. No new rules, no configuration changes, and no change to which code the rules rewrite.
+
+### Changed
+
+- **`NestedArrayEagerLoadingRector`** now prints a grouped array across multiple lines — one item per line with a trailing comma — once it holds more than one item, instead of collapsing the result onto a single line. Single-item arrays stay inline, and any pre-existing array the rule does not rewrite keeps its original formatting. This matches the shape already shown in the rule's documentation and `CodeSample`.
+
+### Performance
+
+- The per-node work every rule does on each visited node was reduced substantially, with no change in behaviour. The hottest gates now match node types and method names directly instead of routing through the generic name resolver, the cheapest and most-selective checks run before file-path and reflection checks, the routing context resolves a class name once instead of twice, and the database-assertion rule memoizes its per-class test-context check. Across a representative corpus this cut per-node rule execution time by roughly 70%.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.2.0...0.2.1
+
 ## 0.2.0 - 2026-06-08
 
 <!-- verified-sha: 60cb1deb008175323a6903ea2e2336b3e254b84c -->
@@ -36,11 +51,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 ```
@@ -75,6 +92,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -163,6 +181,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -170,6 +189,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
