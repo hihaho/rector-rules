@@ -73,7 +73,7 @@ final class ChecksRouteContextTest extends TestCase
                 return $this->isInRoutesDirectory();
             }
 
-            protected function isName(Node $node, string $name): bool
+            protected function getName(Node $node): ?string
             {
                 throw new LogicException('Not exercised in path-context tests.');
             }
