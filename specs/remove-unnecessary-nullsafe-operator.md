@@ -218,7 +218,7 @@ None — both resolved during implementation (see below).
   was found to report a nullable `?Poster` receiver as non-null (`Poster`, not
   `Poster|null`) — which would strip a load-bearing `?->` and cause a runtime null
   error. `$this->getType()` (the other wrapper) *also* drops `null` in some cases
-  (e.g. a `?VideoResource` chain-root parameter). Both convenience wrappers are
+  (e.g. a `?ArticleResource` chain-root parameter). Both convenience wrappers are
   unsafe for this rule. Empirically verified by comparing all sources on the same
   fixtures:
 

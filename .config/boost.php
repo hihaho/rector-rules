@@ -59,7 +59,7 @@ return BoostConfig::configure()
         'fixtures' => [
             'anonymization' => [
                 'guideline' => '.ai/guidelines/anonymize-test-fixtures.md',
-                'scope' => ['tests/', 'src/', 'docs/', 'README.md'],
+                'scope' => ['tests/', 'src/', 'docs/', 'README.md', 'specs/'],
                 'forbidden_terms' => ['Video', 'videos', 'caliper', 'adaptive'],
             ],
         ],

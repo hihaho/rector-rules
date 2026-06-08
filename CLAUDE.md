@@ -22,6 +22,7 @@ fixtures:
       - src/
       - docs/
       - README.md
+      - specs/
     forbidden_terms:
       - Video
       - videos

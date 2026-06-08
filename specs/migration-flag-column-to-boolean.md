@@ -16,8 +16,8 @@ migration rules and reuses their migration-directory gating.
 No rule exists. Reviewers flag it by hand, e.g. PR #7936:
 
 ```php
-- $table->tinyInteger('enable_answer_image_zoom')->default(1);
-+ $table->boolean('enable_answer_image_zoom')->default(true);
+- $table->tinyInteger('is_published')->default(1);
++ $table->boolean('is_published')->default(true);
 ```
 
 The repo already has the infrastructure to model this on:
@@ -158,12 +158,12 @@ change), not two.
 - [x] Flag-name gate against configurable prefix/suffix set (`name_prefixes`/`name_suffixes`).
 - [x] Chain scan: skip unless a `->default(N∈{0,1,true,false})` is present, no `->change()`, no `->autoIncrement()` and the type-call 2nd arg is not `true`.
 - [x] Rename type call to `boolean` and normalise `->default(0)`→`false`/`->default(1)`→`true` in one pass; other chain calls preserved.
-- [x] Tests (convert) — `convert_enable` → `boolean('enable_answer_image_zoom')->default(true)` (exact PR #7936); `convert_nullable` → `boolean('should_loop')->nullable()->default(false)`.
+- [x] Tests (convert) — `convert_enable` → `boolean('is_published')->default(true)` (exact PR #7936); `convert_nullable` → `boolean('should_loop')->nullable()->default(false)`.
 - [x] Tests (skip, blocking) — non-flag name, default(2), defaultless, wider type, `->change()`, auto-increment (2nd-arg + `->autoIncrement()`), non-`String_` name, split form, outside-migrations-dir, and `confirm_mysql_compatible` off (separate disabled test class). All unchanged. (d) `has_count`/`is_type` residual: see Findings — these DO convert under the name gate and are an accepted residual, so no skip fixture asserts otherwise.
 
 ### Phase 2: Extensions (Priority: MEDIUM)
 
-- [x] Class-constant column names (`$table->tinyInteger(SomeModel::ENABLE_X)`) — resolved via injected `ValueResolver` (only `String_` and `ClassConstFetch` are accepted; arbitrary variables/method calls are skipped). `convert_constant_name` fixture + `Source/QuestionColumns`.
+- [x] Class-constant column names (`$table->tinyInteger(SomeModel::ENABLE_X)`) — resolved via injected `ValueResolver` (only `String_` and `ClassConstFetch` are accepted; arbitrary variables/method calls are skipped). `convert_constant_name` fixture + `Source/ArticleColumns`.
 - [~] Model-cast verification — **deferred (not built)**, see Resolved Questions 5. Disproportionate for an opt-in, MySQL-only, manually-run-and-reviewed normalisation; would require the table→model resolution from the other spec.
 - [x] Tests — `convert_constant_name` converts; the variable-named column still skips.
 
@@ -190,7 +190,7 @@ change), not two.
    `->var` chain; do not use a parent-node attribute. **Rationale:** Rector 2.4 has
    no `AttributeKey::PARENT_NODE` (verified — the constant doesn't exist and no core
    rule reads a parent attribute). A throwaway prototype using the walk-down approach
-   converted `enable_zoom`/`should_loop`, normalised the default in the same pass
+   converted `is_active`/`should_loop`, normalised the default in the same pass
    (incl. a case where `->default()` was not the outermost call), and skipped
    non-flag names, `default(2)`, and `->change()` chains. (The prototype also
    converted a defaultless `has_audio`; the production gate was subsequently

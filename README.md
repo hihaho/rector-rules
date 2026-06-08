@@ -286,7 +286,7 @@ Replaces magic table-name strings in database assertions with the model class.
 
 **Scope:**
 
-- Applies to `assertDatabaseHas`, `assertDatabaseMissing`, `assertDatabaseCount`, `assertSoftDeleted`, and `assertNotSoftDeleted`, called as `$this->…` or `self::…`/`static::…` inside a PHPUnit `TestCase` subclass.
+- Applies to `assertDatabaseHas`, `assertDatabaseMissing`, and `assertDatabaseCount`, called as `$this->…` or `self::…`/`static::…` inside a PHPUnit `TestCase` subclass. (`assertSoftDeleted`/`assertNotSoftDeleted` are intentionally excluded — with a model they also resolve the deleted-at column, so a table match alone doesn't prove behaviour is preserved.)
 - **Verify-or-skip:** the string is rewritten only when the resolved model's own table *provably* equals it. A model with a mismatched `$table`, an overridden `getTable()`, or no resolvable model at all is left untouched — a missed conversion is acceptable, a wrong one is not.
 - Configurable: `model_namespace` (default `App\Models`) and a `table_to_model` map for tables the singularise-and-studly convention can't resolve. A map entry is still verified, never trusted blindly.
 
