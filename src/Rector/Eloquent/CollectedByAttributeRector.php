@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\Eloquent;
 
+use Composer\InstalledVersions;
 use Illuminate\Database\Eloquent\Attributes\CollectedBy;
 use Illuminate\Database\Eloquent\Model;
 use PhpParser\Node;
@@ -87,14 +88,15 @@ CODE_SAMPLE,
         }
 
         // On Laravel 12, HasCollection::resolveCollectionFromAttribute() reads the
-        // attribute from static::class only — it does NOT walk the parent chain —
-        // so a subclass does not inherit #[CollectedBy] though it does inherit a
-        // newCollection() method. Rewriting a subclassable base would silently strip
-        // the custom collection from every descendant there. (Laravel 13 walks
-        // parents, making the attribute effectively inherited, but this package
-        // supports both — do not drop this gate.) We cannot enumerate subclasses from
-        // a single AST, so gate conservatively: only a final class is guaranteed none.
-        if (! $node->isFinal()) {
+        // attribute from static::class only — it does NOT walk the parent chain — so
+        // a subclass does not inherit #[CollectedBy] though it does inherit a
+        // newCollection() method. Rewriting a subclassable base there would silently
+        // strip the custom collection from every descendant. We cannot enumerate
+        // subclasses from a single AST, so on Laravel 12 we gate conservatively to
+        // final classes (the only ones guaranteed to have no descendants). Laravel 13
+        // walks the parent chain, making the attribute effectively inherited, so the
+        // rewrite is behaviour-preserving for non-final models too.
+        if (! $node->isFinal() && ! $this->attributeInheritedBySubclasses()) {
             return null;
         }
 
@@ -214,6 +216,31 @@ CODE_SAMPLE,
         return $this->reflectionProvider->getClass($className)->isSubclassOfClass(
             $this->reflectionProvider->getClass(self::ELOQUENT_MODEL)
         );
+    }
+
+    /**
+     * Whether the installed framework inherits #[CollectedBy] through the parent
+     * chain (Laravel 13+), so a non-final model can be rewritten safely. On
+     * Laravel 12 the attribute is resolved from the model's own class only.
+     */
+    private function attributeInheritedBySubclasses(): bool
+    {
+        foreach (['laravel/framework', 'illuminate/database'] as $package) {
+            if (! InstalledVersions::isInstalled($package)) {
+                continue;
+            }
+
+            // The monorepo's illuminate/* subsplits report an empty (or null)
+            // version; fall through to the next candidate when that happens.
+            $version = (string) InstalledVersions::getVersion($package);
+            if ($version === '') {
+                continue;
+            }
+
+            return version_compare($version, '13.0.0', '>=');
+        }
+
+        return false;
     }
 
     private function hasShadowingNewCollection(Class_ $class): bool
