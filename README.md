@@ -61,6 +61,8 @@ General code-quality conventions.
 | `NativeFunctionFlagArgumentToNamedRector` | Name the opaque trailing bool/null flag of well-known native functions |
 | `FirstPartyFlagArgumentToNamedRector`     | Name the opaque trailing bool/null flag on a first-party method call |
 
+#### `RemoveUnnecessaryNullsafeOperatorRector`
+
 ```diff
 -return $this->resource->poster?->original;
 +return $this->resource->poster->original;
@@ -70,6 +72,21 @@ General code-quality conventions.
 it reads as "this might be null" when it can't be. PHPStan already *reports* this at
 `level: max` under bleeding-edge (`nullsafe.neverNull`, "Using nullsafe … on
 non-nullable type"); this rule *fixes* it, so the two complement each other.
+
+**Scope & safety:**
+
+- Handles both `?->property` and `?->method()`, and converts only the segment whose
+  immediate receiver is provably non-null — so in a chain like
+  `$resource?->maybePoster?->original` only the load-bearing nullsafe survives.
+- Nullability is read from the PHPStan `Scope` (`getNativeType`), which resolves a
+  `?Foo` receiver to `Foo|null` and leaves it untouched. A receiver that is
+  `mixed`/unknown, a union with a scalar, or possibly-null is always left alone —
+  the rule only removes a `?->` it can prove is redundant.
+- By default it ignores phpdoc-only non-nullability (e.g. an Eloquent `@property`),
+  so a stale annotation can't cause a wrong removal. Pass
+  `['trust_phpdoc_types' => true]` via `withConfiguredRule()` to also trust phpdoc.
+
+#### `NativeFunctionFlagArgumentToNamedRector` & `FirstPartyFlagArgumentToNamedRector`
 
 ```diff
 -$found = in_array($needle, $haystack, true);
@@ -105,27 +122,48 @@ self-documenting. The two rules split by what owns the parameter name:
   parameter, and a callee that can't be resolved (dynamic name, closure, `__call`)
   are all skipped.
 
-**Scope & safety:**
-
-- Handles both `?->property` and `?->method()`, and converts only the segment whose
-  immediate receiver is provably non-null — so in a chain like
-  `$resource?->maybePoster?->original` only the load-bearing nullsafe survives.
-- Nullability is read from the PHPStan `Scope` (`getNativeType`), which resolves a
-  `?Foo` receiver to `Foo|null` and leaves it untouched. A receiver that is
-  `mixed`/unknown, a union with a scalar, or possibly-null is always left alone —
-  the rule only removes a `?->` it can prove is redundant.
-- By default it ignores phpdoc-only non-nullability (e.g. an Eloquent `@property`),
-  so a stale annotation can't cause a wrong removal. Pass
-  `['trust_phpdoc_types' => true]` via `withConfiguredRule()` to also trust phpdoc.
-
 ### Eloquent (`HihahoSetList::ELOQUENT`)
 
 Enforces conventions for Eloquent relation usage.
 
 | Rule                                  | Description                                                                                    |
 |---------------------------------------|------------------------------------------------------------------------------------------------|
+| `CollectedByAttributeRector`          | Replace `newCollection()` override with the `#[CollectedBy]` attribute (Laravel 11+)          |
 | `NestedArrayEagerLoadingRector`       | Convert dot-notation eager loading to nested-array form when multiple relations share a parent |
+| `ObservedByAttributeRector`           | Replace `booted()` observer registration with the `#[ObservedBy]` attribute (Laravel 11+)     |
 | `RelationNameToClassConstantRector`   | Replace string relation names with the existing class constant of the model                    |
+
+```diff
+-use App\Collections\ArticleCollection;
++use App\Collections\ArticleCollection;
++use Illuminate\Database\Eloquent\Attributes\CollectedBy;
+ use Illuminate\Database\Eloquent\Model;
+
++#[CollectedBy(ArticleCollection::class)]
+ class Article extends Model
+ {
+-    public function newCollection(array $models = []): ArticleCollection
+-    {
+-        return new ArticleCollection($models);
+-    }
+ }
+```
+
+```diff
+-use App\Observers\ArticleObserver;
++use App\Observers\ArticleObserver;
++use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+ use Illuminate\Database\Eloquent\Model;
+
++#[ObservedBy(ArticleObserver::class)]
+ class Article extends Model
+ {
+-    protected static function booted(): void
+-    {
+-        static::observe(ArticleObserver::class);
+-    }
+ }
+```
 
 ```diff
  $query->with([
@@ -148,7 +186,9 @@ Enforces conventions for Eloquent relation usage.
 
 **Scope:**
 
+- `CollectedByAttributeRector` fires when `newCollection()` has exactly one statement — `return new SomeCollection($models)` — the return type matches the constructed class, and the class extends `Illuminate\Database\Eloquent\Model` directly or indirectly. The method is removed entirely; `#[CollectedBy(SomeCollection::class)]` is prepended to the class. Methods with additional logic (filtering, merging) are left untouched. The rule is idempotent: it skips if `#[CollectedBy]` is already present.
 - `NestedArrayEagerLoadingRector` applies to `with`, `load`, `loadMissing`, and `loadCount`. It only groups when two or more entries share the same parent prefix — a single dot-notation chain without siblings stays as-is. Grouping is applied recursively, so deeper shared prefixes nest further.
+- `ObservedByAttributeRector` fires when `booted()` has exactly one statement — `static::observe(SomeObserver::class)` or `self::observe(...)` — and the class extends `Illuminate\Database\Eloquent\Model` directly or indirectly. The method is removed entirely; `#[ObservedBy(SomeObserver::class)]` is prepended to the class. The rule is idempotent: it skips if `#[ObservedBy]` is already present. The observer argument must be a `::class` constant fetch — string literals are not converted.
 - `RelationNameToClassConstantRector` additionally covers `relationLoaded`, `getRelation`, `setRelation`, and `unsetRelation`, on both instance calls (`$model->load(...)`) and static calls (`Model::with(...)`, `self::with(...)`). It only fires when the receiver resolves to a single concrete class **and** that class has a *public* constant whose value equals the string — it never invents constants and never references a non-public one (which would be a fatal access error). Inside the model it emits `self::`/`static::`; elsewhere the class name. Only the relation-name argument is touched — eager-load constraint callbacks are left alone. When multiple constants share the value, only a constant named like the SCREAMING_SNAKE_CASE form of the relation is trusted; otherwise the string is left alone. Dot-notation strings (`'parent.child'`) span multiple models and are not converted.
 
 ### Naming (`HihahoSetList::NAMING`)
@@ -307,11 +347,14 @@ use Hihaho\RectorRules\Rector\Import\AliasImportRector;
 
 ### Testing (`HihahoSetList::TESTING`)
 
-Replaces magic table-name strings in database assertions with the model class.
+Replaces magic table-name strings in database assertions with the model class, and converts verbose single-id existence checks to their expressive equivalents.
 
 | Rule                                    | Description                                                                       |
 |-----------------------------------------|-----------------------------------------------------------------------------------|
 | `AssertDatabaseTableToModelClassRector` | Replace a database-assertion table string with the matching Eloquent model class  |
+| `AssertModelExistsRector`               | Replace `assertDatabaseHas/Missing` single-`id` checks with `assertModelExists/Missing` |
+
+#### `AssertDatabaseTableToModelClassRector`
 
 ```diff
 -$this->assertDatabaseHas('users', ['email' => $email]);
@@ -325,6 +368,25 @@ Replaces magic table-name strings in database assertions with the model class.
 - Applies to `assertDatabaseHas`, `assertDatabaseMissing`, and `assertDatabaseCount`, called as `$this->…` or `self::…`/`static::…` inside a PHPUnit `TestCase` subclass. (`assertSoftDeleted`/`assertNotSoftDeleted` are intentionally excluded — with a model they also resolve the deleted-at column, so a table match alone doesn't prove behaviour is preserved.)
 - **Verify-or-skip:** the string is rewritten only when the resolved model's own table *provably* equals it. A model with a mismatched `$table`, an overridden `getTable()`, or no resolvable model at all is left untouched — a missed conversion is acceptable, a wrong one is not.
 - Configurable: `model_namespace` (default `App\Models`) and a `table_to_model` map for tables the singularise-and-studly convention can't resolve. A map entry is still verified, never trusted blindly.
+
+#### `AssertModelExistsRector`
+
+```diff
+-$this->assertDatabaseHas(Article::class, ['id' => $article->id]);
+-$this->assertDatabaseMissing(Article::class, ['id' => $article->id]);
++$this->assertModelExists($article);
++$this->assertModelMissing($article);
+```
+
+**Why?** `assertModelExists($model)` is the idiomatic Laravel assertion for checking a model still exists in the database. The `assertDatabaseHas(Model::class, ['id' => $model->id])` form is more verbose and repeats information already carried by the model instance.
+
+**Scope:**
+
+- Fires when arg 1 is `SomeModel::class`, arg 2 is a single-item `['id' => $var->id]` array, and PHPStan can confirm `$var` is typed as `SomeModel`.
+- Also accepts class-constant keys (`SomeModel::ID`) when the constant resolves to the string `'id'`.
+- Skips calls with three arguments (the third is a connection name — dropping it would silently switch connections).
+- Skips multi-key arrays (those assert attribute values, not just existence).
+- Only fires inside a `PHPUnit\Framework\TestCase` subclass called on `$this` or `self::`/`static::` — non-test helpers with a same-named method are left alone.
 
 ## Covered by upstream Rector
 
