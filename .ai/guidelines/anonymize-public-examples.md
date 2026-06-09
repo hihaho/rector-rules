@@ -1,14 +1,15 @@
-# Anonymize Fixtures and Doc Examples
+# Anonymize Fixtures, Docs, and Specs
 
 This is a **public, open-source repository**. Test fixtures, the rule
-`CodeSample` heredocs in `src/`, and the snippets in `README.md` / `docs/` are
-all world-readable on GitHub — and `src/` plus the README also ship in the
-Composer dist archive. `/tests` is `export-ignore`d, but that only trims the
-archive; it hides nothing on GitHub. Doc examples are the easy thing to forget
-precisely because they are not "fixtures" — they leak just the same.
+`CodeSample` heredocs in `src/`, the snippets in `README.md` / `docs/`, and the
+spec files in `specs/` are all world-readable on GitHub — and `src/` plus the
+README also ship in the Composer dist archive. `/tests` is `export-ignore`d, but
+that only trims the archive; it hides nothing on GitHub. Doc examples and specs
+are the easy things to forget precisely because they are not "fixtures" — they
+leak just the same.
 
-Every example — fixture, `CodeSample`, or doc snippet — must be **synthetic**.
-Never copy proprietary application code — from hihaho or any
+Every example — fixture, `CodeSample`, doc snippet, or spec — must be
+**synthetic**. Never copy proprietary application code — from hihaho or any
 consumer/dogfooding codebase — into one. Reconstruct the smallest generic
 example that demonstrates the rule, then strip every domain detail not needed
 to make the point.
@@ -38,6 +39,25 @@ out instead of being buried in incidental domain noise.
 - **The convention the rule enforces** (suffixes, alias targets, flag-column
   names). That is the package's public contract, not proprietary.
 
+## Specs leak provenance, not just code
+
+A spec in `specs/` rarely contains a real schema column — its leak vector is
+**provenance metadata** describing where the work came from. Scrub all of it:
+
+- **Internal PR / issue / ticket numbers** ("modelled on PR #1234",
+  "ABC-123"). Describe the *change* generically ("a manual code-style cleanup")
+  instead of citing the source. (Don't reference a real PR number here either —
+  these examples are deliberately fake.)
+- **Employee names, handles, and authorship** of the originating work.
+- **Real domain method / class names** copied from the source change, even in
+  prose (e.g. "the source change's `recalculateScore()`/`markProcessed()`
+  calls"). Use the same neutral placeholders the spec's code examples use.
+- **Dogfooding / consumer-app references** ("from the hihaho app", file/line
+  counts of a private PR).
+
+State *what* the rule does and *why*, never *which internal change or person*
+it came from.
+
 ## Rule of thumb
 
 An example should read like a generic framework tutorial snippet, not like a
@@ -45,13 +65,14 @@ slice of one company's application. If a reader could tell which product it
 came from, anonymize further — prefer a neutral noun (`Article`, `Order`) over
 an actual product entity (e.g. `Video`, `caliper`, `adaptiveLearning`).
 
-## When adding or editing a fixture or doc example
+## When adding or editing a fixture, doc example, or spec
 
 1. Keep only the framework symbols the rule matches against.
 2. Replace real names and strings with neutral equivalents.
 3. For a fixture, run the test to confirm the rule still fires
    (`vendor/bin/pest path/to/RuleTest.php`); for a `CodeSample` or README
-   snippet, keep it consistent with the rule it documents.
+   snippet, keep it consistent with the rule it documents; for a spec, strip
+   provenance (see "Specs leak provenance" above).
 4. Before committing, scan the diff for product names, real table/column
-   names, and domain jargon — across `README.md` and `docs/` too, not only
-   `tests/` and `src/`.
+   names, domain jargon, and internal PR/ticket/person references — across
+   `specs/`, `README.md`, and `docs/` too, not only `tests/` and `src/`.

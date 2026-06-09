@@ -1,14 +1,15 @@
-# Anonymize Fixtures and Doc Examples
+# Anonymize Fixtures, Docs, and Specs
 
 This is a **public, open-source repository**. Test fixtures, the rule
-`CodeSample` heredocs in `src/`, and the snippets in `README.md` / `docs/` are
-all world-readable on GitHub — and `src/` plus the README also ship in the
-Composer dist archive. `/tests` is `export-ignore`d, but that only trims the
-archive; it hides nothing on GitHub. Doc examples are the easy thing to forget
-precisely because they are not "fixtures" — they leak just the same.
+`CodeSample` heredocs in `src/`, the snippets in `README.md` / `docs/`, and the
+spec files in `specs/` are all world-readable on GitHub — and `src/` plus the
+README also ship in the Composer dist archive. `/tests` is `export-ignore`d, but
+that only trims the archive; it hides nothing on GitHub. Doc examples and specs
+are the easy things to forget precisely because they are not "fixtures" — they
+leak just the same.
 
-Every example — fixture, `CodeSample`, or doc snippet — must be **synthetic**.
-Never copy proprietary application code — from hihaho or any
+Every example — fixture, `CodeSample`, doc snippet, or spec — must be
+**synthetic**. Never copy proprietary application code — from hihaho or any
 consumer/dogfooding codebase — into one. Reconstruct the smallest generic
 example that demonstrates the rule, then strip every domain detail not needed
 to make the point.
@@ -38,6 +39,25 @@ out instead of being buried in incidental domain noise.
 - **The convention the rule enforces** (suffixes, alias targets, flag-column
   names). That is the package's public contract, not proprietary.
 
+## Specs leak provenance, not just code
+
+A spec in `specs/` rarely contains a real schema column — its leak vector is
+**provenance metadata** describing where the work came from. Scrub all of it:
+
+- **Internal PR / issue / ticket numbers** ("modelled on PR #1234",
+  "ABC-123"). Describe the *change* generically ("a manual code-style cleanup")
+  instead of citing the source. (Don't reference a real PR number here either —
+  these examples are deliberately fake.)
+- **Employee names, handles, and authorship** of the originating work.
+- **Real domain method / class names** copied from the source change, even in
+  prose (e.g. "the source change's `recalculateScore()`/`markProcessed()`
+  calls"). Use the same neutral placeholders the spec's code examples use.
+- **Dogfooding / consumer-app references** ("from the hihaho app", file/line
+  counts of a private PR).
+
+State *what* the rule does and *why*, never *which internal change or person*
+it came from.
+
 ## Rule of thumb
 
 An example should read like a generic framework tutorial snippet, not like a
@@ -45,16 +65,72 @@ slice of one company's application. If a reader could tell which product it
 came from, anonymize further — prefer a neutral noun (`Article`, `Order`) over
 an actual product entity (e.g. `Video`, `caliper`, `adaptiveLearning`).
 
-## When adding or editing a fixture or doc example
+## When adding or editing a fixture, doc example, or spec
 
 1. Keep only the framework symbols the rule matches against.
 2. Replace real names and strings with neutral equivalents.
 3. For a fixture, run the test to confirm the rule still fires
    (`vendor/bin/pest path/to/RuleTest.php`); for a `CodeSample` or README
-   snippet, keep it consistent with the rule it documents.
+   snippet, keep it consistent with the rule it documents; for a spec, strip
+   provenance (see "Specs leak provenance" above).
 4. Before committing, scan the diff for product names, real table/column
-   names, and domain jargon — across `README.md` and `docs/` too, not only
-   `tests/` and `src/`.
+   names, domain jargon, and internal PR/ticket/person references — across
+   `specs/`, `README.md`, and `docs/` too, not only `tests/` and `src/`.
+
+---
+
+# Authoring Rector Rules
+
+Repo-specific conventions and gotchas for adding a rule under `src/Rector/`.
+For the general mechanics of building a rule, follow the vendor
+`rector-developer` skill — this guideline only covers what bites in *this*
+package.
+
+## Gate cheaply, resolve names once
+
+The per-node bottleneck is the name-resolver machinery, not your refactor
+logic. `refactor()` runs on every matching node in the consumer's codebase, so:
+
+- Gate with a direct `instanceof` check on the node's `name` / `class` first
+  (`$node->name instanceof Identifier`, `$node->class instanceof Name`). This
+  bails the overwhelming majority of nodes before any name resolution.
+- Then resolve the name **once** (`$this->getName($node)`) and compare —
+  never loop `isName()` / `isNames()` across accepted spellings.
+- PHP function, class, **and method** names are all case-insensitive, so match
+  with `strtolower()` / `strcasecmp()` rather than an exact `toString()`
+  comparison — a `MethodCall` / `StaticCall` rule that compares the method name
+  exactly silently skips valid mixed-case calls (e.g. `Route::GET()`).
+
+`ChecksRouteContext` is the canonical shape.
+
+## `provideMinPhpVersion()`: use `PhpVersion::PHP_*`, not a new `PhpVersionFeature::*`
+
+`PhpVersionFeature` feature aliases can be **newer than the `rector/rector`
+floor** in `composer.json` (`^2.4.1`). `PhpVersionFeature::NAMED_ARGUMENTS`, for
+instance, does not exist in the floor and throws `Undefined constant` on the CI
+`prefer-lowest` leg — green locally (latest Rector), red in CI.
+
+Return a stable `Rector\ValueObject\PhpVersion::PHP_8X` constant instead (e.g.
+`PhpVersion::PHP_80` for a PHP-8.0 feature), unless you have confirmed the
+feature alias exists in the floor. The `PhpVersion::PHP_*` values are long-stable.
+
+## Test-double `Source/` classes must be Rector-clean
+
+`rector.php` processes `tests/`, and a CI **Auto-fix** workflow runs
+`vendor/bin/rector process` on every push to `main` and commits the result as
+`chore: auto-fix` directly on the branch.
+
+So a reflection test double — a `tests/.../Source/*.php` class whose method
+signatures exist only so a rule can resolve parameter names — gets mangled on
+push: the deadcode set strips "unused" parameters
+(`RemoveUnusedPublicMethodParameterRector`) and deletes empty-body methods
+(`RemoveEmptyClassMethodRector`), breaking the fixtures that depend on those
+signatures.
+
+Give every `Source` method a body that genuinely uses all its parameters, and
+avoid empty bodies. Confirm `vendor/bin/rector process --dry-run` reports
+**0 changes before pushing** — otherwise the auto-fix bot rewrites the double
+on push and reds the test legs.
 
 ---
 
