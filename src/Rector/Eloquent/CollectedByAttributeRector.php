@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Hihaho\RectorRules\Rector\Eloquent;
 
 use Composer\InstalledVersions;
+use Hihaho\RectorRules\Rector\Eloquent\Support\NewCollectionShadowDetector;
 use Illuminate\Database\Eloquent\Attributes\CollectedBy;
 use Illuminate\Database\Eloquent\Model;
 use PhpParser\Node;
@@ -20,7 +21,6 @@ use PhpParser\Node\Param;
 use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\Node\Stmt\Return_;
-use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use Rector\Rector\AbstractRector;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
@@ -35,9 +35,13 @@ final class CollectedByAttributeRector extends AbstractRector
 
     private const string ELOQUENT_MODEL = Model::class;
 
+    private readonly NewCollectionShadowDetector $shadowDetector;
+
     public function __construct(
         private readonly ReflectionProvider $reflectionProvider,
-    ) {}
+    ) {
+        $this->shadowDetector = new NewCollectionShadowDetector($reflectionProvider);
+    }
 
     public function getRuleDefinition(): RuleDefinition
     {
@@ -129,7 +133,8 @@ CODE_SAMPLE,
         // ancestor model is a real method that shadows the base — so it also beats
         // the attribute. Removing this class's explicit override would hand
         // resolution to that method, not the attribute. Skip such classes.
-        if ($this->hasShadowingNewCollection($node)) {
+        $className = $this->getName($node);
+        if ($className !== null && $this->shadowDetector->isShadowed($className)) {
             return null;
         }
 
@@ -241,69 +246,6 @@ CODE_SAMPLE,
         }
 
         return false;
-    }
-
-    private function hasShadowingNewCollection(Class_ $class): bool
-    {
-        $className = $this->getName($class);
-        if ($className === null || ! $this->reflectionProvider->hasClass($className)) {
-            return false;
-        }
-
-        $classReflection = $this->reflectionProvider->getClass($className);
-
-        // A trait anywhere in the hierarchy that defines newCollection() flattens
-        // into the class and beats the attribute. getTraits(true) walks nested
-        // traits and parent traits too. The framework's own HasCollection trait
-        // (which Model uses to implement the attribute-aware newCollection) is the
-        // mechanism the attribute hooks into — not a shadow — so skip Illuminate's.
-        foreach ($classReflection->getTraits(true) as $trait) {
-            if (str_starts_with($trait->getName(), 'Illuminate\\')) {
-                continue;
-            }
-
-            if ($trait->getNativeReflection()->hasMethod('newCollection')) {
-                return true;
-            }
-        }
-
-        // A trait method aliased to newCollection (`use T { build as newCollection; }`)
-        // supplies the method too, without the trait literally declaring it. The
-        // class's explicit override masks it from method reflection, so inspect the
-        // trait-alias map directly. Alias keys preserve their written casing while
-        // method names are case-insensitive, so compare case-insensitively.
-        foreach (array_keys($classReflection->getNativeReflection()->getTraitAliases()) as $alias) {
-            if (strcasecmp($alias, 'newCollection') === 0) {
-                return true;
-            }
-        }
-
-        // An ancestor model (other than the framework base) that declares its own
-        // newCollection() is inherited as a real method and beats the attribute.
-        $parent = $classReflection->getParentClass();
-        while ($parent instanceof ClassReflection) {
-            if ($parent->getName() === self::ELOQUENT_MODEL) {
-                break;
-            }
-
-            if ($this->declaresOwnNewCollection($parent)) {
-                return true;
-            }
-
-            $parent = $parent->getParentClass();
-        }
-
-        return false;
-    }
-
-    private function declaresOwnNewCollection(ClassReflection $class): bool
-    {
-        $native = $class->getNativeReflection();
-        if (! $native->hasMethod('newCollection')) {
-            return false;
-        }
-
-        return $native->getMethod('newCollection')->getDeclaringClass()->getName() === $class->getName();
     }
 
     private function hasCollectedByAttribute(Class_ $class): bool
