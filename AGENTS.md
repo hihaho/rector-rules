@@ -79,6 +79,88 @@ an actual product entity (e.g. `Video`, `caliper`, `adaptiveLearning`).
 
 ---
 
+## Performance benchmarks
+
+Every rule under `src/Rector/` runs **per-AST-node** during Rector traversal, so
+the hot path is the rule pipeline itself — the `refactor()` / `getNodeTypes()`
+gates and the shared `Concerns/` helpers (e.g. `ChecksRouteContext`). The
+`rector-rule-authoring` guideline's "Gate cheaply, resolve names once" section
+is the per-rule cost model; this file covers how to *measure* it.
+
+Performance work goes through the **autoresearch** loop, not a Pest group — a
+timed assertion in the suite is flaky and tells you nothing about the
+distribution. Benchmark scripts live in `autoresearch/` (create the dir on first
+use) and run this package's rules against a synthetic consumer corpus, measuring
+wall-clock via `hrtime()`. Keep the corpus synthetic per
+`anonymize-public-examples.md` — never benchmark against real consumer code.
+
+Benchmark when touching the rule pipeline or a shared `Concerns/` helper:
+capture a baseline, make one change, re-run, and keep it only if the metric
+improves. The `autoresearch` skill drives the full measure → change →
+keep-or-revert loop — activate it for any sustained optimization work.
+
+---
+
+## Public API discipline
+
+Downstream consumers depend on this package via Composer, so every public
+symbol is governed by SemVer 2.0 — renames or signature changes require a MAJOR
+bump. The public surface of a Rector-rules package is narrower than a typical
+library; it is exactly:
+
+- **Rector rule class FQNs** under `Hihaho\RectorRules\Rector\` — consumers
+  reference these by name in their own `rector.php`.
+- **`HihahoSetList` constants** (`src/Set/HihahoSetList.php`) — the set-file
+  paths consumers `->withSets([...])` against.
+- **Set config files** under `config/sets/` — the rule groupings a set list
+  constant resolves to. Adding a rule to a set is a minor; removing one (or
+  changing what a set means) is breaking.
+- **Public configuration constants / setters** on a configurable rule — the
+  knobs a consumer passes through `->withConfiguredRule()`.
+
+A rule's `refactor()` logic, its private helpers, and the `Concerns/` traits are
+**not** public API. They may change in any release; a consumer extending or
+calling them does so against the documentation.
+
+### Default new helpers to internal
+
+This package has no `Internal\` namespace yet. Until one exists, keep
+implementation detail out of the four public categories above:
+
+- Shared logic between rules → a trait under the rule's `Concerns/` subdir
+  (the established pattern, e.g. `Routing/Concerns/ChecksRouteContext`). These
+  traits are implementation detail, not public API, regardless of whether they
+  carry an `@internal` tag.
+- A new rule you are not ready to commit to → do not add it to any
+  `config/sets/` file. An un-setted rule class is reachable by FQN but not part
+  of any set's contract, so it carries weaker guarantees.
+
+Promoting an internal helper to public later is a non-event. Demoting a public
+symbol back to internal requires a deprecation cycle and a MAJOR bump. That
+asymmetry makes "internal until proven otherwise" the safe default.
+
+### When deleting or renaming a public symbol
+
+Direct removal is a MAJOR-bump-only event. For pre-MAJOR releases, add a
+deprecation cycle instead:
+
+- **Classes** — keep the old FQN as a `class_alias` to the new one.
+- **Methods / constants** — keep the old name with an `@deprecated` PHPDoc tag
+  pointing at the replacement.
+- **Set membership** — if a set drops a rule, note it; consumers pinning that
+  set will silently lose the transform otherwise.
+- **Document the timeline in the release notes** under a "Deprecations"
+  heading (drafted in `internal/release-notes-<version>.md` per the CLAUDE.md
+  Release Automation section) so consumers see when the shim disappears.
+
+### When in doubt
+
+Default to internal. A rule that isn't in a set and a helper under `Concerns/`
+both cost nothing to promote later; a public symbol costs a deprecation cycle to
+retract.
+
+---
+
 # Authoring Rector Rules
 
 Repo-specific conventions and gotchas for adding a rule under `src/Rector/`.
