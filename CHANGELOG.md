@@ -2,6 +2,40 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.4.1 - 2026-06-09
+
+<!-- verified-sha: 88b8f85705df0500a9452ec4921948b7c1af0de3 -->
+Correctness fixes for three rules introduced in 0.3.0/0.4.0, surfaced by
+real-world adoption running the set against a production codebase: a hard crash
+in the flag-argument namers and a silent collection-resolution change in
+`CollectedByAttributeRector`.
+
+### Fixed
+
+- **`FirstPartyFlagArgumentToNamedRector`** and
+  **`NativeFunctionFlagArgumentToNamedRector`** no longer abort the Rector run on
+  a first-class callable. A visited `$obj->method(...)`, `Class::method(...)`, or
+  `func(...)` reached `getArgs()`, which asserts it is not called on a first-class
+  callable and fataled the entire process. Both rules now skip first-class
+  callables (they carry no trailing flag argument to name) before that call.
+  
+- **`CollectedByAttributeRector`** now only rewrites a `newCollection()` override
+  to `#[CollectedBy]` when the swap is behaviour-preserving. The attribute and the
+  method do not resolve identically, so the rule was changing runtime collection
+  resolution in two cases:
+  
+  - On Laravel 12 the attribute is read from the model's own class only (Laravel
+    13 walks the parent chain), so a non-`final` base would lose its custom
+    collection on subtypes. The rule now converts a `final` class only — the
+    conservative gate that stays correct across the supported Laravel 12/13 range.
+  - A `newCollection()` supplied by a trait or an ancestor model — including a
+    trait method aliased to `newCollection` under any casing — is a real method
+    that beats the attribute. The rule now skips any class where such a method
+    would shadow it.
+  
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.4.0...0.4.1
+
 ## 0.4.0 - 2026-06-09
 
 <!-- verified-sha: b69e8af46f8eee6dbdcbb9ac277a951e5f049d29 -->
@@ -112,11 +146,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -154,6 +190,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -248,6 +285,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -255,6 +293,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
