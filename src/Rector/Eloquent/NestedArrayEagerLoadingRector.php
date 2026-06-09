@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use PhpParser\Node;
 use PhpParser\Node\ArrayItem;
 use PhpParser\Node\Expr;
@@ -129,7 +130,59 @@ CODE_SAMPLE,
         return $array;
     }
 
+    /**
+     * Eloquent's explicit exits to the base query builder. These deliberately leave
+     * the Eloquent API, so a chain continuing through them is genuinely on the base
+     * query builder and must not be treated as an `__call()` passthru — unlike the
+     * implicit forwarding of e.g. `whereIntegerNotInRaw()`. Lowercased; PHP method
+     * names are case-insensitive.
+     *
+     * @var list<string>
+     */
+    private const array QUERY_BUILDER_EXITS = ['tobase', 'getquery'];
+
+    /**
+     * Walk the fluent call chain rather than testing only the immediate receiver.
+     * A mid-chain method forwarded to the base query builder via Eloquent
+     * `Builder::__call()` / its `@mixin` — e.g. `whereIntegerNotInRaw()` — resolves
+     * to exactly `Illuminate\Database\Query\Builder`, dropping out of the Eloquent
+     * allow-list even though at runtime the chain stays on the Eloquent builder.
+     * Climb past such links only, and accept once an earlier receiver resolves to an
+     * Eloquent type. The base query builder exposes no eager-load method, so a
+     * receiver typed as *exactly* that class can only be the passthru illusion;
+     * matching subclasses too would risk a custom builder with its own `with()`, an
+     * explicit exit (`toBase()`/`getQuery()`) genuinely leaves Eloquent, and any
+     * other concrete type means the chain left Eloquent — all of those bail.
+     */
     private function isEloquentReceiver(Expr $var): bool
+    {
+        $current = $var;
+
+        while (true) {
+            if ($this->isEloquentType($current)) {
+                return true;
+            }
+
+            if ($current instanceof MethodCall && $this->isBaseQueryBuilderPassthru($current)) {
+                $current = $current->var;
+
+                continue;
+            }
+
+            return false;
+        }
+    }
+
+    private function isBaseQueryBuilderPassthru(MethodCall $methodCall): bool
+    {
+        if ($methodCall->name instanceof Identifier && in_array(strtolower($methodCall->name->toString()), self::QUERY_BUILDER_EXITS, true)) {
+            return false;
+        }
+
+        return $this->getType($methodCall)->getObjectClassNames() === [QueryBuilder::class];
+    }
+
+    private function isEloquentType(Expr $var): bool
     {
         foreach (self::ELOQUENT_RECEIVERS as $class) {
             if ($this->isObjectType($var, new ObjectType($class))) {
