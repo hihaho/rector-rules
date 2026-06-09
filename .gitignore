@@ -1,6 +1,8 @@
 # Dependencies
 /vendor
 auth.json
+# Library package — consumers resolve their own deps; don't pin a lock
+composer.lock
 
 # Caches
 .cache
