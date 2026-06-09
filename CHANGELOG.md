@@ -2,6 +2,52 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.4.0 - 2026-06-09
+
+<!-- verified-sha: b69e8af46f8eee6dbdcbb9ac277a951e5f049d29 -->
+Three new rules — two Laravel 11+ attribute migrations and a test-assertion
+simplification — plus a correctness fix to the nested eager-loading rule so it
+fires through fluent query-builder chains it previously skipped.
+
+### Added
+
+- **`CollectedByAttributeRector`** (`Eloquent` set) — replaces a `newCollection()`
+  override with the `#[CollectedBy]` attribute (Laravel 11+). Fires only when
+  `newCollection()` is a single `return new SomeCollection($models)` whose return
+  type matches the constructed class, on a class that extends
+  `Illuminate\Database\Eloquent\Model`. The method is removed and
+  `#[CollectedBy(SomeCollection::class)]` is prepended to the class. Overrides
+  with extra logic are left untouched, and the rule is idempotent — it skips when
+  `#[CollectedBy]` is already present.
+- **`ObservedByAttributeRector`** (`Eloquent` set) — replaces `booted()` observer
+  registration with the `#[ObservedBy]` attribute (Laravel 11+). Fires only when
+  `booted()` is a single `static::observe(SomeObserver::class)` / `self::observe(...)`
+  on a Model subclass. The method is removed and `#[ObservedBy(SomeObserver::class)]`
+  is prepended. The observer argument must be a `::class` constant fetch — string
+  literals are not converted — and the rule skips when `#[ObservedBy]` is already
+  present.
+- **`AssertModelExistsRector`** (`Testing` set) — rewrites a single-`id`
+  `assertDatabaseHas(Model::class, ['id' => $model->id])` to the idiomatic
+  `assertModelExists($model)`, and the `assertDatabaseMissing` form to
+  `assertModelMissing($model)`. Only fires when the array holds exactly the `id`
+  key and the model instance carrying it is in scope; multi-key arrays, table-name
+  strings, and non-`id` checks are left alone.
+
+### Fixed
+
+- **`NestedArrayEagerLoadingRector`** now fires when the eager-load call sits behind
+  a fluent query-builder passthru — e.g. `Model::query()->whereIntegerNotInRaw(...) ->oldest(...)->with([...])`. Such a passthru is forwarded to the base query
+  builder via Eloquent's `Builder::__call()`, which collapsed the immediate
+  receiver type out of the Eloquent allow-list and silently skipped an otherwise
+  valid rewrite. The receiver check now walks the chain and accepts once an earlier
+  receiver is Eloquent, while staying conservative: it climbs only past links typed
+  as *exactly* the base `Illuminate\Database\Query\Builder` (which exposes no
+  eager-load method, so the call can only be the runtime-Eloquent passthru), and
+  never past the explicit exits `toBase()` / `getQuery()` or any other concrete
+  type — so unrelated fluent `with([...])` APIs are still left untouched.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.3.0...0.4.0
+
 ## 0.3.0 - 2026-06-09
 
 <!-- verified-sha: 87114eb6914ec5ab5cbba43c30280d9dd55b5fae -->
@@ -65,11 +111,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -106,6 +154,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -198,6 +247,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -205,6 +255,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
