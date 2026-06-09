@@ -94,7 +94,7 @@ CODE_SAMPLE,
         $modelClass = $this->resolveModelClass($args[0]);
         $modelVar = $this->resolveModelVar($args[1], $modelClass);
 
-        if ($modelClass === null || $modelVar === null) {
+        if ($modelClass === null || ! $modelVar instanceof Expr) {
             return null;
         }
 
@@ -114,6 +114,7 @@ CODE_SAMPLE,
             if (! $node->class instanceof Name) {
                 return false;
             }
+
             if (! in_array(strtolower($node->class->toString()), ['self', 'static'], true)) {
                 return false;
             }
@@ -190,7 +191,7 @@ CODE_SAMPLE,
 
     private function isIdKey(?Expr $key): bool
     {
-        if ($key === null) {
+        if (! $key instanceof Expr) {
             return false;
         }
 

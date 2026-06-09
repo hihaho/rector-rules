@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\Eloquent;
 
+use Illuminate\Database\Eloquent\Attributes\CollectedBy;
+use Illuminate\Database\Eloquent\Model;
 use PhpParser\Node;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Attribute;
@@ -27,9 +29,9 @@ use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
  */
 final class CollectedByAttributeRector extends AbstractRector
 {
-    private const string COLLECTED_BY_ATTRIBUTE = 'Illuminate\Database\Eloquent\Attributes\CollectedBy';
+    private const string COLLECTED_BY_ATTRIBUTE = CollectedBy::class;
 
-    private const string ELOQUENT_MODEL = 'Illuminate\Database\Eloquent\Model';
+    private const string ELOQUENT_MODEL = Model::class;
 
     public function __construct(
         private readonly ReflectionProvider $reflectionProvider,
@@ -94,7 +96,7 @@ CODE_SAMPLE,
             }
         }
 
-        if ($newCollectionMethod === null || $newCollectionKey === null) {
+        if (! $newCollectionMethod instanceof ClassMethod || $newCollectionKey === null) {
             return null;
         }
 
@@ -135,7 +137,7 @@ CODE_SAMPLE,
 
         $new = $stmt->expr;
 
-        if ($method->returnType === null) {
+        if (! $method->returnType instanceof Node) {
             return null;
         }
 

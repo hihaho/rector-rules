@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\Eloquent;
 
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Model;
 use PhpParser\Node;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Attribute;
@@ -26,9 +28,9 @@ use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
  */
 final class ObservedByAttributeRector extends AbstractRector
 {
-    private const string OBSERVED_BY_ATTRIBUTE = 'Illuminate\Database\Eloquent\Attributes\ObservedBy';
+    private const string OBSERVED_BY_ATTRIBUTE = ObservedBy::class;
 
-    private const string ELOQUENT_MODEL = 'Illuminate\Database\Eloquent\Model';
+    private const string ELOQUENT_MODEL = Model::class;
 
     public function __construct(
         private readonly ReflectionProvider $reflectionProvider,
@@ -92,7 +94,7 @@ CODE_SAMPLE,
             }
         }
 
-        if ($bootedMethod === null || $bootedKey === null) {
+        if (! $bootedMethod instanceof ClassMethod || $bootedKey === null) {
             return null;
         }
 
