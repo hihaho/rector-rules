@@ -2,6 +2,18 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.3.0 - 2026-06-09
+
+<!-- verified-sha: 87114eb6914ec5ab5cbba43c30280d9dd55b5fae -->
+### Added
+
+- **`NativeFunctionFlagArgumentToNamedRector`** (`CodeQuality` set) — names the opaque trailing bool/null flag argument of well-known native functions, so `in_array($needle, $haystack, true)` becomes `in_array($needle, $haystack, strict: true)`. Ships a curated default map (`in_array`/`array_search` → `strict`, `json_decode` → `associative`) that consumers extend or override via `function_flag_arguments`.
+- **`FirstPartyFlagArgumentToNamedRector`** (`CodeQuality` set) — names an opaque trailing bool/null flag argument on a first-party method or static call, resolving the parameter name by reflection. Gated to your own namespaces via `first_party_namespaces` (default `App\`), so vendor signatures — whose parameter names can change under semver — are never touched.
+
+Both fire only on a bare `true`/`false`/`null` literal in the final argument position (which keeps the call valid — a positional argument after a named one is a fatal), and skip already-named, unpacked, variadic-target, and unresolvable calls. Both are enabled by default in the `CodeQuality` set.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.2.1...0.3.0
+
 ## 0.2.1 - 2026-06-08
 
 <!-- verified-sha: 592b7bbfb26d4e645ac0c06672f99bad5cd8288e -->
@@ -52,11 +64,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -92,6 +106,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -182,6 +197,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -189,6 +205,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
