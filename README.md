@@ -119,8 +119,8 @@ self-documenting. The two rules split by what owns the parameter name:
   (a positional argument after a named one is a PHP fatal). So `json_decode($j, true)`
   converts but `json_decode($j, true, 512)` is left as-is.
 - An already-named argument, an unpacked argument (`...$args`), a variadic target
-  parameter, and a callee that can't be resolved (dynamic name, closure, `__call`)
-  are all skipped.
+  parameter, a first-class callable (`strlen(...)`, `$store->resolve(...)`), and a
+  callee that can't be resolved (dynamic name, closure, `__call`) are all skipped.
 
 ### Eloquent (`HihahoSetList::ELOQUENT`)
 
@@ -186,7 +186,7 @@ Enforces conventions for Eloquent relation usage.
 
 **Scope:**
 
-- `CollectedByAttributeRector` fires when `newCollection()` has exactly one statement — `return new SomeCollection($models)` — the return type matches the constructed class, and the class extends `Illuminate\Database\Eloquent\Model` directly or indirectly. The method is removed entirely; `#[CollectedBy(SomeCollection::class)]` is prepended to the class. Methods with additional logic (filtering, merging) are left untouched. The rule is idempotent: it skips if `#[CollectedBy]` is already present.
+- `CollectedByAttributeRector` fires when `newCollection()` has exactly one statement — `return new SomeCollection($models)` — the return type matches the constructed class, and the class extends `Illuminate\Database\Eloquent\Model` directly or indirectly. The method is removed entirely; `#[CollectedBy(SomeCollection::class)]` is prepended to the class. Methods with additional logic (filtering, merging) are left untouched. The rule is idempotent: it skips if `#[CollectedBy]` is already present. Because the attribute and the method do not resolve identically, the rule only converts a **`final`** class, and skips any class where a trait or an ancestor model supplies its own `newCollection()` (including a trait method aliased to `newCollection`). On Laravel 12 `#[CollectedBy]` is read from the model's own class only — a non-final base would lose its collection on subtypes — so the `final` gate keeps the rewrite behaviour-preserving across the supported Laravel range; a non-final model is left as-is.
 - `NestedArrayEagerLoadingRector` applies to `with`, `load`, `loadMissing`, and `loadCount`. It only groups when two or more entries share the same parent prefix — a single dot-notation chain without siblings stays as-is. Grouping is applied recursively, so deeper shared prefixes nest further.
 - `ObservedByAttributeRector` fires when `booted()` has exactly one statement — `static::observe(SomeObserver::class)` or `self::observe(...)` — and the class extends `Illuminate\Database\Eloquent\Model` directly or indirectly. The method is removed entirely; `#[ObservedBy(SomeObserver::class)]` is prepended to the class. The rule is idempotent: it skips if `#[ObservedBy]` is already present. The observer argument must be a `::class` constant fetch — string literals are not converted.
 - `RelationNameToClassConstantRector` additionally covers `relationLoaded`, `getRelation`, `setRelation`, and `unsetRelation`, on both instance calls (`$model->load(...)`) and static calls (`Model::with(...)`, `self::with(...)`). It only fires when the receiver resolves to a single concrete class **and** that class has a *public* constant whose value equals the string — it never invents constants and never references a non-public one (which would be a fatal access error). Inside the model it emits `self::`/`static::`; elsewhere the class name. Only the relation-name argument is touched — eager-load constraint callbacks are left alone. When multiple constants share the value, only a constant named like the SCREAMING_SNAKE_CASE form of the relation is trusted; otherwise the string is left alone. Dot-notation strings (`'parent.child'`) span multiple models and are not converted.
