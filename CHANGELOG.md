@@ -2,6 +2,28 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.4.2 - 2026-06-09
+
+<!-- verified-sha: d68af21fa6651ab6d485cde805dc23f020eb6d20 -->
+### Changed
+
+- **`CollectedByAttributeRector`** now converts non-`final` models on **Laravel
+  13+**. 0.4.1 restricted the rewrite to `final` classes because, on Laravel 12,
+  `#[CollectedBy]` is resolved from the model's own class only — a subclass would
+  not inherit the attribute the way it inherited the `newCollection()` method.
+  Laravel 13 resolves the attribute up the parent chain, so a subclass inherits
+  it and the rewrite is behaviour-preserving for non-final models too. The rule
+  detects the installed framework version and keeps the `final`-only gate on
+  Laravel 12; the trait-/ancestor-supplied `newCollection()` skips are unchanged.
+
+### Internal
+
+- Expanded fixture coverage for the flag-argument namers (case-insensitive method
+  and function names, fully-qualified native calls) and for `CollectedBy`
+  preserving unrelated methods.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.4.1...0.4.2
+
 ## 0.4.1 - 2026-06-09
 
 <!-- verified-sha: 88b8f85705df0500a9452ec4921948b7c1af0de3 -->
@@ -147,11 +169,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -190,6 +214,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -286,6 +311,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -293,6 +319,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
