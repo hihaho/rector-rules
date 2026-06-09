@@ -6,7 +6,7 @@ use Hihaho\RectorRules\Tests\Rector\Eloquent\CollectedByAttributeRector\Source\A
 use Illuminate\Database\Eloquent\Model;
 
 // Constructor receives more than one argument — count($args) !== 1, rule skips.
-class Article extends Model
+final class Article extends Model
 {
     public function newCollection(array $models = []): ArticleCollection
     {

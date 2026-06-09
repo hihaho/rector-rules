@@ -19,6 +19,7 @@ use PhpParser\Node\Param;
 use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\Node\Stmt\Return_;
+use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use Rector\Rector\AbstractRector;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
@@ -47,7 +48,7 @@ final class CollectedByAttributeRector extends AbstractRector
 use App\Collections\ArticleCollection;
 use Illuminate\Database\Eloquent\Model;
 
-class Article extends Model
+final class Article extends Model
 {
     /** @param self[] $models */
     public function newCollection(array $models = []): ArticleCollection
@@ -62,7 +63,7 @@ use Illuminate\Database\Eloquent\Attributes\CollectedBy;
 use Illuminate\Database\Eloquent\Model;
 
 #[CollectedBy(ArticleCollection::class)]
-class Article extends Model
+final class Article extends Model
 {
 }
 CODE_SAMPLE,
@@ -82,6 +83,18 @@ CODE_SAMPLE,
         assert($node instanceof Class_);
 
         if ($node->isAnonymous()) {
+            return null;
+        }
+
+        // On Laravel 12, HasCollection::resolveCollectionFromAttribute() reads the
+        // attribute from static::class only — it does NOT walk the parent chain —
+        // so a subclass does not inherit #[CollectedBy] though it does inherit a
+        // newCollection() method. Rewriting a subclassable base would silently strip
+        // the custom collection from every descendant there. (Laravel 13 walks
+        // parents, making the attribute effectively inherited, but this package
+        // supports both — do not drop this gate.) We cannot enumerate subclasses from
+        // a single AST, so gate conservatively: only a final class is guaranteed none.
+        if (! $node->isFinal()) {
             return null;
         }
 
@@ -106,6 +119,15 @@ CODE_SAMPLE,
         }
 
         if (! $this->isEloquentModel($node)) {
+            return null;
+        }
+
+        // #[CollectedBy] is only consulted inside the framework base
+        // Model::newCollection(). A newCollection() supplied by a trait or by an
+        // ancestor model is a real method that shadows the base — so it also beats
+        // the attribute. Removing this class's explicit override would hand
+        // resolution to that method, not the attribute. Skip such classes.
+        if ($this->hasShadowingNewCollection($node)) {
             return null;
         }
 
@@ -192,6 +214,69 @@ CODE_SAMPLE,
         return $this->reflectionProvider->getClass($className)->isSubclassOfClass(
             $this->reflectionProvider->getClass(self::ELOQUENT_MODEL)
         );
+    }
+
+    private function hasShadowingNewCollection(Class_ $class): bool
+    {
+        $className = $this->getName($class);
+        if ($className === null || ! $this->reflectionProvider->hasClass($className)) {
+            return false;
+        }
+
+        $classReflection = $this->reflectionProvider->getClass($className);
+
+        // A trait anywhere in the hierarchy that defines newCollection() flattens
+        // into the class and beats the attribute. getTraits(true) walks nested
+        // traits and parent traits too. The framework's own HasCollection trait
+        // (which Model uses to implement the attribute-aware newCollection) is the
+        // mechanism the attribute hooks into — not a shadow — so skip Illuminate's.
+        foreach ($classReflection->getTraits(true) as $trait) {
+            if (str_starts_with($trait->getName(), 'Illuminate\\')) {
+                continue;
+            }
+
+            if ($trait->getNativeReflection()->hasMethod('newCollection')) {
+                return true;
+            }
+        }
+
+        // A trait method aliased to newCollection (`use T { build as newCollection; }`)
+        // supplies the method too, without the trait literally declaring it. The
+        // class's explicit override masks it from method reflection, so inspect the
+        // trait-alias map directly. Alias keys preserve their written casing while
+        // method names are case-insensitive, so compare case-insensitively.
+        foreach (array_keys($classReflection->getNativeReflection()->getTraitAliases()) as $alias) {
+            if (strcasecmp($alias, 'newCollection') === 0) {
+                return true;
+            }
+        }
+
+        // An ancestor model (other than the framework base) that declares its own
+        // newCollection() is inherited as a real method and beats the attribute.
+        $parent = $classReflection->getParentClass();
+        while ($parent instanceof ClassReflection) {
+            if ($parent->getName() === self::ELOQUENT_MODEL) {
+                break;
+            }
+
+            if ($this->declaresOwnNewCollection($parent)) {
+                return true;
+            }
+
+            $parent = $parent->getParentClass();
+        }
+
+        return false;
+    }
+
+    private function declaresOwnNewCollection(ClassReflection $class): bool
+    {
+        $native = $class->getNativeReflection();
+        if (! $native->hasMethod('newCollection')) {
+            return false;
+        }
+
+        return $native->getMethod('newCollection')->getDeclaringClass()->getName() === $class->getName();
     }
 
     private function hasCollectedByAttribute(Class_ $class): bool

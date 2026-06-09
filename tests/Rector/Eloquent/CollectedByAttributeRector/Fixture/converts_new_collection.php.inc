@@ -5,7 +5,7 @@ namespace Hihaho\RectorRules\Tests\Rector\Eloquent\CollectedByAttributeRector\Fi
 use Hihaho\RectorRules\Tests\Rector\Eloquent\CollectedByAttributeRector\Source\ArticleCollection;
 use Illuminate\Database\Eloquent\Model;
 
-class Article extends Model
+final class Article extends Model
 {
     /** @param self[] $models */
     public function newCollection(array $models = []): ArticleCollection
@@ -23,6 +23,6 @@ use Hihaho\RectorRules\Tests\Rector\Eloquent\CollectedByAttributeRector\Source\A
 use Illuminate\Database\Eloquent\Model;
 
 #[CollectedBy(ArticleCollection::class)]
-class Article extends Model
+final class Article extends Model
 {
 }

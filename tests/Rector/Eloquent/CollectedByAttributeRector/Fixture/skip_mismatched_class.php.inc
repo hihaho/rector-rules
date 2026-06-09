@@ -7,7 +7,7 @@ use Hihaho\RectorRules\Tests\Rector\Eloquent\CollectedByAttributeRector\Source\C
 use Illuminate\Database\Eloquent\Model;
 
 // Return type (ArticleCollection) differs from constructed class (CommentCollection) — rule skips.
-class Article extends Model
+final class Article extends Model
 {
     public function newCollection(array $models = []): ArticleCollection
     {

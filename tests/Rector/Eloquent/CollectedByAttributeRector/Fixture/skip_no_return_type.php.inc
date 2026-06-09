@@ -6,7 +6,7 @@ use Hihaho\RectorRules\Tests\Rector\Eloquent\CollectedByAttributeRector\Source\A
 use Illuminate\Database\Eloquent\Model;
 
 // Missing return type declaration — $returnTypeFqcn is null, rule skips.
-class Article extends Model
+final class Article extends Model
 {
     public function newCollection(array $models = [])
     {

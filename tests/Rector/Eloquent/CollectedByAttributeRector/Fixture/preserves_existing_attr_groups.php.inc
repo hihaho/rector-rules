@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 
 #[ObservedBy(ArticleObserver::class)]
-class Article extends Model
+final class Article extends Model
 {
     /** @param self[] $models */
     public function newCollection(array $models = []): ArticleCollection
@@ -29,6 +29,6 @@ use Illuminate\Database\Eloquent\Model;
 
 #[CollectedBy(ArticleCollection::class)]
 #[ObservedBy(ArticleObserver::class)]
-class Article extends Model
+final class Article extends Model
 {
 }

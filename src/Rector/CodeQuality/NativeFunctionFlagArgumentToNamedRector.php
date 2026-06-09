@@ -96,6 +96,13 @@ CODE_SAMPLE,
             return null;
         }
 
+        // A first-class callable (f(...)) carries no trailing flag argument to
+        // name, and CallLike::getArgs() asserts against being called on one —
+        // bail before it fatals.
+        if ($node->isFirstClassCallable()) {
+            return null;
+        }
+
         // Resolve the called name once (handles the global fallback in namespaced
         // files), then a single map lookup — no per-spelling isName() loop.
         $functionName = $this->getName($node);

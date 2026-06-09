@@ -85,6 +85,13 @@ CODE_SAMPLE,
             return null;
         }
 
+        // A first-class callable ($obj->m(...), C::m(...)) carries no trailing
+        // flag argument to name, and CallLike::getArgs() asserts against being
+        // called on one — bail before it fatals.
+        if ($node->isFirstClassCallable()) {
+            return null;
+        }
+
         $args = $node->getArgs();
         $lastIndex = count($args) - 1;
         if ($lastIndex < 0) {

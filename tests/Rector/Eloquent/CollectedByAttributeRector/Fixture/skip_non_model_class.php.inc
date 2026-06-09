@@ -5,7 +5,7 @@ namespace Hihaho\RectorRules\Tests\Rector\Eloquent\CollectedByAttributeRector\Fi
 use Hihaho\RectorRules\Tests\Rector\Eloquent\CollectedByAttributeRector\Source\ArticleCollection;
 
 // Does not extend Model — the inheritance guard prevents firing on arbitrary classes.
-class ArticleRepository
+final class ArticleRepository
 {
     public function newCollection(array $models = []): ArticleCollection
     {
