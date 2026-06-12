@@ -2,6 +2,48 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.5.0 - 2026-06-12
+
+<!-- verified-sha: bbeb4ebe6a862c9e285bb68f892dbca543ae2d39 -->
+`RelationNameToClassConstantRector` now reaches nested relations. Previously it
+only matched a single-level relation string against the receiver model's own
+constants; nested paths were left untouched because no single constant spans
+more than one model. It now resolves each level against the model the previous
+relation points to.
+
+### Changed
+
+- **`RelationNameToClassConstantRector`** converts **nested relations level by
+  level**, in both notations:
+  
+  - dot-notation strings — `'comments.author'` →
+    `Post::COMMENTS . '.' . Comment::AUTHOR`
+  - nested arrays — `['comments' => ['author']]` →
+    `[Post::COMMENTS => [Comment::AUTHOR]]`
+  
+  The two forms compose, so a dotted key with a nested-array value or an array
+  whose leaf is itself a dot path are both handled. Each hop to the next model
+  is resolved without Larastan by reading the relation method's body for its
+  Eloquent relationship factory call (`$this->belongsTo(Comment::class)`,
+  `hasMany`, `hasOne`, …) and taking the first `::class` argument; resolution is
+  memoised per `owner::relation`. Conversion is **all-or-nothing per path** — if
+  any segment's model or constant can't be resolved (including a polymorphic
+  `morphTo`, which has no single related model), the whole string is left as-is
+  rather than half-converted. Single-level behaviour, the receiver-type and
+  public-constant gates, and the SCREAMING_SNAKE_CASE tie-breaker are unchanged.
+  
+
+### Internal
+
+- Added fixtures covering three-level dot paths, pure three-level nested arrays,
+  the combined dot-key/array-value and array-key/dot-value shapes, the mixed
+  constants-and-dotted-string call shape, and the `morphTo`/unresolvable-hop
+  skips. Nested-relation test doubles carry real relation method bodies so the
+  related-model hop is exercised end to end.
+- Dropped the `roave/security-advisories` dev dependency.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.4.2...0.5.0
+
 ## 0.4.2 - 2026-06-09
 
 <!-- verified-sha: d68af21fa6651ab6d485cde805dc23f020eb6d20 -->
@@ -170,11 +212,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -214,6 +258,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -312,6 +357,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -319,6 +365,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
