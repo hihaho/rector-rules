@@ -2,6 +2,48 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.7.0 - 2026-06-13
+
+<!-- verified-sha: 9755a1ebc7d91cb64a899688f5f79eaea7b503ce -->
+`FirstPartyFlagArgumentToNamedRector` gains an opt-in **cascade** mode for the
+call shape it previously left alone: a bare flag that is not the last argument.
+
+### Added
+
+- **`FirstPartyFlagArgumentToNamedRector` — `cascade_trailing_args` config**
+  (default `false`). By default the rule names a bare `true`/`false`/`null` flag
+  only when every argument to its right is already named or is itself a flag
+  being named (the trailing "namable run"), so a flag followed by a positional
+  non-flag is left untouched — naming it would force that non-flag to be named
+  too. With `cascade_trailing_args` on, the rule does exactly that: it names the
+  flag and the positional arguments after it, which PHP requires (a positional
+  argument cannot follow a named one):
+  
+  ```php
+  $store->loadCount(true, $start, $end);
+  // ->
+  $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
+  ```
+  The run is always anchored on a flag, so a call with no bare flag is never
+  touched, and it still stops at an unpacked argument or a variadic/unknown
+  parameter. It is off by default because it produces broader diffs — the
+  trailing non-flag arguments are named purely to satisfy PHP's ordering rule.
+  Enable per consumer with
+  `['cascade_trailing_args' => true]`.
+  
+
+### Internal
+
+- The reflection-free pre-gate is cascade-aware, so the per-node hot path stays
+  fast — callee resolution still runs only when a flag is actually present to
+  rename.
+- Added a second test class and config exercising the cascade path
+  (flag-first, flag-in-middle, and the no-flag skip); default-mode fixtures are
+  unchanged.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.6.0...0.7.0
+
 ## 0.6.0 - 2026-06-13
 
 <!-- verified-sha: e68df4906eb10d8608bc1adb1c629178591aa1f9 -->
@@ -252,11 +294,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -298,6 +342,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -400,6 +445,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -407,6 +453,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
