@@ -59,7 +59,7 @@ General code-quality conventions.
 |-----------------------------------------|----------------------------------------------------------------------|
 | `RemoveUnnecessaryNullsafeOperatorRector` | Remove the nullsafe operator (`?->`) when the receiver can never be null |
 | `NativeFunctionFlagArgumentToNamedRector` | Name the opaque trailing bool/null flag of well-known native functions |
-| `FirstPartyFlagArgumentToNamedRector`     | Name the opaque trailing bool/null flag on a first-party method call |
+| `FirstPartyFlagArgumentToNamedRector`     | Name opaque bool/null flags on a first-party method, static, or constructor call |
 
 #### `RemoveUnnecessaryNullsafeOperatorRector`
 
@@ -106,18 +106,23 @@ self-documenting. The two rules split by what owns the parameter name:
   functions (`in_array`/`array_search` → `strict`, `json_decode` → `associative`)
   whose flag names are frozen by PHP. Extend or override it via
   `['function_flag_arguments' => ['in_array' => [2 => 'strict']]]`.
-- `FirstPartyFlagArgumentToNamedRector` resolves the parameter name by reflection,
-  and fires only for callees in your own namespaces — never vendor signatures,
-  whose parameter names can change under semver. Defaults to `['App\\']`; configure
-  with `['first_party_namespaces' => ['App\\', 'Domain\\']]`.
+- `FirstPartyFlagArgumentToNamedRector` resolves the parameter name by reflection
+  across method, static, and constructor (`new`) calls — including through a
+  nullable receiver (`Foo|null`, the usual shape of a docblock-typed property). It
+  fires only for callees in your own namespaces — never vendor signatures, whose
+  parameter names can change under semver. Defaults to `['App\\']`; configure with
+  `['first_party_namespaces' => ['App\\', 'Domain\\']]`.
 
 **Scope & safety:**
 
 - Only a bare `true`, `false`, or `null` literal is named — a variable, constant,
   or enum case is already self-documenting and is left alone.
-- Only the **last** argument of a call is ever named, which keeps the result valid
-  (a positional argument after a named one is a PHP fatal). So `json_decode($j, true)`
-  converts but `json_decode($j, true, 512)` is left as-is.
+- A flag is named only when every argument to its right is already named or is
+  itself a flag being named — the call's trailing "namable run". This keeps the
+  result valid (a positional argument after a named one is a PHP fatal), so
+  `$store->configure($key, false, isBoolean: true)` names the `false`, while
+  `json_decode($j, true, 512)` (a positional `512` follows) is left as-is. The
+  rules never name a flag that would force a *non-flag* argument to be named too.
 - An already-named argument, an unpacked argument (`...$args`), a variadic target
   parameter, a first-class callable (`strlen(...)`, `$store->resolve(...)`), and a
   callee that can't be resolved (dynamic name, closure, `__call`) are all skipped.

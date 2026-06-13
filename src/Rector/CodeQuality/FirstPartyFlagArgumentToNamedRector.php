@@ -7,9 +7,11 @@ namespace Hihaho\RectorRules\Rector\CodeQuality;
 use Hihaho\RectorRules\Rector\CodeQuality\Concerns\NamesFlagArguments;
 use PhpParser\Node;
 use PhpParser\Node\Expr\MethodCall;
+use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\StaticCall;
 use PHPStan\Analyser\Scope;
 use PHPStan\Reflection\MethodReflection;
+use PHPStan\Type\TypeCombinator;
 use Rector\Contract\Rector\ConfigurableRectorInterface;
 use Rector\NodeTypeResolver\Node\AttributeKey;
 use Rector\NodeTypeResolver\PHPStan\ParametersAcceptorSelectorVariantsWrapper;
@@ -58,14 +60,14 @@ final class FirstPartyFlagArgumentToNamedRector extends AbstractRector implement
     public function getRuleDefinition(): RuleDefinition
     {
         return new RuleDefinition(
-            'Name an opaque trailing bool/null flag argument on a first-party method call',
+            'Name opaque bool/null flag arguments on a first-party method, static, or constructor call',
             [
                 new ConfiguredCodeSample(
                     <<<'CODE_SAMPLE'
-$token = $store->resolve($platform, false);
+$store->configure($platform, false, isBoolean: true);
 CODE_SAMPLE,
                     <<<'CODE_SAMPLE'
-$token = $store->resolve($platform, inherit: false);
+$store->configure($platform, setDefaultNullValue: false, isBoolean: true);
 CODE_SAMPLE,
                     [self::FIRST_PARTY_NAMESPACES => ['App\\']],
                 ),
@@ -76,38 +78,33 @@ CODE_SAMPLE,
     /** @return array<class-string<Node>> */
     public function getNodeTypes(): array
     {
-        return [MethodCall::class, StaticCall::class];
+        return [MethodCall::class, StaticCall::class, New_::class];
     }
 
     public function refactor(Node $node): ?Node
     {
-        if (! $node instanceof MethodCall && ! $node instanceof StaticCall) {
+        if (! $node instanceof MethodCall && ! $node instanceof StaticCall && ! $node instanceof New_) {
             return null;
         }
 
-        // A first-class callable ($obj->m(...), C::m(...)) carries no trailing
-        // flag argument to name, and CallLike::getArgs() asserts against being
-        // called on one — bail before it fatals.
+        // A first-class callable ($obj->m(...), C::m(...)) carries no flag
+        // argument to name, and CallLike::getArgs() asserts against being called
+        // on one — bail before it fatals.
         if ($node->isFirstClassCallable()) {
             return null;
         }
 
         $args = $node->getArgs();
-        $lastIndex = count($args) - 1;
-        if ($lastIndex < 0) {
+
+        // Cheap pre-gate: bail unless the trailing namable run actually holds a bare
+        // flag to rename. This keeps the expensive callee reflection off the hot path
+        // for the common shapes — a call with no flag, or one ending in an
+        // already-named argument with no flag before it.
+        if (! $this->hasFlagInTrailingRun($args)) {
             return null;
         }
 
-        // Cheap pre-gate: only the final argument is ever named, and it must be a
-        // bare bool/null literal. This bails the overwhelming majority of calls
-        // before any (expensive) reflection runs.
-        if (! $this->isBareBoolOrNullFlag($args[$lastIndex])) {
-            return null;
-        }
-
-        $methodReflection = $node instanceof MethodCall
-            ? $this->reflectionResolver->resolveMethodReflectionFromMethodCall($node)
-            : $this->reflectionResolver->resolveMethodReflectionFromStaticCall($node);
+        $methodReflection = $this->resolveCalleeReflection($node);
 
         // Unresolved callee (dynamic name, closure, __call magic, unknown type):
         // skip rather than guess at a parameter name.
@@ -125,25 +122,55 @@ CODE_SAMPLE,
         }
 
         $parametersAcceptor = ParametersAcceptorSelectorVariantsWrapper::select($methodReflection, $node, $scope);
-        $parameters = $parametersAcceptor->getParameters();
 
-        // No declared parameter at this position means the call lands on a
-        // variadic tail (or the signature is unknown); naming it is unsafe.
-        $parameter = $parameters[$lastIndex] ?? null;
-        if ($parameter === null || $parameter->isVariadic()) {
-            return null;
-        }
-
-        if (! $this->nameTrailingFlagArgument($args, $lastIndex, $parameter->getName())) {
-            return null;
-        }
-
-        return $node;
+        return $this->nameFlagArgumentsInTrailingRun($args, $parametersAcceptor->getParameters()) ? $node : null;
     }
 
     public function provideMinPhpVersion(): int
     {
         return PhpVersion::PHP_80;
+    }
+
+    /**
+     * Resolve the called method / constructor. For an instance call the receiver
+     * type has its null stripped first: a nullable receiver (`Foo|null`, the
+     * common shape of a docblock-typed property or a nullable return) otherwise
+     * resolves to no single class and the call is silently skipped.
+     *
+     * @param MethodCall|StaticCall|New_ $node
+     */
+    private function resolveCalleeReflection(Node $node): ?MethodReflection
+    {
+        if ($node instanceof New_) {
+            return $this->reflectionResolver->resolveMethodReflectionFromNew($node);
+        }
+
+        if ($node instanceof StaticCall) {
+            return $this->reflectionResolver->resolveMethodReflectionFromStaticCall($node);
+        }
+
+        // Strip null before resolving the receiver class: a nullable receiver
+        // resolves to more than one type member, so the single-class lookup below
+        // would otherwise return nothing and the call would be skipped.
+        $callerType = TypeCombinator::removeNull($this->getType($node->var));
+        $classReflections = $callerType->getObjectClassReflections();
+        if (count($classReflections) !== 1) {
+            return null;
+        }
+
+        $methodName = $this->getName($node->name);
+        if ($methodName === null) {
+            return null;
+        }
+
+        $scope = $node->getAttribute(AttributeKey::SCOPE);
+        if (! $scope instanceof Scope) {
+            return null;
+        }
+
+        $classReflection = $classReflections[0];
+
+        return $classReflection->hasMethod($methodName) ? $classReflection->getMethod($methodName, $scope) : null;
     }
 
     private function isFirstParty(MethodReflection $methodReflection): bool
