@@ -2,6 +2,44 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.6.0 - 2026-06-13
+
+<!-- verified-sha: e68df4906eb10d8608bc1adb1c629178591aa1f9 -->
+`FirstPartyFlagArgumentToNamedRector` reaches more call sites. It previously
+named only the single last positional bool/null flag of a first-party method or
+static call; flags in deeper positions, on nullable receivers, and on
+constructor calls slipped through unnamed. It now resolves all three.
+
+### Changed
+
+- **`FirstPartyFlagArgumentToNamedRector`** names flags in three more shapes:
+  
+  - **Trailing namable run** — a bare flag followed only by already-named
+    arguments (or other flags being named) is named, not just the absolute last
+    argument: `$store->configure($key, false, isBoolean: true)` →
+    `$store->configure($key, setDefaultNullValue: false, isBoolean: true)`.
+  - **Nullable receivers** — a flag call on a `Foo|null` receiver (the usual
+    shape of a docblock-typed nullable property) resolves by stripping null
+    before the single-class lookup, instead of being silently skipped.
+  - **Constructor (`new`) calls** — `new TokenStore($platform, true, false)` →
+    `new TokenStore($platform, inherit: true, shared: false)`.
+  
+  The safety guard is preserved: a flag is named only when every argument to its
+  right is already named or is itself a flag being named, so the result is never
+  invalid PHP, and a flag whose naming would force a non-flag positional argument
+  to be named too is left alone. A cheap, reflection-free pre-gate keeps the
+  per-node cost off the hot path — callee resolution runs only when a flag is
+  actually present to rename.
+  
+
+### Internal
+
+- Expanded fixture coverage: nullable receiver, flag-before-named-argument,
+  single and consecutive constructor flags, and the trailing-safe skips
+  (flag-before-positional and untyped/unresolvable receiver).
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.5.0...0.6.0
+
 ## 0.5.0 - 2026-06-12
 
 <!-- verified-sha: bbeb4ebe6a862c9e285bb68f892dbca543ae2d39 -->
@@ -213,11 +251,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -258,6 +298,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -358,6 +399,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -365,6 +407,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
