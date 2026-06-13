@@ -29,6 +29,11 @@ final class TokenStore
         return ($hasStarted ?? false) ? $end - $start : $start;
     }
 
+    public function link(string $url, bool $openInSameWindow, string $name): string
+    {
+        return $openInSameWindow ? "{$name}:{$url}" : $url;
+    }
+
     public static function make(string $platform, bool $shared): self
     {
         $store = new self();

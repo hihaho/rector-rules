@@ -121,8 +121,17 @@ self-documenting. The two rules split by what owns the parameter name:
   itself a flag being named — the call's trailing "namable run". This keeps the
   result valid (a positional argument after a named one is a PHP fatal), so
   `$store->configure($key, false, isBoolean: true)` names the `false`, while
-  `json_decode($j, true, 512)` (a positional `512` follows) is left as-is. The
-  rules never name a flag that would force a *non-flag* argument to be named too.
+  `json_decode($j, true, 512)` (a positional `512` follows) is left as-is. By
+  default the rule never names a flag that would force a *non-flag* argument to be
+  named too.
+- **Cascade (opt-in).** `FirstPartyFlagArgumentToNamedRector` accepts
+  `['cascade_trailing_args' => true]`. With it on, a flag that is *not* last is
+  still named by also naming the positional arguments that follow it —
+  `$store->loadCount(true, $start, $end)` →
+  `loadCount(hasStarted: true, start: $start, end: $end)`. Off by default
+  because it produces broader diffs (the trailing non-flag arguments get named
+  purely to satisfy PHP's ordering rule). Anchored on a flag, so a call with no
+  flag is never touched.
 - An already-named argument, an unpacked argument (`...$args`), a variadic target
   parameter, a first-class callable (`strlen(...)`, `$store->resolve(...)`), and a
   callee that can't be resolved (dynamic name, closure, `__call`) are all skipped.

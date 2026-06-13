@@ -61,17 +61,19 @@ trait NamesFlagArguments
     }
 
     /**
-     * Cheap, reflection-free pre-gate mirroring {@see nameFlagArgumentsInTrailingRun()}:
-     * true only when the trailing namable run holds at least one bare flag worth
-     * renaming. Scanning from the right, already-named arguments keep the run open;
-     * the first positional argument decides it — a bare flag means there is work to
-     * do, anything else means there is not. This lets the expensive callee
-     * resolution be skipped for the common shapes (a call ending in an already-named
-     * argument, or one with no flag at all).
+     * Cheap, reflection-free pre-gate mirroring {@see nameFlagArguments()}: true
+     * only when the trailing namable run holds at least one bare flag worth
+     * renaming. Scanning from the right, already-named arguments keep the run open
+     * and a bare flag confirms there is work to do. In trailing-safe mode the first
+     * positional non-flag ends the scan; in cascade mode it is skipped over (it is
+     * itself namable), so the scan keeps looking left for a flag to anchor on. An
+     * unpacked argument always ends the scan — the run cannot cross it. This lets
+     * the expensive callee resolution be skipped for the common shapes (a call with
+     * no flag, or one ending in an already-named argument with no flag before it).
      *
      * @param array<Arg> $args
      */
-    private function hasFlagInTrailingRun(array $args): bool
+    private function hasFlagInTrailingRun(array $args, bool $cascade): bool
     {
         for ($index = count($args) - 1; $index >= 0; --$index) {
             $arg = $args[$index];
@@ -80,57 +82,98 @@ trait NamesFlagArguments
                 continue;
             }
 
-            return $this->isBareBoolOrNullFlag($arg);
+            if ($arg->unpack) {
+                return false;
+            }
+
+            if ($this->isBareBoolOrNullFlag($arg)) {
+                return true;
+            }
+
+            if (! $cascade) {
+                return false;
+            }
         }
 
         return false;
     }
 
     /**
-     * Name every bare bool/null flag literal in the call's trailing "namable run":
-     * the contiguous suffix of arguments, counted from the right, that are each
-     * either already named or a bare flag literal. The first positional
-     * non-literal argument (scanning right to left) ends the run — naming anything
-     * to its left would leave a positional argument after a named one, which is a
-     * PHP fatal error. Already-named arguments inside the run are left untouched;
-     * a flag whose parameter cannot be resolved (variadic tail, unknown position)
-     * also ends the run, since it must stay positional.
+     * Name the bare flag literals the call should carry named, returning whether
+     * anything changed. The arguments named are the trailing run anchored on a bare
+     * flag:
+     *
+     * - **Trailing-safe (default)** — the run is the suffix of arguments that are
+     *   each already named or a bare flag; the first positional non-flag ends it,
+     *   and only flags are named.
+     * - **Cascade** — the run may also cross positional non-flag arguments, which
+     *   are then named too. This is what lets a flag that is *not* the last
+     *   argument be named: PHP forbids a positional argument after a named one, so
+     *   every argument to the right of the flag must be named as well.
+     *
+     * In both modes the run is anchored on a flag (a call with no flag is never
+     * touched), cannot cross an unpacked argument or a variadic/unknown parameter,
+     * and leaves already-named arguments inside it untouched.
      *
      * @param array<Arg> $args
      * @param array<int, ParameterReflection> $parameters parameters indexed by position
      */
-    private function nameFlagArgumentsInTrailingRun(array $args, array $parameters): bool
+    private function nameFlagArguments(array $args, array $parameters, bool $cascade): bool
     {
-        $namesByIndex = [];
+        $start = $this->resolveFlagRegionStart($args, $parameters, $cascade);
+        if ($start === null) {
+            return false;
+        }
+
+        // The region always begins on a bare flag (never an already-named
+        // argument), so at least that argument is renamed — reaching here is a change.
+        for ($index = $start, $count = count($args); $index < $count; ++$index) {
+            $arg = $args[$index];
+            if (! $arg->name instanceof Identifier) {
+                $arg->name = new Identifier($parameters[$index]->getName());
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Resolve the left-most index a flag-naming run may start at: the position of
+     * the left-most bare flag for which every argument from it to the end can be
+     * named (or already is). Returns null when no such flag exists. A positional
+     * non-flag ends the run in trailing-safe mode and is absorbed into it in cascade
+     * mode; an unpacked argument or a variadic/unknown parameter ends it in both.
+     *
+     * @param array<Arg> $args
+     * @param array<int, ParameterReflection> $parameters
+     */
+    private function resolveFlagRegionStart(array $args, array $parameters, bool $cascade): ?int
+    {
+        $start = null;
 
         for ($index = count($args) - 1; $index >= 0; --$index) {
             $arg = $args[$index];
 
-            // Already named: stays as-is but keeps the run open to its left.
             if ($arg->name instanceof Identifier) {
                 continue;
             }
 
-            // Positional non-flag: the run stops here; nothing further left is safe.
-            if (! $this->isBareBoolOrNullFlag($arg)) {
-                break;
-            }
-
-            // A flag whose parameter resolves to a variadic tail (or no declared
-            // parameter at all) cannot be named, so it must remain positional —
-            // ending the run just like any other positional argument.
             $parameter = $parameters[$index] ?? null;
-            if ($parameter === null || $parameter->isVariadic()) {
+            if ($arg->unpack || $parameter === null || $parameter->isVariadic()) {
                 break;
             }
 
-            $namesByIndex[$index] = $parameter->getName();
+            if ($this->isBareBoolOrNullFlag($arg)) {
+                $start = $index;
+
+                continue;
+            }
+
+            if (! $cascade) {
+                break;
+            }
         }
 
-        foreach ($namesByIndex as $index => $paramName) {
-            $args[$index]->name = new Identifier($paramName);
-        }
-
-        return $namesByIndex !== [];
+        return $start;
     }
 }

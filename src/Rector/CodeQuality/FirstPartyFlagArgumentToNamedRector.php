@@ -32,6 +32,8 @@ final class FirstPartyFlagArgumentToNamedRector extends AbstractRector implement
 
     public const string FIRST_PARTY_NAMESPACES = 'first_party_namespaces';
 
+    public const string CASCADE_TRAILING_ARGS = 'cascade_trailing_args';
+
     /**
      * Naming an argument couples the call site to the callee's *parameter name*.
      * That is safe only for code whose signatures you control — never for vendor
@@ -45,6 +47,14 @@ final class FirstPartyFlagArgumentToNamedRector extends AbstractRector implement
     /** @var list<string> */
     private array $firstPartyNamespaces = self::DEFAULT_FIRST_PARTY_NAMESPACES;
 
+    /**
+     * When enabled, a bare flag that is not the last argument is still named by
+     * also naming the positional arguments that follow it (PHP forbids a positional
+     * argument after a named one). Off by default: it produces broader diffs — the
+     * trailing non-flag arguments get named purely to satisfy that ordering rule.
+     */
+    private bool $cascadeTrailingArgs = false;
+
     public function __construct(
         private readonly ReflectionResolver $reflectionResolver,
     ) {}
@@ -55,6 +65,10 @@ final class FirstPartyFlagArgumentToNamedRector extends AbstractRector implement
         Assert::isArray($namespaces);
         Assert::allStringNotEmpty($namespaces);
         $this->firstPartyNamespaces = array_values($namespaces);
+
+        $cascade = $configuration[self::CASCADE_TRAILING_ARGS] ?? false;
+        Assert::boolean($cascade);
+        $this->cascadeTrailingArgs = $cascade;
     }
 
     public function getRuleDefinition(): RuleDefinition
@@ -70,6 +84,15 @@ CODE_SAMPLE,
 $store->configure($platform, setDefaultNullValue: false, isBoolean: true);
 CODE_SAMPLE,
                     [self::FIRST_PARTY_NAMESPACES => ['App\\']],
+                ),
+                new ConfiguredCodeSample(
+                    <<<'CODE_SAMPLE'
+$store->loadCount(true, $start, $end);
+CODE_SAMPLE,
+                    <<<'CODE_SAMPLE'
+$store->loadCount(hasStarted: true, start: $start, end: $end);
+CODE_SAMPLE,
+                    [self::FIRST_PARTY_NAMESPACES => ['App\\'], self::CASCADE_TRAILING_ARGS => true],
                 ),
             ],
         );
@@ -100,7 +123,7 @@ CODE_SAMPLE,
         // flag to rename. This keeps the expensive callee reflection off the hot path
         // for the common shapes — a call with no flag, or one ending in an
         // already-named argument with no flag before it.
-        if (! $this->hasFlagInTrailingRun($args)) {
+        if (! $this->hasFlagInTrailingRun($args, $this->cascadeTrailingArgs)) {
             return null;
         }
 
@@ -123,7 +146,7 @@ CODE_SAMPLE,
 
         $parametersAcceptor = ParametersAcceptorSelectorVariantsWrapper::select($methodReflection, $node, $scope);
 
-        return $this->nameFlagArgumentsInTrailingRun($args, $parametersAcceptor->getParameters()) ? $node : null;
+        return $this->nameFlagArguments($args, $parametersAcceptor->getParameters(), $this->cascadeTrailingArgs) ? $node : null;
     }
 
     public function provideMinPhpVersion(): int
