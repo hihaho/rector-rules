@@ -2,6 +2,47 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.10.0 - 2026-06-14
+
+<!-- verified-sha: d46da662db36e5c514dcaee5ae7318a00b8c5a5f -->
+A new `CODE_QUALITY` rule turns Laravel's array-setter `config()` call into the
+explicit `config()->set()` form.
+
+### Added
+
+- **`ConfigSetMethodRector` (in the `CODE_QUALITY` set).** Rewrites the
+  array-setter form of the `config()` helper —
+  
+  ```php
+  config(['queue.default' => 'sync']);
+  
+  ```
+  into the explicit setter form:
+  
+  ```php
+  config()->set('queue.default', 'sync');
+  
+  ```
+  A multi-key array is expanded into one `config()->set()` call per pair, in source
+  order. The rule names the write, so a call that mutates configuration no longer
+  reads like a lookup.
+  
+  Scope is deliberately narrow and safe:
+  
+  - It fires only when the `config([...])` call is the whole statement — never inside
+    an assignment, condition, or other expression (where multi-key expansion would be
+    invalid).
+  - Only string-literal keys convert; a dynamic key (`config([$key => $v])`), a
+    class-constant key (`config([Config::KEY => $v])`), and an empty array are left
+    untouched.
+  - The original function-name node is preserved, so a fully-qualified
+    `\config([...])` keeps resolving to the global helper after the rewrite.
+  - First-class callables (`config(...)`) are skipped, and any leading comment or
+    suppression marker on the statement is carried onto the rewritten call.
+  
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.9.4...0.10.0
+
 ## 0.9.4 - 2026-06-14
 
 <!-- verified-sha: 05b561a3b1c34a238d44b616be2fab68ff720065 -->
@@ -70,6 +111,7 @@ in `MiddlewareStringToClassRector`'s default surfaced by real-world adoption.
           'auth', 'auth.basic', 'can', 'guest', 'password.confirm', 'signed', 'verified',
       ],
   ])
+  
   
   
   ```
@@ -210,6 +252,7 @@ Laravel's class-based fluent form.
   
   
   
+  
   ```
   It is **not in any set** and reachable by FQN only — Laravel doesn't document
   this form as a recommended convention, so adopting it is a deliberate choice.
@@ -267,6 +310,7 @@ type only resolves under a PHPStan extension such as larastan.
   ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
       NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
   ])
+  
   
   
   
@@ -332,6 +376,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   
   
@@ -616,11 +661,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -669,6 +716,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -785,6 +833,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -792,6 +841,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
