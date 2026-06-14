@@ -368,31 +368,46 @@ this form as a recommended convention) and is registered by FQN:
 ])
 ```
 
-**Scope.** Rewrites string and array-of-string arguments to `->middleware()` /
-`Route::middleware()` / `withoutMiddleware()` on a receiver that resolves to an
-Illuminate routing type (so an unrelated `->middleware()` method is never touched).
-Converts the first-party aliases `auth`, `auth.basic`, `can`, `guest`,
-`password.confirm`, `signed`, `verified`. Group names (`web`, `api`), custom/package
-aliases (`fortify.*`, `role:`, …), variables, and already-class-form references are
-left untouched. The `can:` model arguments stay string literals — never upgraded to
-`::class`, which would change the authorisation target.
+**Scope.** Rewrites string and array-of-string middleware references across the
+surfaces where they appear:
+
+- `->middleware()` / `Route::middleware()` / `withoutMiddleware()` on a receiver that
+  resolves to an Illuminate routing type (so an unrelated `->middleware()` method is
+  never touched) — every argument.
+- the `bootstrap/app.php` middleware configurator — `$middleware->group($name, [...])`
+  (the group middleware, not the name), `append(...)`, and `prepend(...)`.
+- Laravel 11+ controller `new Middleware('auth:sanctum')` value objects (the
+  `HasMiddleware::middleware()` return shape).
+
+Group names (`web`, `api`), custom/package aliases (`fortify.*`, `role:`, …),
+variables, and already-class-form references are left untouched. The `can:` model
+arguments stay string literals — never upgraded to `::class`, which would change the
+authorisation target.
+
+**Default convert-set excludes `auth` and `guest`.** Converting an alias to its
+hardcoded *framework* class is only behaviour-preserving when the app leaves that
+alias at the framework default. `auth` and `guest` are the aliases apps most often
+remap to a custom subclass carrying real logic, so they are **not** converted by
+default — list them in `aliases` (after confirming they're unremapped) to opt in. The
+default set is `auth.basic`, `can`, `password.confirm`, `signed`, `verified`.
 
 **Configuration.**
 
 | Key | Default | Purpose |
 |---|---|---|
-| `aliases` | the seven above | Narrow or extend which aliases are converted. |
-| `convert_bare_aliases` | `true` | Also rewrite no-param forms (`'auth'`→`Authenticate::class`). Set `false` for `alias:param` forms only. |
+| `aliases` | the five behaviour-safe aliases (`auth`/`guest` excluded) | Narrow or extend which aliases are converted. |
+| `convert_bare_aliases` | `true` | Also rewrite no-param forms (`'signed'`→`ValidateSignature::class`). Set `false` for `alias:param` forms only. |
 | `include_throttle` | `false` | Opt into `throttle` conversion (see caveat). |
 | `throttle_class` | unset | Required when `include_throttle` is on. |
 
 **Throttle caveat.** `throttle` is excluded by default. Its target class
-(`ThrottleRequests` vs `ThrottleRequestsWithRedis`) depends on app-global config
-(`->throttleWithRedis()`) that is invisible at the call site, so the rule will not
-guess it — converting blindly would silently switch a Redis-throttling app to the
-database limiter. To enable it, set `include_throttle => true` **and** the explicit
-`throttle_class` matching your app; then `'throttle:api'` → `{class}::using('api')`
-and `'throttle:60,1'` → `{class}::with(60, 1)`.
+(`ThrottleRequests` vs `ThrottleRequestsWithRedis` vs a custom subclass) depends on
+app-global config (`->throttleWithRedis()`, or an overridden alias) that is invisible
+at the call site, so the rule will not guess it — converting blindly would silently
+switch a Redis-throttling app to the database limiter. To enable it, set
+`include_throttle => true` **and** the explicit `throttle_class` matching your app;
+then `'throttle:api'` → `{class}::using('api')` and `'throttle:60,1'` →
+`{class}::with(60, 1)`.
 
 ### Migrations (`HihahoSetList::MIGRATIONS`)
 

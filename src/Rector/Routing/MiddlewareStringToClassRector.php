@@ -11,6 +11,8 @@ use Illuminate\Auth\Middleware\Authorize;
 use Illuminate\Auth\Middleware\EnsureEmailIsVerified;
 use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
 use Illuminate\Auth\Middleware\RequirePassword;
+use Illuminate\Foundation\Configuration\Middleware as MiddlewareConfiguration;
+use Illuminate\Routing\Controllers\Middleware as ControllerMiddleware;
 use Illuminate\Routing\Middleware\ValidateSignature;
 use Illuminate\Routing\PendingResourceRegistration;
 use Illuminate\Routing\Route;
@@ -23,8 +25,10 @@ use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\ClassConstFetch;
 use PhpParser\Node\Expr\MethodCall;
+use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Identifier;
+use PhpParser\Node\Name;
 use PhpParser\Node\Name\FullyQualified;
 use PhpParser\Node\Scalar\Int_;
 use PhpParser\Node\Scalar\String_;
@@ -139,21 +143,22 @@ final class MiddlewareStringToClassRector extends AbstractRector implements Conf
     /** @return array<class-string<Node>> */
     public function getNodeTypes(): array
     {
-        return [MethodCall::class, StaticCall::class];
+        return [MethodCall::class, StaticCall::class, New_::class];
     }
 
     public function refactor(Node $node): ?Node
     {
-        if (! $node instanceof MethodCall && ! $node instanceof StaticCall) {
+        if (! $node instanceof MethodCall && ! $node instanceof StaticCall && ! $node instanceof New_) {
             return null;
         }
 
-        if (! $this->isMiddlewareCall($node)) {
+        $args = $this->middlewareArgs($node);
+        if ($args === null) {
             return null;
         }
 
         $changed = false;
-        foreach ($node->getArgs() as $arg) {
+        foreach ($args as $arg) {
             $changed = $this->rewriteArgument($arg) || $changed;
         }
 
@@ -182,24 +187,103 @@ CODE_SAMPLE,
         );
     }
 
-    private function isMiddlewareCall(MethodCall|StaticCall $node): bool
+    /**
+     * The arguments that hold middleware references for this call, or null when the
+     * node is not a middleware sink this rule rewrites. Different sinks place the
+     * middleware differently:
+     *
+     * - `->middleware()` / `->withoutMiddleware()` on a routing object, and the
+     *   `Route::` facade form — every argument is a middleware reference.
+     * - the `bootstrap/app.php` middleware configurator — `group($group, $middleware)`
+     *   keeps the group name and rewrites `$middleware` (arg 1); `append`/`prepend`
+     *   rewrite `$middleware` (arg 0).
+     * - `new Middleware(...)` controller value objects (Laravel 11+) — `$middleware`
+     *   (arg 0); the `$only` / `$except` filters are left alone.
+     *
+     * The single-`$middleware` sinks resolve that argument by name when the call uses
+     * PHP 8 named arguments, falling back to source position only when it is safe.
+     *
+     * @return Arg[]|null
+     */
+    private function middlewareArgs(MethodCall|StaticCall|New_ $node): ?array
     {
-        if (! $node->name instanceof Identifier) {
-            return false;
+        if ($node instanceof New_) {
+            return $this->isControllerMiddlewareValueObject($node)
+                ? $this->singleMiddlewareArg($node->getArgs(), 0)
+                : null;
         }
 
-        $method = $node->name->toString();
-        if (strcasecmp($method, 'middleware') !== 0 && strcasecmp($method, 'withoutMiddleware') !== 0) {
-            return false;
+        if (! $node->name instanceof Identifier) {
+            return null;
         }
+
+        $method = strtolower($node->name->toString());
 
         if ($node instanceof StaticCall) {
-            return $this->isRouteClass($node);
+            return $this->isMiddlewareMethod($method) && $this->isRouteClass($node)
+                ? $node->getArgs()
+                : null;
         }
 
-        $receiverTypes = $this->getType($node->var)->getObjectClassNames();
+        // Gate on the method name before the expensive receiver-type resolution: only
+        // these few method names can be a middleware sink, so the type resolver never
+        // runs for the overwhelming majority of method calls (the per-node hot path).
+        if ($this->isMiddlewareMethod($method)) {
+            $receiverTypes = $this->getType($node->var)->getObjectClassNames();
 
-        return array_intersect($receiverTypes, self::ROUTE_RECEIVER_TYPES) !== [];
+            return array_intersect($receiverTypes, self::ROUTE_RECEIVER_TYPES) !== []
+                ? $node->getArgs()
+                : null;
+        }
+
+        return match ($method) {
+            'group' => $this->isMiddlewareConfigurator($node) ? $this->singleMiddlewareArg($node->getArgs(), 1) : null,
+            'append', 'prepend' => $this->isMiddlewareConfigurator($node) ? $this->singleMiddlewareArg($node->getArgs(), 0) : null,
+            default => null,
+        };
+    }
+
+    /**
+     * The single `$middleware` argument of a sink that takes exactly one — resolved by
+     * name when the call uses named arguments (every such sink names the parameter
+     * `middleware`), else by source position. Returns null when a named argument has
+     * made the source position unreliable, so a wrong argument is never rewritten.
+     *
+     * @param  Arg[]  $args
+     * @return list<Arg>|null
+     */
+    private function singleMiddlewareArg(array $args, int $position): ?array
+    {
+        foreach ($args as $arg) {
+            if ($arg->name instanceof Identifier && $arg->name->toString() === 'middleware') {
+                return [$arg];
+            }
+        }
+
+        // No `middleware:` named argument. PHP requires positional arguments before
+        // named ones, so the argument at this source position is still the right one as
+        // long as it is itself positional — a later `only:`/`except:` named argument
+        // does not shift it. A *named* argument in this slot means the position is
+        // unreliable, so skip rather than guess.
+        $arg = $args[$position] ?? null;
+
+        return $arg instanceof Arg && ! $arg->name instanceof Identifier ? [$arg] : null;
+    }
+
+    private function isMiddlewareMethod(string $method): bool
+    {
+        return $method === 'middleware' || $method === 'withoutmiddleware';
+    }
+
+    private function isMiddlewareConfigurator(MethodCall $node): bool
+    {
+        return in_array(MiddlewareConfiguration::class, $this->getType($node->var)->getObjectClassNames(), true);
+    }
+
+    private function isControllerMiddlewareValueObject(New_ $node): bool
+    {
+        return $node->class instanceof Name
+            && $this->getName($node->class) === ControllerMiddleware::class;
     }
 
     private function rewriteArgument(Arg $arg): bool
@@ -293,6 +377,9 @@ CODE_SAMPLE,
      */
     private function convertThrottle(array $params): ?Expr
     {
+        // The throttle class is per-application config (ThrottleRequests vs
+        // ThrottleRequestsWithRedis vs a custom subclass) that cannot be read from the
+        // call site, so it must be supplied explicitly — never guessed.
         if (! $this->includeThrottle || $this->throttleClass === null || $params === []) {
             return null;
         }

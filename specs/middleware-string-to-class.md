@@ -172,28 +172,48 @@ With the class resolved, branch on the parameter shape (the second trap):
 
 ## Implementation
 
+> **Phases 1 & 2 shipped in earlier releases** (0.9.0; the auth/guest default-safety
+> narrowing in 0.9.3). Their task boxes below are checked to reflect that. Phase 3 was
+> the remaining LOW-priority work, now implemented.
+
 ### Phase 1: Safe-whitelist conversion (Priority: HIGH)
 
-- [ ] Create `src/Rector/Routing/MiddlewareStringToClassRector.php` — `AbstractRector` + `ConfigurableRectorInterface`, `getNodeTypes()` = `[MethodCall, StaticCall]`, reusing `ChecksRouteContext` for the `Route::` facade gate.
-- [ ] Implement receiver-type gate for `MethodCall` `middleware`/`withoutMiddleware` — resolve to Illuminate routing types; skip unresolved.
-- [ ] Build the alias→helper mapping table for the §1 whitelist (excluding throttle), with the `signed`/`verified`/`can` special cases and the round-trip-safety skips.
-- [ ] Rewrite string-literal args and string-literal array elements; leave everything else.
-- [ ] `configure()` — `aliases`, `convert_bare_aliases`; `getRuleDefinition()` with a `ConfiguredCodeSample`.
-- [ ] Tests — fixtures per whitelisted alias (param + bare under both `convert_bare_aliases` settings), array-arg mixed conversion, `can:` model-arg-stays-string, and skips: non-route receiver, unknown alias, already-class-form, unround-trippable param, group name.
+- [x] Create `src/Rector/Routing/MiddlewareStringToClassRector.php` — `AbstractRector` + `ConfigurableRectorInterface`, `getNodeTypes()` = `[MethodCall, StaticCall]`, reusing `ChecksRouteContext` for the `Route::` facade gate.
+- [x] Implement receiver-type gate for `MethodCall` `middleware`/`withoutMiddleware` — resolve to Illuminate routing types; skip unresolved.
+- [x] Build the alias→helper mapping table for the §1 whitelist (excluding throttle), with the `signed`/`verified`/`can` special cases and the round-trip-safety skips.
+- [x] Rewrite string-literal args and string-literal array elements; leave everything else.
+- [x] `configure()` — `aliases`, `convert_bare_aliases`; `getRuleDefinition()` with a `ConfiguredCodeSample`.
+- [x] Tests — fixtures per whitelisted alias (param + bare under both `convert_bare_aliases` settings), array-arg mixed conversion, `can:` model-arg-stays-string, and skips: non-route receiver, unknown alias, already-class-form, unround-trippable param, group name.
 
 ### Phase 2: Throttle conversion (opt-in) (Priority: MEDIUM)
 
-- [ ] Add `include_throttle` + `throttle_class` config.
-- [ ] Implement the `using` (named) vs `with` (numeric) branch with int-literal emission for `with`.
-- [ ] README "Opt-in" subsection documenting the Redis caveat and `throttle_class`.
-- [ ] Tests — `throttle:api`→`using`, `throttle:60,1`→`with`, custom `throttle_class` (Redis), and throttle-left-untouched when `include_throttle` is off.
+- [x] Add `include_throttle` + `throttle_class` config.
+- [x] Implement the `using` (named) vs `with` (numeric) branch with int-literal emission for `with`.
+- [x] README "Opt-in" subsection documenting the Redis caveat and `throttle_class`.
+- [x] Tests — `throttle:api`→`using`, `throttle:60,1`→`with`, custom `throttle_class` (Redis), and throttle-left-untouched when `include_throttle` is off.
 
 ### Phase 3: Extended call surfaces (Priority: LOW)
 
-- [ ] `bootstrap/app.php` `->withMiddleware()` `group`/`append`/`prepend` arrays.
-- [ ] L11 `HasMiddleware::middleware()` `Middleware` value objects; L10 controller `$this->middleware()`.
-- [ ] Optional best-effort `bootstrap/app.php` throttle-driver detection, with `throttle_class` as the override.
-- [ ] Tests — per added surface.
+- [x] `bootstrap/app.php` `->withMiddleware()` `group`/`append`/`prepend` arrays — the
+      configurator gate (`Illuminate\Foundation\Configuration\Middleware`) with
+      per-method arg selection (`group` rewrites arg 1, keeping the name; `append`/
+      `prepend` rewrite arg 0).
+- [x] L11 `HasMiddleware::middleware()` `Middleware` value objects — `New_` of
+      `Illuminate\Routing\Controllers\Middleware`, arg 0. **L10 controller
+      `$this->middleware()` was deliberately skipped**: it was removed in Laravel 11 and
+      the package floor is Laravel 12, so it is dead surface for every supported version
+      (see Findings).
+- [~] Best-effort throttle-driver detection — **built, then removed** (see Findings).
+      Regex-scanning `bootstrap/app.php` / `Kernel.php` from `getcwd()` proved
+      irredeemably fragile (four adversarial review rounds, every one a real correctness
+      or reliability finding: imported short-name aliases, positional redis flags, comment
+      / unrelated-array false positives, working-directory dependence). Throttle
+      conversion keeps the robust explicit `throttle_class` config — the original 0.9.x
+      contract, and what the spec always named the reliable source of truth.
+- [x] Tests — two fixtures for the new surfaces (`convert_middleware_configurator`,
+      `convert_controller_middleware_value_object`) plus named-argument coverage
+      (`convert_controller_middleware_named_args`,
+      `convert_controller_middleware_positional_then_named`).
 
 ---
 
@@ -246,3 +266,32 @@ seen in real `->middleware()` / array usage. Non-framework aliases observed
 have no fluent helpers and are correctly out of scope. Array-form middleware is
 very common (route-group definitions), confirming array-element rewriting is
 essential, not optional.
+
+**Phase 3 implementation notes.**
+
+- **L10 `$this->middleware()` skipped as dead surface.** It was removed in Laravel 11
+  (replaced by `HasMiddleware`), and the package floor is Laravel 12 — so no supported
+  consumer has it. Implementing it would add a controller-`$this` receiver gate that
+  can never fire on a supported version.
+- **Per-method arg selection.** Unlike `middleware()` (all args are middleware), the
+  configurator methods place middleware in specific positions — `group($name, $mw)`
+  keeps arg 0. `middlewareArgIndices()` returns the exact indices per sink so the group
+  name is never rewritten.
+- **Throttle auto-detection was built and then removed** after adversarial review. A
+  regex scan of `bootstrap/app.php` / `app/Http/Kernel.php` (from `getcwd()`) cannot be
+  made reliable: it can't resolve a `use`-imported short class name (would emit a broken
+  `\CustomThrottle`), it matches a `'throttle' => …'` string sitting in a comment or an
+  unrelated array (a wrong rewrite), and `getcwd()` is not the project root when Rector
+  is launched from a subdirectory / editor / CI wrapper (silently converts nothing).
+  Four review rounds each surfaced a fresh instance of this class of problem — the signal
+  that source-level grepping is the wrong altitude for resolving runtime config.
+  **Decision:** drop detection entirely; `throttle` conversion requires the explicit
+  `throttle_class` config (robust, the original 0.9.x contract). The spec had already
+  named explicit config "the shipped contract" and detection "best-effort, never the sole
+  source of truth" — removal makes the floor the only path. Surfaces A (configurator) and
+  B (controller value objects) survive review clean and ship.
+- The surviving surfaces all route through the same `convertString()` core, so the
+  auth/guest default exclusion and every round-trip-safety skip apply uniformly. Their
+  single-`$middleware`-argument sinks resolve the argument name-aware (the `middleware`
+  parameter is matched by name under PHP 8 named arguments, by position otherwise), so a
+  `new Middleware(only: […], middleware: '…')` call is handled correctly.
