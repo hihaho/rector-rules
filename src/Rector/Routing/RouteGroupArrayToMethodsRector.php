@@ -72,11 +72,13 @@ CODE_SAMPLE,
             return null;
         }
 
-        if (! $this->isInRoutesDirectory()) {
+        // Cheap structural gate first: the `group` method-name check bails the bulk of
+        // static calls before the per-node directory context is consulted.
+        if (! $this->isRouteGroupWithArray($node)) {
             return null;
         }
 
-        if (! $this->isRouteGroupWithArray($node)) {
+        if (! $this->isInRoutesDirectory()) {
             return null;
         }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\Routing\Concerns;
 
+use Hihaho\RectorRules\Rector\Support\DirectoryContextCache;
 use Illuminate\Support\Facades\Route;
 use PhpParser\Node;
 use PhpParser\Node\Expr\StaticCall;
@@ -16,15 +17,10 @@ trait ChecksRouteContext
 
     private function isInRoutesDirectory(): bool
     {
-        // Normalise separators — getFilePath() returns backslash paths on Windows,
-        // which would never match the forward-slash markers below.
-        $filePath = str_replace('\\', '/', $this->getFile()->getFilePath());
-
-        if (str_contains($filePath, '/vendor/')) {
-            return false;
-        }
-
-        return str_contains($filePath, '/routes/');
+        // The verdict is constant per file but refactor() runs per node; the cache
+        // hoists the path scan to once per file. State lives in the cache (not a trait
+        // property) so the trait stays usable inside a `readonly class` host.
+        return DirectoryContextCache::isInRoutesDirectory($this->getFile());
     }
 
     private function isRouteStaticCall(StaticCall $node, string $method): bool

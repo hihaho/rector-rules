@@ -58,18 +58,20 @@ CODE_SAMPLE,
             return null;
         }
 
-        if (! $this->isInMigrationsDirectory()) {
-            return null;
-        }
-
         if (! $node->name instanceof Identifier) {
             return null;
         }
 
         $constantName = $node->name->toString();
 
-        // Skip ::class references — those are always valid
+        // Skip ::class references — those are always valid. This cheap structural gate
+        // runs before the directory check: `::class` is by far the most common
+        // ClassConstFetch, and bailing it here avoids the per-node context lookup.
         if ($constantName === 'class') {
+            return null;
+        }
+
+        if (! $this->isInMigrationsDirectory()) {
             return null;
         }
 
