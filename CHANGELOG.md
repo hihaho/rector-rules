@@ -2,6 +2,46 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.9.4 - 2026-06-14
+
+<!-- verified-sha: 05b561a3b1c34a238d44b616be2fab68ff720065 -->
+`MiddlewareStringToClassRector` now reaches two more places string middleware
+references live.
+
+### Added
+
+- **`MiddlewareStringToClassRector` converts the `bootstrap/app.php` middleware
+  configurator and controller value objects.** In addition to `->middleware()` /
+  `withoutMiddleware()` on routing objects, the rule now rewrites:
+  
+  - the middleware configurator — `$middleware->group($name, [...])` (the group
+    middleware, never the name), `$middleware->append(...)`, and `prepend(...)`.
+  - Laravel 11+ controller `new Middleware('auth:sanctum')` value objects (the
+    `HasMiddleware::middleware()` return shape).
+  
+  The single-`$middleware` sinks resolve that argument **name-aware**: the
+  `middleware` parameter is matched by name when the call uses PHP 8 named arguments
+  (e.g. `new Middleware(only: [...], middleware: '...')`), and by source position
+  otherwise — so the wrong argument is never rewritten. The same default convert-set
+  applies (`auth`/`guest` excluded unless opted in), since every surface routes
+  through the same conversion core.
+  
+  `throttle` conversion still requires an explicit `throttle_class` (it cannot be
+  inferred from the call site or reliably from project files).
+  
+
+### Internal
+
+- The duplicated Eloquent model-inspection helpers (`isEloquentModel()` plus the
+  attribute-presence check) shared by `ObservedByAttributeRector` and
+  `CollectedByAttributeRector` are extracted into a single
+  `Eloquent/Concerns/InspectsEloquentModel` trait — behaviour-preserving, no fixture
+  changes.
+- CI GitHub Actions bumped (`actions/checkout`, `shivammathur/setup-php`,
+  `actions/cache`), and the fully-implemented spec files were removed from the repo.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.9.3...0.9.4
+
 ## 0.9.3 - 2026-06-14
 
 <!-- verified-sha: fae7f1aa3587ed2c9b0873b6d338e1288d0372e9 -->
@@ -30,6 +70,7 @@ in `MiddlewareStringToClassRector`'s default surfaced by real-world adoption.
           'auth', 'auth.basic', 'can', 'guest', 'password.confirm', 'signed', 'verified',
       ],
   ])
+  
   
   ```
 
@@ -168,6 +209,7 @@ Laravel's class-based fluent form.
   
   
   
+  
   ```
   It is **not in any set** and reachable by FQN only — Laravel doesn't document
   this form as a recommended convention, so adopting it is a deliberate choice.
@@ -225,6 +267,7 @@ type only resolves under a PHPStan extension such as larastan.
   ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
       NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
   ])
+  
   
   
   
@@ -289,6 +332,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   
   
@@ -571,11 +615,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -623,6 +669,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -737,6 +784,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -744,6 +792,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
