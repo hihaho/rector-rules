@@ -324,6 +324,58 @@ Enforces consistent route definitions. Only applies to files under a `routes/` d
 - `NormalizeRoutePathRector` only rewrites `Route::get|post|put|patch|delete|any|head`. `Route::match`, `Route::redirect`, `Route::view`, and custom verbs are left untouched.
 - `RouteGroupArrayToMethodsRector` only rewrites groups where every array key is in the supported set: `middleware`, `prefix`, `name` / `as`, `namespace`, `domain`, `where`, `excluded_middleware`, `scope_bindings`. Unknown keys, positional (no-key) arrays, and empty arrays are left as-is to avoid dropping configuration silently.
 
+#### Opt-in: `MiddlewareStringToClassRector` (not in any set)
+
+Rewrites string route-middleware references to the class-based fluent form Laravel
+10.9+ provides — `Authenticate::using()`, `Authorize::using()`,
+`ValidateSignature::relative()`, … — so references become refactor-safe and
+IDE-navigable instead of magic strings:
+
+```diff
+-Route::middleware('auth:sanctum')->group(function () {
+-    Route::get('/posts', [PostController::class, 'index'])->middleware('can:viewAny,post');
+-});
++Route::middleware(\Illuminate\Auth\Middleware\Authenticate::using('sanctum'))->group(function () {
++    Route::get('/posts', [PostController::class, 'index'])->middleware(\Illuminate\Auth\Middleware\Authorize::using('viewAny', 'post'));
++});
+```
+
+Each helper returns the **same resolver string** the alias would produce, so the
+rewrite is behaviour-preserving. It is **not in any set** (Laravel doesn't document
+this form as a recommended convention) and is registered by FQN:
+
+```php
+->withConfiguredRule(MiddlewareStringToClassRector::class, [
+    MiddlewareStringToClassRector::CONVERT_BARE_ALIASES => true,
+])
+```
+
+**Scope.** Rewrites string and array-of-string arguments to `->middleware()` /
+`Route::middleware()` / `withoutMiddleware()` on a receiver that resolves to an
+Illuminate routing type (so an unrelated `->middleware()` method is never touched).
+Converts the first-party aliases `auth`, `auth.basic`, `can`, `guest`,
+`password.confirm`, `signed`, `verified`. Group names (`web`, `api`), custom/package
+aliases (`fortify.*`, `role:`, …), variables, and already-class-form references are
+left untouched. The `can:` model arguments stay string literals — never upgraded to
+`::class`, which would change the authorisation target.
+
+**Configuration.**
+
+| Key | Default | Purpose |
+|---|---|---|
+| `aliases` | the seven above | Narrow or extend which aliases are converted. |
+| `convert_bare_aliases` | `true` | Also rewrite no-param forms (`'auth'`→`Authenticate::class`). Set `false` for `alias:param` forms only. |
+| `include_throttle` | `false` | Opt into `throttle` conversion (see caveat). |
+| `throttle_class` | unset | Required when `include_throttle` is on. |
+
+**Throttle caveat.** `throttle` is excluded by default. Its target class
+(`ThrottleRequests` vs `ThrottleRequestsWithRedis`) depends on app-global config
+(`->throttleWithRedis()`) that is invisible at the call site, so the rule will not
+guess it — converting blindly would silently switch a Redis-throttling app to the
+database limiter. To enable it, set `include_throttle => true` **and** the explicit
+`throttle_class` matching your app; then `'throttle:api'` → `{class}::using('api')`
+and `'throttle:60,1'` → `{class}::with(60, 1)`.
+
 ### Migrations (`HihahoSetList::MIGRATIONS`)
 
 Enforces self-contained, production-safe migrations. Only applies to files in the `database/migrations/` directory.
