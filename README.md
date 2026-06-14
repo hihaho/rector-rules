@@ -2,7 +2,7 @@
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/hihaho/rector-rules.svg?style=flat-square)](https://packagist.org/packages/hihaho/rector-rules)
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/hihaho/rector-rules/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/hihaho/rector-rules/actions/workflows/run-tests.yml)
-[![GitHub PHPStan Action Status](https://img.shields.io/github/actions/workflow/status/sandermuller/stopwatch/phpstan.yml?branch=main&label=phpstan&style=flat-square)](https://github.com/sandermuller/stopwatch/actions?query=workflow%3Aphpstan+branch%3Amain)
+[![GitHub PHPStan Action Status](https://img.shields.io/github/actions/workflow/status/hihaho/rector-rules/phpstan.yml?branch=main&label=phpstan&style=flat-square)](https://github.com/hihaho/rector-rules/actions/workflows/phpstan.yml)
 [![Total Downloads](https://img.shields.io/packagist/dt/hihaho/rector-rules.svg?style=flat-square)](https://packagist.org/packages/hihaho/rector-rules)
 [![License](https://img.shields.io/github/license/hihaho/rector-rules.svg?style=flat-square)](LICENSE)
 
@@ -55,10 +55,10 @@ Or pick individual sets:
 
 General code-quality conventions.
 
-| Rule                                    | Description                                                          |
-|-----------------------------------------|----------------------------------------------------------------------|
-| `RemoveUnnecessaryNullsafeOperatorRector` | Remove the nullsafe operator (`?->`) when the receiver can never be null |
-| `NativeFunctionFlagArgumentToNamedRector` | Name the opaque trailing bool/null flag of well-known native functions |
+| Rule                                      | Description                                                                      |
+|-------------------------------------------|----------------------------------------------------------------------------------|
+| `RemoveUnnecessaryNullsafeOperatorRector` | Remove the nullsafe operator (`?->`) when the receiver can never be null         |
+| `NativeFunctionFlagArgumentToNamedRector` | Name the opaque trailing bool/null flag of well-known native functions           |
 | `FirstPartyFlagArgumentToNamedRector`     | Name opaque bool/null flags on a first-party method, static, or constructor call |
 
 #### `RemoveUnnecessaryNullsafeOperatorRector`
@@ -140,12 +140,12 @@ self-documenting. The two rules split by what owns the parameter name:
 
 Enforces conventions for Eloquent relation usage.
 
-| Rule                                  | Description                                                                                    |
-|---------------------------------------|------------------------------------------------------------------------------------------------|
-| `CollectedByAttributeRector`          | Replace `newCollection()` override with the `#[CollectedBy]` attribute (Laravel 11+)          |
-| `NestedArrayEagerLoadingRector`       | Convert dot-notation eager loading to nested-array form when multiple relations share a parent |
-| `ObservedByAttributeRector`           | Replace `booted()` observer registration with the `#[ObservedBy]` attribute (Laravel 11+)     |
-| `RelationNameToClassConstantRector`   | Replace string relation names with the existing class constant of the model                    |
+| Rule                                | Description                                                                                    |
+|-------------------------------------|------------------------------------------------------------------------------------------------|
+| `CollectedByAttributeRector`        | Replace `newCollection()` override with the `#[CollectedBy]` attribute (Laravel 11+)           |
+| `NestedArrayEagerLoadingRector`     | Convert dot-notation eager loading to nested-array form when multiple relations share a parent |
+| `ObservedByAttributeRector`         | Replace `booted()` observer registration with the `#[ObservedBy]` attribute (Laravel 11+)      |
+| `RelationNameToClassConstantRector` | Replace string relation names with the existing class constant of the model                    |
 
 ```diff
 -use App\Collections\ArticleCollection;
@@ -363,9 +363,9 @@ use Hihaho\RectorRules\Rector\Import\AliasImportRector;
 
 Replaces magic table-name strings in database assertions with the model class, and converts verbose single-id existence checks to their expressive equivalents.
 
-| Rule                                    | Description                                                                       |
-|-----------------------------------------|-----------------------------------------------------------------------------------|
-| `AssertDatabaseTableToModelClassRector` | Replace a database-assertion table string with the matching Eloquent model class  |
+| Rule                                    | Description                                                                             |
+|-----------------------------------------|-----------------------------------------------------------------------------------------|
+| `AssertDatabaseTableToModelClassRector` | Replace a database-assertion table string with the matching Eloquent model class        |
 | `AssertModelExistsRector`               | Replace `assertDatabaseHas/Missing` single-`id` checks with `assertModelExists/Missing` |
 
 #### `AssertDatabaseTableToModelClassRector`
@@ -406,9 +406,9 @@ Replaces magic table-name strings in database assertions with the model class, a
 
 Some rules in [`hihaho/phpstan-rules`](https://github.com/hihaho/phpstan-rules) have no counterpart here because the fix already ships in an upstream Rector set. Enable the upstream set instead of waiting for a rule in this package.
 
-| PHPStan rule                   | Upstream set                                           | Notes                                                                          |
-|--------------------------------|--------------------------------------------------------|--------------------------------------------------------------------------------|
-| `onlyAllowFacadeAliasInBlade`  | `LaravelSetList::LARAVEL_FACADE_ALIASES_TO_FULL_NAMES` | Rewrites `use Route;` to `use Illuminate\Support\Facades\Route;` (and siblings) |
+| PHPStan rule                  | Upstream set                                           | Notes                                                                           |
+|-------------------------------|--------------------------------------------------------|---------------------------------------------------------------------------------|
+| `onlyAllowFacadeAliasInBlade` | `LaravelSetList::LARAVEL_FACADE_ALIASES_TO_FULL_NAMES` | Rewrites `use Route;` to `use Illuminate\Support\Facades\Route;` (and siblings) |
 
 ```php
 use RectorLaravel\Set\LaravelSetList;
