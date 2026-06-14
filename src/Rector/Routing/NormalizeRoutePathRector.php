@@ -56,11 +56,13 @@ CODE_SAMPLE,
             return null;
         }
 
-        if (! $this->isInRoutesDirectory()) {
+        // Cheap structural gate first: the method-name Identifier check bails the bulk
+        // of static calls before the per-node directory context is consulted.
+        if (! $this->isRouteStaticCallForMethods($node, self::ROUTE_METHODS)) {
             return null;
         }
 
-        if (! $this->isRouteStaticCallForMethods($node, self::ROUTE_METHODS)) {
+        if (! $this->isInRoutesDirectory()) {
             return null;
         }
 
