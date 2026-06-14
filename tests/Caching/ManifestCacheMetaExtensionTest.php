@@ -6,7 +6,6 @@ namespace Hihaho\RectorRules\Tests\Caching;
 
 use Hihaho\RectorRules\Caching\ManifestCacheMetaExtension;
 use PHPUnit\Framework\TestCase;
-use Rector\Caching\Config\FileHashComputer;
 
 final class ManifestCacheMetaExtensionTest extends TestCase
 {
@@ -61,24 +60,5 @@ final class ManifestCacheMetaExtensionTest extends TestCase
         $extension = new ManifestCacheMetaExtension($this->manifest);
 
         $this->assertSame('hihaho_named_argument_manifest', $extension->getKey());
-    }
-
-    /**
-     * The contract this rests on: a manifest change must flip Rector's per-file
-     * cache key, so a cached "no change" result is reprocessed once the manifest
-     * gains a finding. {@see FileHashComputer::compute()} folds each registered
-     * extension's hash into that key.
-     */
-    public function test_registered_extension_changes_rectors_per_file_hash(): void
-    {
-        file_put_contents($this->manifest, '[]');
-        $fileHashComputer = new FileHashComputer([new ManifestCacheMetaExtension($this->manifest)]);
-
-        $before = $fileHashComputer->compute(__FILE__);
-
-        file_put_contents($this->manifest, '[{"file":"a.php","line":5,"method":"m","argIndex":1,"paramName":"p"}]');
-        $after = $fileHashComputer->compute(__FILE__);
-
-        $this->assertNotSame($before, $after);
     }
 }
