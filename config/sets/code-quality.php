@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Hihaho\RectorRules\Rector\CodeQuality\ConfigSetMethodRector;
 use Hihaho\RectorRules\Rector\CodeQuality\FirstPartyFlagArgumentToNamedRector;
 use Hihaho\RectorRules\Rector\CodeQuality\NativeFunctionFlagArgumentToNamedRector;
+use Hihaho\RectorRules\Rector\CodeQuality\RemoveDefaultValuedArgumentRector;
 use Hihaho\RectorRules\Rector\CodeQuality\RemoveUnnecessaryNullsafeOperatorRector;
 use Rector\Config\RectorConfig;
 
@@ -14,5 +15,6 @@ return static function (RectorConfig $rectorConfig): void {
         NativeFunctionFlagArgumentToNamedRector::class,
         FirstPartyFlagArgumentToNamedRector::class,
         ConfigSetMethodRector::class,
+        RemoveDefaultValuedArgumentRector::class,
     ]);
 };

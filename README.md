@@ -61,6 +61,7 @@ General code-quality conventions.
 | `NativeFunctionFlagArgumentToNamedRector` | Name the opaque trailing bool/null flag of well-known native functions           |
 | `FirstPartyFlagArgumentToNamedRector`     | Name opaque bool/null flags on a first-party method, static, or constructor call |
 | `ConfigSetMethodRector`                   | Convert the `config([...])` array-setter form to explicit `config()->set(...)`   |
+| `RemoveDefaultValuedArgumentRector`       | Drop an argument whose value equals the callee parameter's default               |
 
 #### `RemoveUnnecessaryNullsafeOperatorRector`
 
@@ -133,6 +134,12 @@ self-documenting. The two rules split by what owns the parameter name:
   because it produces broader diffs (the trailing non-flag arguments get named
   purely to satisfy PHP's ordering rule). Anchored on a flag, so a call with no
   flag is never touched.
+- **Name preceding positionals (opt-in).** `['name_preceding_positionals' => true]`
+  names the positional arguments *before* an already-named one, for calls that mix
+  the two — `$store->paginate(1, perPage: 50)` →
+  `paginate(page: 1, perPage: 50)`. Off by default and first-party only (naming
+  couples to the parameter name); a call with no named argument has nothing to anchor
+  on and is left alone.
 - An already-named argument, an unpacked argument (`...$args`), a variadic target
   parameter, a first-class callable (`strlen(...)`, `$store->resolve(...)`), and a
   callee that can't be resolved (dynamic name, closure, `__call`) are all skipped.
@@ -159,6 +166,35 @@ expanded into one `set()` call per pair, preserving source order.
   array is a no-op.
 - Idempotent — the already-converted `config()->set(...)` form is a method call, not
   the `config()` function call the rule matches, so re-running changes nothing.
+
+#### `RemoveDefaultValuedArgumentRector`
+
+```diff
+-$user->withPosts(callback: null, times: 2);
++$user->withPosts(times: 2);
+```
+
+**Why?** Passing an argument that just repeats the parameter's default is noise — it
+reads as if a non-default value were chosen. Dropping it ("skip optional parameters")
+makes the call state only what differs from the default.
+
+**Scope & safety:**
+
+- An argument is dropped only when the parameter's default is a single, statically
+  known constant — `null`, a bool/int/float/string literal, an empty array `[]`, or a
+  class constant that resolves to one of those — **and** the argument is the exact same
+  type and value. The match is strict: `0` is not dropped against a `false` default,
+  `''` not against `null`. A computed-expression default, or an enum-case object
+  default (`= Status::Active`), is never droppable.
+- By default it drops only an **already-named** default argument (order-independent) or
+  a **trailing positional** default (iteratively). These are allowed on any callee,
+  including vendor — they couple only to the default *value*.
+- **Cascade (opt-in).** `['cascade_drop' => true]` also drops a *mid*-positional
+  default by naming the arguments after it — `$factory->attach($user, [], $relationship)`
+  → `attach($user, relationship: $relationship)`. First-party only (it couples to
+  parameter names) and gated behind `first_party_namespaces` (default `App\`).
+- An unpacked argument (`...$args`), a variadic target parameter, a first-class
+  callable, and an unresolved callee are all skipped.
 
 #### Opt-in: `NamedArgumentFromManifestRector` (not in any set)
 

@@ -57,4 +57,14 @@ final class TokenStore
     {
         return $flags;
     }
+
+    public function seek(int $page, bool $strict = false): int
+    {
+        return $strict ? $page : -$page;
+    }
+
+    public function slice(int $start, int $end, bool $inclusive = false): int
+    {
+        return $inclusive ? $end - $start + 1 : $end - $start;
+    }
 }
