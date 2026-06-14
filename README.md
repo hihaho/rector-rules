@@ -179,6 +179,11 @@ two calls of the **same method name on the same physical line** with different
 receiver types and parameter names — keep one call per line (formatters already
 do) to avoid it.
 
+**Manifest validation:** a malformed manifest fails loud — invalid JSON or a
+non-array payload throws an `InvalidArgumentException` naming the path — while a
+single structurally-invalid record (missing key, wrong scalar type, or an empty
+`file`/`method`/`paramName`) is skipped so one bad line never fails the run.
+
 **The manifest is invisible to Rector's cache.** Rector keys each file's cache on
 the source content plus the configuration *parameters* — never the content of a
 file a rule points at. So a regenerated manifest with new findings, over
