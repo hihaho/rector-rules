@@ -143,7 +143,7 @@ CODE_SAMPLE,
             return null;
         }
 
-        if (! $call->name instanceof Identifier || $call->name->toString() !== 'observe') {
+        if (! $call->name instanceof Identifier || strcasecmp($call->name->toString(), 'observe') !== 0) {
             return null;
         }
 

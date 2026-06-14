@@ -60,7 +60,7 @@ final class FlagColumnToBooleanRector extends AbstractRector implements Configur
      *
      * @var list<string>
      */
-    private const array TYPE_METHODS = ['tinyInteger'];
+    private const array TYPE_METHODS = ['tinyinteger'];
 
     private bool $confirmMysqlCompatible = false;
 
@@ -161,7 +161,7 @@ CODE_SAMPLE,
 
     private function isFlagColumnTypeCall(MethodCall $typeCall): bool
     {
-        if (! $typeCall->name instanceof Identifier || ! in_array($typeCall->name->toString(), self::TYPE_METHODS, true)) {
+        if (! $typeCall->name instanceof Identifier || ! in_array(strtolower($typeCall->name->toString()), self::TYPE_METHODS, true)) {
             return false;
         }
 
@@ -215,9 +215,9 @@ CODE_SAMPLE,
                 continue;
             }
 
-            $name = $call->name->toString();
+            $name = strtolower($call->name->toString());
 
-            if ($name === 'change' || $name === 'autoIncrement') {
+            if ($name === 'change' || $name === 'autoincrement') {
                 return null;
             }
 

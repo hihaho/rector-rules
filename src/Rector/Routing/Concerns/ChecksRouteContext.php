@@ -31,7 +31,7 @@ trait ChecksRouteContext
     {
         // Cheapest gate first: the method-name Identifier check bails the bulk of
         // static calls before the class name has to be resolved.
-        if (! $node->name instanceof Identifier || $node->name->toString() !== $method) {
+        if (! $node->name instanceof Identifier || strcasecmp($node->name->toString(), $method) !== 0) {
             return false;
         }
 
@@ -43,7 +43,7 @@ trait ChecksRouteContext
      */
     private function isRouteStaticCallForMethods(StaticCall $node, array $methods): bool
     {
-        if (! $node->name instanceof Identifier || ! in_array($node->name->toString(), $methods, true)) {
+        if (! $node->name instanceof Identifier || ! in_array(strtolower($node->name->toString()), $methods, true)) {
             return false;
         }
 

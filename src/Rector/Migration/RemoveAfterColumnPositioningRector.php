@@ -52,7 +52,7 @@ CODE_SAMPLE,
 
         // Cheapest, most-selective gate first: almost no method call is named
         // `after`, so bail on the name before the per-node directory string scan.
-        if (! $node->name instanceof Identifier || $node->name->toString() !== 'after') {
+        if (! $node->name instanceof Identifier || strcasecmp($node->name->toString(), 'after') !== 0) {
             return null;
         }
 
