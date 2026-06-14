@@ -2,6 +2,55 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.11.0 - 2026-06-14
+
+<!-- verified-sha: b2c0be83ec6e1806eb41c0292c2f7cab21c36a3f -->
+A new `CODE_QUALITY` rule that drops redundant default-valued arguments, plus an
+opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading positionals.
+
+### Added
+
+- **`RemoveDefaultValuedArgumentRector` (in the `CODE_QUALITY` set).** Drops an
+  argument whose value equals the callee parameter's default — the "skip optional
+  parameters" convention — so a call states only what differs from the default:
+  
+  ```diff
+  -$user->factory()->withPosts(callback: null, times: 2);
+  +$user->factory()->withPosts(times: 2);
+  
+  ```
+  By default it drops an already-named default argument (order-independent) or a
+  trailing positional default (iteratively), and it fires on any callee — those drops
+  couple only to the default *value*. An opt-in `cascade_drop` additionally drops a
+  *mid*-positional default by naming the arguments after it
+  (`$factory->attach($user, [], $relationship)` → `attach($user, relationship: $relationship)`);
+  because that couples to parameter names, it is first-party only (gated by
+  `first_party_namespaces`, default `App\`).
+  
+  The drop is deliberately conservative: only a side-effect-free constant *literal* is
+  removed — never a call or variable that merely *resolves* to the default value, so an
+  expression's evaluation is never silently dropped. Matching is strict on type and
+  value (`0` is not dropped against a `false` default), a class constant resolving to a
+  scalar counts, and enum-case objects, computed-expression defaults, first-class
+  callables, unpacked arguments, and variadic targets are all left alone.
+  
+- **`FirstPartyFlagArgumentToNamedRector` gains a `name_preceding_positionals` knob.**
+  Off by default. When enabled, a call that already carries a named argument *in source*
+  also has its leading positional arguments named:
+  
+  ```diff
+  -$store->paginate(1, perPage: 50);
+  +$store->paginate(page: 1, perPage: 50);
+  
+  ```
+  First-party only (naming couples to the parameter name), and it leaves a call
+  untouched when any argument is unpacked — naming a positional before a `...$spread`
+  would be a fatal error. A call made "mixed" only because this rule just named its own
+  trailing flag is not affected; the knob anchors on an argument named in the source.
+  
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.10.0...0.11.0
+
 ## 0.10.0 - 2026-06-14
 
 <!-- verified-sha: d46da662db36e5c514dcaee5ae7318a00b8c5a5f -->
@@ -16,11 +65,13 @@ explicit `config()->set()` form.
   ```php
   config(['queue.default' => 'sync']);
   
+  
   ```
   into the explicit setter form:
   
   ```php
   config()->set('queue.default', 'sync');
+  
   
   ```
   A multi-key array is expanded into one `config()->set()` call per pair, in source
@@ -111,6 +162,7 @@ in `MiddlewareStringToClassRector`'s default surfaced by real-world adoption.
           'auth', 'auth.basic', 'can', 'guest', 'password.confirm', 'signed', 'verified',
       ],
   ])
+  
   
   
   
@@ -253,6 +305,7 @@ Laravel's class-based fluent form.
   
   
   
+  
   ```
   It is **not in any set** and reachable by FQN only — Laravel doesn't document
   this form as a recommended convention, so adopting it is a deliberate choice.
@@ -310,6 +363,7 @@ type only resolves under a PHPStan extension such as larastan.
   ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
       NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
   ])
+  
   
   
   
@@ -376,6 +430,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   
   
@@ -662,11 +717,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -716,6 +773,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -834,6 +892,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -841,6 +900,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
