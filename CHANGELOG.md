@@ -2,6 +2,64 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.9.0 - 2026-06-14
+
+<!-- verified-sha: cb2e8c017108aec9d1a3419e0c0871df048fc870 -->
+A new opt-in routing rule converts magic-string middleware references to
+Laravel's class-based fluent form.
+
+### Added
+
+- **`MiddlewareStringToClassRector`** — rewrites string route-middleware
+  references to the class-based fluent helpers Laravel 10.9+ ships
+  (`Authenticate::using('sanctum')`, `Authorize::using('viewAny', 'post')`,
+  `ValidateSignature::relative()`, …). Each helper returns the *same* resolver
+  string the alias would produce, so the rewrite is behaviour-preserving — it
+  just makes the reference refactor-safe and IDE-navigable instead of a magic
+  string:
+  
+  ```php
+  Route::middleware('auth:sanctum')
+      ->group(fn () => Route::get('/posts', PostController::class)->middleware('can:viewAny,post'));
+  // ->
+  Route::middleware(\Illuminate\Auth\Middleware\Authenticate::using('sanctum'))
+      ->group(fn () => Route::get('/posts', PostController::class)->middleware(\Illuminate\Auth\Middleware\Authorize::using('viewAny', 'post')));
+  
+  ```
+  It is **not in any set** and reachable by FQN only — Laravel doesn't document
+  this form as a recommended convention, so adopting it is a deliberate choice.
+  
+  - Rewrites string and array-of-string arguments to `->middleware()`,
+    `Route::middleware()`, and `withoutMiddleware()`, gated on a receiver that
+    resolves to an Illuminate routing type — an unrelated `->middleware()`
+    method is never touched.
+  - Converts the first-party aliases `auth`, `auth.basic`, `can`, `guest`,
+    `password.confirm`, `signed`, `verified`. Group names (`web`, `api`),
+    custom/package aliases, variables, and already-class-form references are
+    left alone. `can:` model arguments stay string literals — never upgraded to
+    `::class`, which would change the authorisation target.
+  - Bare no-parameter aliases convert to `::class` by default; set
+    `convert_bare_aliases => false` for `alias:param` forms only.
+  - **`throttle` is opt-in.** Its target class (`ThrottleRequests` vs
+    `ThrottleRequestsWithRedis`) depends on app-global configuration that is
+    invisible at the call site, so the rule will not guess it — converting
+    blindly would silently switch a Redis-throttling app to the database
+    limiter. Enable it with `include_throttle => true` and an explicit
+    `throttle_class`; then `throttle:api` → `{class}::using('api')` and
+    `throttle:60,1` → `{class}::with(60, 1)`.
+  
+
+### Internal
+
+- 24 fixtures cover the conversions (every alias, parameterised and bare, array
+  and variadic arguments, `withoutMiddleware`, the `signed`/`verified`/throttle
+  special-case helpers) and the skips (non-route receiver, unknown/custom alias,
+  group name, already-class form, variable argument, unround-trippable
+  parameter, throttle-disabled, bare `can`), across default, throttle-enabled,
+  and bare-disabled configurations.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.8.0...0.9.0
+
 ## 0.8.0 - 2026-06-14
 
 <!-- verified-sha: a4c3b3288368c55bba29b9d13deed58c7f732124 -->
@@ -24,6 +82,7 @@ type only resolves under a PHPStan extension such as larastan.
   ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
       NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
   ])
+  
   
   ```
   Each manifest record is `{file, line, method, argIndex, paramName, value?}`.
@@ -84,6 +143,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   
   ```
@@ -358,11 +418,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -406,6 +468,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -512,6 +575,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -519,6 +583,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
