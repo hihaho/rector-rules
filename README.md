@@ -60,6 +60,7 @@ General code-quality conventions.
 | `RemoveUnnecessaryNullsafeOperatorRector` | Remove the nullsafe operator (`?->`) when the receiver can never be null         |
 | `NativeFunctionFlagArgumentToNamedRector` | Name the opaque trailing bool/null flag of well-known native functions           |
 | `FirstPartyFlagArgumentToNamedRector`     | Name opaque bool/null flags on a first-party method, static, or constructor call |
+| `ConfigSetMethodRector`                   | Convert the `config([...])` array-setter form to explicit `config()->set(...)`   |
 
 #### `RemoveUnnecessaryNullsafeOperatorRector`
 
@@ -135,6 +136,29 @@ self-documenting. The two rules split by what owns the parameter name:
 - An already-named argument, an unpacked argument (`...$args`), a variadic target
   parameter, a first-class callable (`strlen(...)`, `$store->resolve(...)`), and a
   callee that can't be resolved (dynamic name, closure, `__call`) are all skipped.
+
+#### `ConfigSetMethodRector`
+
+```diff
+-config(['queue.default' => 'sync']);
++config()->set('queue.default', 'sync');
+```
+
+**Why?** The array form of `config()` is a setter dressed up as a getter — it reads
+like a lookup but mutates the repository. The explicit `config()->set(...)` form
+names the operation, so the call site states that it writes. A multi-key array is
+expanded into one `set()` call per pair, preserving source order.
+
+**Scope & safety:**
+
+- Fires only when the `config([...])` call is the whole statement — a `config([...])`
+  inside an assignment, condition, or other expression is left alone (multi-key
+  expansion is only valid as standalone statements).
+- Only string-literal keys are converted. A dynamic key (`config([$key => $v])`) or a
+  class-constant key (`config([Config::KEY => $v])`) is left untouched, and an empty
+  array is a no-op.
+- Idempotent — the already-converted `config()->set(...)` form is a method call, not
+  the `config()` function call the rule matches, so re-running changes nothing.
 
 #### Opt-in: `NamedArgumentFromManifestRector` (not in any set)
 
