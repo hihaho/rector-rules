@@ -179,6 +179,34 @@ two calls of the **same method name on the same physical line** with different
 receiver types and parameter names — keep one call per line (formatters already
 do) to avoid it.
 
+**The manifest is invisible to Rector's cache.** Rector keys each file's cache on
+the source content plus the configuration *parameters* — never the content of a
+file a rule points at. So a regenerated manifest with new findings, over
+unchanged source, is served from cache and **silently skipped**. Two ways to stay
+correct:
+
+- **Run the pass with `rector process --no-cache`** (or `--clear-cache`). Simplest;
+  fits the regenerate-then-apply workflow, where the manifest changes every cycle
+  anyway.
+- **Register `ManifestCacheMetaExtension`** to fold the manifest's hash into the
+  cache key, so Rector reprocesses exactly when the manifest content changes and
+  keeps the cache while it is stable (useful for a standing CI Rector check). Bind
+  it with the **same** manifest path and tag it directly — do *not* use
+  `cacheMetaExtension()`, which re-binds the class to autowiring and drops the
+  path:
+
+  ```php
+  use Hihaho\RectorRules\Caching\ManifestCacheMetaExtension;
+  use Rector\Caching\Contract\CacheMetaExtensionInterface;
+
+  $manifest = __DIR__ . '/named-arguments-manifest.json';
+  $rectorConfig->ruleWithConfiguration(NamedArgumentFromManifestRector::class, [
+      NamedArgumentFromManifestRector::MANIFEST => $manifest,
+  ]);
+  $rectorConfig->singleton(ManifestCacheMetaExtension::class, fn () => new ManifestCacheMetaExtension($manifest));
+  $rectorConfig->tag(ManifestCacheMetaExtension::class, CacheMetaExtensionInterface::class);
+  ```
+
 ### Eloquent (`HihahoSetList::ELOQUENT`)
 
 Enforces conventions for Eloquent relation usage.
