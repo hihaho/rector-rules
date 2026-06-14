@@ -6,7 +6,6 @@ namespace Hihaho\RectorRules\Rector\CodeQuality;
 
 use InvalidArgumentException;
 use JsonException;
-use Override;
 use PhpParser\Node;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Expr\ConstFetch;
@@ -16,6 +15,7 @@ use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use Rector\Contract\Rector\ConfigurableRectorInterface;
+use Rector\PhpParser\Node\FileNode;
 use Rector\Rector\AbstractRector;
 use Rector\ValueObject\PhpVersion;
 use Rector\VersionBonding\Contract\MinPhpVersionInterface;
@@ -62,9 +62,9 @@ final class NamedArgumentFromManifestRector extends AbstractRector implements Co
     private array $recordsByBasename = [];
 
     /**
-     * Resolved once per file in {@see beforeTraverse()}, so the path normalisation
-     * and basename lookup happen once per file — not once per call node — and the
-     * per-node hot path is a single bool check.
+     * Resolved once per file in the {@see FileNode} branch of {@see refactor()}, so the
+     * path normalisation and basename lookup happen once per file — not once per call
+     * node — and the per-node hot path is a single bool check.
      */
     private string $currentFilePath = '';
 
@@ -147,32 +147,26 @@ CODE_SAMPLE,
     /** @return array<class-string<Node>> */
     public function getNodeTypes(): array
     {
-        return [MethodCall::class, StaticCall::class, New_::class];
-    }
-
-    /**
-     * Resolve the manifest records for the current file once, before its nodes are
-     * traversed — so the per-node hot path never normalises the path or hits the
-     * lookup, and a file with no records bails on a single bool.
-     *
-     * @param Node[] $nodes
-     * @return Node[]|null
-     */
-    #[Override]
-    public function beforeTraverse(array $nodes): ?array
-    {
-        // No parent::beforeTraverse() — its only job is setting the deprecated
-        // $this->file, which this rule never reads; getFile() resolves the current
-        // file from the file provider independently.
-        $this->currentFilePath = str_replace('\\', '/', $this->getFile()->getFilePath());
-        $this->currentFileRecords = $this->recordsByBasename[basename($this->currentFilePath)] ?? [];
-        $this->currentFileHasNoRecords = $this->currentFileRecords === [];
-
-        return null;
+        // FileNode is the per-file root, visited before the call nodes — it replaces a
+        // (now-deprecated) beforeTraverse() override for the once-per-file record setup.
+        return [FileNode::class, MethodCall::class, StaticCall::class, New_::class];
     }
 
     public function refactor(Node $node): ?Node
     {
+        // FileNode fires first for each file (Rector wraps every file's stmts in one).
+        // Resolve the file's manifest records once here, exactly as the former
+        // beforeTraverse() override did, so the per-node hot path stays a single bool
+        // check. getFile() is used (not the @internal CurrentFileProvider) — it is the
+        // accessor AbstractRector exposes and does not trip this package's PHPStan.
+        if ($node instanceof FileNode) {
+            $this->currentFilePath = str_replace('\\', '/', $this->getFile()->getFilePath());
+            $this->currentFileRecords = $this->recordsByBasename[basename($this->currentFilePath)] ?? [];
+            $this->currentFileHasNoRecords = $this->currentFileRecords === [];
+
+            return null;
+        }
+
         if ($this->currentFileHasNoRecords) {
             return null;
         }

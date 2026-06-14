@@ -6,7 +6,10 @@ namespace Hihaho\RectorRules\Tests\Rector\CodeQuality\NamedArgumentFromManifestR
 
 use Hihaho\RectorRules\Rector\CodeQuality\NamedArgumentFromManifestRector;
 use InvalidArgumentException;
+use Rector\PhpParser\Node\FileNode;
+use Rector\Rector\AbstractRector;
 use Rector\Testing\PHPUnit\AbstractLazyTestCase;
+use ReflectionMethod;
 use ReflectionProperty;
 
 /**
@@ -103,6 +106,26 @@ final class ConfigureManifestTest extends AbstractLazyTestCase
         $rule->configure([NamedArgumentFromManifestRector::MANIFEST => $this->manifest]);
 
         $this->assertSame([], $this->loadedRecords($rule));
+    }
+
+    public function test_rule_does_not_override_before_traverse(): void
+    {
+        // Overriding beforeTraverse() is deprecated in Rector 2.4.5 (emits a runtime
+        // [WARNING]). The per-file setup moved to the FileNode branch of refactor(), so
+        // beforeTraverse must resolve to AbstractRector's, not this rule's — pinning the
+        // regression so the override cannot creep back.
+        $declaringClass = (new ReflectionMethod(NamedArgumentFromManifestRector::class, 'beforeTraverse'))
+            ->getDeclaringClass()
+            ->getName();
+
+        $this->assertSame(AbstractRector::class, $declaringClass);
+    }
+
+    public function test_rule_registers_the_file_node_type(): void
+    {
+        $rule = new NamedArgumentFromManifestRector();
+
+        $this->assertContains(FileNode::class, $rule->getNodeTypes());
     }
 
     /**
