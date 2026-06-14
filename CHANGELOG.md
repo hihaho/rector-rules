@@ -2,6 +2,44 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.9.1 - 2026-06-14
+
+<!-- verified-sha: f9c49c37824fed3f5a4c178fb93148068e5f107e -->
+Method-name matching across five rules is now case-insensitive, the way PHP
+itself treats method names.
+
+### Fixed
+
+- **Mixed-case method calls are no longer silently skipped.** PHP method names
+  are case-insensitive, but six gates across five rules compared a method name
+  with an exact string check, so a mixed-case spelling slipped through:
+  
+  - `ObservedByAttributeRector` now matches `static::Observe(...)`.
+  - `RemoveAfterColumnPositioningRector` now matches `->After(...)`.
+  - `NormalizeRoutePathRector` and `RouteGroupArrayToMethodsRector` (via the
+    shared `ChecksRouteContext`) now match `Route::GET(...)`, `Route::GROUP(...)`,
+    and other mixed-case verbs.
+  - `FlagColumnToBooleanRector` now matches `$table->TinyInteger(...)`.
+  
+  These were missed transforms — the rules simply did nothing on a mixed-case
+  call that they handle in lowercase.
+  
+- **Correctness fix in `FlagColumnToBooleanRector`'s skip guard.** The guard that
+  leaves a column-modifying migration alone keyed on exact `->change()` /
+  `->autoIncrement()` spellings. A mixed-case `->Change()` slipped the guard, so
+  the rule could **wrongly convert** a `tinyInteger(...)->Change()` migration to
+  `boolean(...)`. The guard now matches case-insensitively and correctly skips it.
+  
+
+Behaviour is unchanged for the lowercase spellings every existing fixture uses.
+
+### Internal
+
+- Six regression fixtures added (one per fixed site), covering both the
+  now-matched transforms and the skip-guard correctness case.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.9.0...0.9.1
+
 ## 0.9.0 - 2026-06-14
 
 <!-- verified-sha: cb2e8c017108aec9d1a3419e0c0871df048fc870 -->
@@ -24,6 +62,7 @@ Laravel's class-based fluent form.
   // ->
   Route::middleware(\Illuminate\Auth\Middleware\Authenticate::using('sanctum'))
       ->group(fn () => Route::get('/posts', PostController::class)->middleware(\Illuminate\Auth\Middleware\Authorize::using('viewAny', 'post')));
+  
   
   ```
   It is **not in any set** and reachable by FQN only — Laravel doesn't document
@@ -82,6 +121,7 @@ type only resolves under a PHPStan extension such as larastan.
   ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
       NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
   ])
+  
   
   
   ```
@@ -143,6 +183,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   
   
@@ -419,11 +460,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -468,6 +511,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -576,6 +620,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -583,6 +628,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
