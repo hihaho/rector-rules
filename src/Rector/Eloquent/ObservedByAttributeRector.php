@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\Eloquent;
 
+use Hihaho\RectorRules\Rector\Eloquent\Concerns\InspectsEloquentModel;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Illuminate\Database\Eloquent\Model;
 use PhpParser\Node;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Attribute;
@@ -28,9 +28,9 @@ use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
  */
 final class ObservedByAttributeRector extends AbstractRector
 {
-    private const string OBSERVED_BY_ATTRIBUTE = ObservedBy::class;
+    use InspectsEloquentModel;
 
-    private const string ELOQUENT_MODEL = Model::class;
+    private const string OBSERVED_BY_ATTRIBUTE = ObservedBy::class;
 
     public function __construct(
         private readonly ReflectionProvider $reflectionProvider,
@@ -107,7 +107,7 @@ CODE_SAMPLE,
             return null;
         }
 
-        if ($this->hasObservedByAttribute($node)) {
+        if ($this->hasAttribute($node, self::OBSERVED_BY_ATTRIBUTE)) {
             return null;
         }
 
@@ -158,34 +158,5 @@ CODE_SAMPLE,
         }
 
         return $this->getName($constFetch->class);
-    }
-
-    private function isEloquentModel(Class_ $class): bool
-    {
-        $className = $this->getName($class);
-        if ($className === null || ! $this->reflectionProvider->hasClass($className)) {
-            return false;
-        }
-
-        if (! $this->reflectionProvider->hasClass(self::ELOQUENT_MODEL)) {
-            return false;
-        }
-
-        return $this->reflectionProvider->getClass($className)->isSubclassOfClass(
-            $this->reflectionProvider->getClass(self::ELOQUENT_MODEL)
-        );
-    }
-
-    private function hasObservedByAttribute(Class_ $class): bool
-    {
-        foreach ($class->attrGroups as $attrGroup) {
-            foreach ($attrGroup->attrs as $attr) {
-                if ($this->getName($attr->name) === self::OBSERVED_BY_ATTRIBUTE) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 }

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Hihaho\RectorRules\Rector\Eloquent;
 
 use Composer\InstalledVersions;
+use Hihaho\RectorRules\Rector\Eloquent\Concerns\InspectsEloquentModel;
 use Hihaho\RectorRules\Rector\Eloquent\Support\NewCollectionShadowDetector;
 use Illuminate\Database\Eloquent\Attributes\CollectedBy;
-use Illuminate\Database\Eloquent\Model;
 use PhpParser\Node;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Attribute;
@@ -31,9 +31,9 @@ use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
  */
 final class CollectedByAttributeRector extends AbstractRector
 {
-    private const string COLLECTED_BY_ATTRIBUTE = CollectedBy::class;
+    use InspectsEloquentModel;
 
-    private const string ELOQUENT_MODEL = Model::class;
+    private const string COLLECTED_BY_ATTRIBUTE = CollectedBy::class;
 
     private readonly NewCollectionShadowDetector $shadowDetector;
 
@@ -138,7 +138,7 @@ CODE_SAMPLE,
             return null;
         }
 
-        if ($this->hasCollectedByAttribute($node)) {
+        if ($this->hasAttribute($node, self::COLLECTED_BY_ATTRIBUTE)) {
             return null;
         }
 
@@ -207,22 +207,6 @@ CODE_SAMPLE,
         return $returnTypeFqcn;
     }
 
-    private function isEloquentModel(Class_ $class): bool
-    {
-        $className = $this->getName($class);
-        if ($className === null || ! $this->reflectionProvider->hasClass($className)) {
-            return false;
-        }
-
-        if (! $this->reflectionProvider->hasClass(self::ELOQUENT_MODEL)) {
-            return false;
-        }
-
-        return $this->reflectionProvider->getClass($className)->isSubclassOfClass(
-            $this->reflectionProvider->getClass(self::ELOQUENT_MODEL)
-        );
-    }
-
     /**
      * Whether the installed framework inherits #[CollectedBy] through the parent
      * chain (Laravel 13+), so a non-final model can be rewritten safely. On
@@ -243,19 +227,6 @@ CODE_SAMPLE,
             }
 
             return version_compare($version, '13.0.0', '>=');
-        }
-
-        return false;
-    }
-
-    private function hasCollectedByAttribute(Class_ $class): bool
-    {
-        foreach ($class->attrGroups as $attrGroup) {
-            foreach ($attrGroup->attrs as $attr) {
-                if ($this->getName($attr->name) === self::COLLECTED_BY_ATTRIBUTE) {
-                    return true;
-                }
-            }
         }
 
         return false;
