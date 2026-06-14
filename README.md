@@ -145,7 +145,10 @@ larastan — a generic-inherited property, a model `@property` chain — which R
 cannot load into its own engine. This rule closes that gap with a **manifest
 bridge**: a larastan-powered PHPStan rule (run on the consumer side) emits the
 findings Rector can't compute, and this rule applies them with **no type
-resolution of its own**.
+resolution of its own**. A ready-made producer ships in
+[`hihaho/phpstan-rules`](https://github.com/hihaho/phpstan-rules) (a Collector that
+writes the JSON manifest in this schema) — include its
+`named-argument-manifest.neon`, or write your own producer to the format below.
 
 It is **not in any set** and is a **no-op until configured** with a manifest path:
 
@@ -211,6 +214,16 @@ correct:
   $rectorConfig->singleton(ManifestCacheMetaExtension::class, fn () => new ManifestCacheMetaExtension($manifest));
   $rectorConfig->tag(ManifestCacheMetaExtension::class, CacheMetaExtensionInterface::class);
   ```
+
+  This wiring needs the **classic `RectorConfig` callback style** (a `$rectorConfig`
+  parameter). The fluent `RectorConfig::configure()->withConfiguredRule(...)` builder
+  cannot register a tagged singleton, so put the `ManifestCacheMetaExtension`
+  `singleton()` + `tag()` in a classic-style config file (the rule itself can still be
+  configured either way).
+
+> **Running under an agent wrapper?** `laravel/pao` rewrites `--error-format` (and can
+> interfere with Rector's stream handling), so run the manifest pass with `PAO_DISABLE=1`
+> — e.g. `PAO_DISABLE=1 vendor/bin/rector process --no-cache`.
 
 ### Eloquent (`HihahoSetList::ELOQUENT`)
 

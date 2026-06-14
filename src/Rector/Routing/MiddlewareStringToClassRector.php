@@ -38,8 +38,16 @@ use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
  *
  * Laravel 10.9 added static "named middleware" helpers — `Authenticate::using()`,
  * `Authorize::using()`, `ValidateSignature::relative()`, … — each returning the
- * exact resolver string the magic string would otherwise produce, so the rewrite
- * is behaviour-preserving while making references refactor-safe and navigable.
+ * exact resolver string the magic string would otherwise produce. The rewrite is
+ * behaviour-preserving **only for an alias that still points at the framework class**
+ * it hardcodes ({@see ALIAS_CLASSES}). An application that remaps an alias to its own
+ * subclass in the middleware-alias map (commonly `auth` → a custom `Authenticate`,
+ * `guest` → a custom `RedirectIfAuthenticated`, carrying real logic) would have that
+ * logic silently bypassed, since `using()` resolves to the *framework* class. The rule
+ * cannot read a consumer's alias map from the call site, so the two most-often-remapped
+ * aliases, `auth` and `guest`, are **excluded from the default convert-set**
+ * ({@see DEFAULT_ALIASES}); convert them only by listing them explicitly in
+ * {@see ALIASES} after confirming they are unremapped.
  *
  * Opt-in: not in any set, reachable by FQN. `throttle` is excluded by default
  * because its target class (`ThrottleRequests` vs `ThrottleRequestsWithRedis`) is
@@ -92,12 +100,23 @@ final class MiddlewareStringToClassRector extends AbstractRector implements Conf
     ];
 
     /**
+     * The aliases converted by default — every {@see ALIAS_CLASSES} key *except*
+     * `auth` and `guest`. Those two are the ones an application most often remaps to a
+     * logic-bearing subclass, so converting them to the hardcoded framework class would
+     * silently change behaviour. They remain convertible when listed explicitly in
+     * {@see ALIASES}.
+     *
+     * @var list<string>
+     */
+    private const array DEFAULT_ALIASES = ['auth.basic', 'can', 'password.confirm', 'signed', 'verified'];
+
+    /**
      * Defaulted at declaration (not only in configure()) so the rule still works
      * when registered with a bare ->rule(), which never calls configure().
      *
      * @var list<string>
      */
-    private array $enabledAliases = ['auth', 'auth.basic', 'can', 'guest', 'password.confirm', 'signed', 'verified'];
+    private array $enabledAliases = self::DEFAULT_ALIASES;
 
     private bool $convertBareAliases = true;
 
@@ -108,7 +127,7 @@ final class MiddlewareStringToClassRector extends AbstractRector implements Conf
     public function configure(array $configuration): void
     {
         /** @var list<string> $aliases */
-        $aliases = $configuration[self::ALIASES] ?? array_keys(self::ALIAS_CLASSES);
+        $aliases = $configuration[self::ALIASES] ?? self::DEFAULT_ALIASES;
         $this->enabledAliases = $aliases;
         $this->convertBareAliases = (bool) ($configuration[self::CONVERT_BARE_ALIASES] ?? true);
         $this->includeThrottle = (bool) ($configuration[self::INCLUDE_THROTTLE] ?? false);
