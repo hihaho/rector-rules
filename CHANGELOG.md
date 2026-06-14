@@ -2,6 +2,47 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.9.2 - 2026-06-14
+
+<!-- verified-sha: 93dd29e3fa82563d94d776819c59faaafc57d534 -->
+`NamedArgumentFromManifestRector` now validates its manifest on load, and a
+cache-key collision on an unreadable manifest is fixed.
+
+### Fixed
+
+- **The manifest is validated on load.** Previously a malformed manifest threw a
+  raw `JsonException`, and a structurally-wrong record reached `basename()` with an
+  undefined key — a PHP warning that could mis-fire on the wrong file. Now:
+  
+  - Invalid JSON or a non-array payload throws an `InvalidArgumentException` that
+    names the manifest path and the underlying cause, instead of a bare
+    `JsonException`.
+  - A single structurally-invalid record — missing key, wrong scalar type, or an
+    empty `file`/`method`/`paramName` — is skipped, so one bad line never fails a
+    whole-codebase run. (An empty `paramName` would otherwise become
+    `new Identifier('')` and emit invalid PHP.)
+  
+  Valid manifests are unaffected; the matching logic is unchanged.
+  
+- **`ManifestCacheMetaExtension` no longer collapses an unreadable manifest's hash
+  to the empty string.** `hash_file()` returns `false` on an unreadable file, and
+  the old `(string)` cast turned that into `''` — so every unreadable manifest
+  produced the same cache key, defeating invalidation. `getHash()` now pre-checks
+  `is_readable()` (side-effect-free, no `hash_file()` warning) and returns a
+  distinct `'manifest-unreadable'` sentinel, keeping a `=== false` guard for the
+  vanished/locked-between-checks race.
+  
+
+### Internal
+
+- Added `ConfigureManifestTest` (malformed JSON, non-list payload, skipped invalid
+  record alongside a co-located valid one, wrong scalar type, missing-file no-op)
+  and an unreadable-manifest hash test (skip-guarded for filesystems that ignore
+  `0000`).
+- README documents the new fail-loud / skip-bad-record validation behaviour.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.9.1...0.9.2
+
 ## 0.9.1 - 2026-06-14
 
 <!-- verified-sha: f9c49c37824fed3f5a4c178fb93148068e5f107e -->
@@ -64,6 +105,7 @@ Laravel's class-based fluent form.
       ->group(fn () => Route::get('/posts', PostController::class)->middleware(\Illuminate\Auth\Middleware\Authorize::using('viewAny', 'post')));
   
   
+  
   ```
   It is **not in any set** and reachable by FQN only — Laravel doesn't document
   this form as a recommended convention, so adopting it is a deliberate choice.
@@ -121,6 +163,7 @@ type only resolves under a PHPStan extension such as larastan.
   ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
       NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
   ])
+  
   
   
   
@@ -183,6 +226,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   
   
@@ -461,11 +505,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -511,6 +557,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -621,6 +668,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -628,6 +676,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
