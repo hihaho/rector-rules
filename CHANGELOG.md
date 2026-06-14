@@ -2,6 +2,67 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.9.3 - 2026-06-14
+
+<!-- verified-sha: fae7f1aa3587ed2c9b0873b6d338e1288d0372e9 -->
+Removes a Rector 2.4.5 deprecation warning, and closes a behaviour-change footgun
+in `MiddlewareStringToClassRector`'s default surfaced by real-world adoption.
+
+### Changed
+
+- **`MiddlewareStringToClassRector` no longer converts `auth` / `guest` by default.**
+  Converting a string alias to its hardcoded *framework* middleware class is only
+  behaviour-preserving when the application leaves that alias at the framework default.
+  `auth` and `guest` are the aliases apps most often remap to a custom subclass (a
+  custom `Authenticate` / `RedirectIfAuthenticated` carrying real logic) in the
+  middleware-alias map — and the rewrite would silently bypass that logic, invisibly,
+  since the helper returns a resolver string. The rule cannot read a consumer's alias
+  map from the call site, so `auth` and `guest` are now excluded from the default
+  convert-set.
+  
+  This is a behaviour change for consumers of this **opt-in** rule (it is in no set)
+  who relied on `auth`/`guest` converting by default. To restore the old behaviour
+  after confirming those aliases are unremapped in your app, list them explicitly:
+  
+  ```php
+  ->withConfiguredRule(MiddlewareStringToClassRector::class, [
+      MiddlewareStringToClassRector::ALIASES => [
+          'auth', 'auth.basic', 'can', 'guest', 'password.confirm', 'signed', 'verified',
+      ],
+  ])
+  
+  ```
+
+### Fixed
+
+- **`NamedArgumentFromManifestRector` no longer overrides the deprecated
+  `beforeTraverse()`.** Rector 2.4.5 deprecates overriding `beforeTraverse()` and emits a
+  runtime `[WARNING]` on every run that uses the rule. The once-per-file manifest-record
+  setup now runs in a `FileNode` branch of `refactor()` — Rector's recommended file-level
+  hook, visited before the call nodes (same ordering the override gave). The rule's
+  matching logic and manifest schema are unchanged.
+- The `MiddlewareStringToClassRector` class docblock no longer claims the rewrite is
+  unconditionally "behaviour-preserving" — it is, only for an alias still pointing at the
+  framework class.
+
+### Documentation
+
+- The README manifest section now points at the ready-made manifest **producer** shipping
+  in [`hihaho/phpstan-rules`](https://github.com/hihaho/phpstan-rules), and documents two
+  consumer-found wiring caveats: `ManifestCacheMetaExtension` needs the classic
+  `RectorConfig` callback style (the fluent `configure()` builder cannot register a tagged
+  singleton), and agent-wrapped runs need `PAO_DISABLE=1`.
+
+### Internal
+
+- A regression test pins that `NamedArgumentFromManifestRector` no longer overrides
+  `beforeTraverse` and registers `FileNode`.
+- New `MiddlewareStringToClassDefaultAliasesTest` proves the default skips `auth`/`guest`
+  while still converting the behaviour-safe aliases; the existing suite now enables all
+  seven aliases explicitly to keep exercising the conversion mechanics.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.9.2...0.9.3
+
 ## 0.9.2 - 2026-06-14
 
 <!-- verified-sha: 93dd29e3fa82563d94d776819c59faaafc57d534 -->
@@ -106,6 +167,7 @@ Laravel's class-based fluent form.
   
   
   
+  
   ```
   It is **not in any set** and reachable by FQN only — Laravel doesn't document
   this form as a recommended convention, so adopting it is a deliberate choice.
@@ -163,6 +225,7 @@ type only resolves under a PHPStan extension such as larastan.
   ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
       NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
   ])
+  
   
   
   
@@ -226,6 +289,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   
   
@@ -506,11 +570,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -557,6 +623,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -669,6 +736,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -676,6 +744,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
