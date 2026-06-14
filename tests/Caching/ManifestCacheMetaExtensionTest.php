@@ -5,9 +5,16 @@ declare(strict_types=1);
 namespace Hihaho\RectorRules\Tests\Caching;
 
 use Hihaho\RectorRules\Caching\ManifestCacheMetaExtension;
-use PHPUnit\Framework\TestCase;
+use Rector\Testing\PHPUnit\AbstractLazyTestCase;
 
-final class ManifestCacheMetaExtensionTest extends TestCase
+/**
+ * Extends Rector's own lazy test base (not a bare PHPUnit TestCase): its setUp
+ * pulls in Rector's scoper autoload, so loading a class that implements a Rector
+ * contract here doesn't double-declare Rector's bundled symfony polyfill against
+ * the root one — a redeclaration fatal that only surfaces on the Windows
+ * prefer-lowest CI leg. Every other test in this suite runs through this base.
+ */
+final class ManifestCacheMetaExtensionTest extends AbstractLazyTestCase
 {
     private string $manifest;
 
