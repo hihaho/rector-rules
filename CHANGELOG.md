@@ -2,6 +2,67 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.8.0 - 2026-06-14
+
+<!-- verified-sha: a4c3b3288368c55bba29b9d13deed58c7f732124 -->
+A new **manifest-bridge** rule closes the one gap
+`FirstPartyFlagArgumentToNamedRector` cannot reach: call sites whose receiver
+type only resolves under a PHPStan extension such as larastan.
+
+### Added
+
+- **`NamedArgumentFromManifestRector`** — names arguments from a JSON manifest
+  produced by an external analyser, with no type resolution of its own.
+  `FirstPartyFlagArgumentToNamedRector` names a flag only when Rector's own
+  (bare-PHPStan) resolution can identify the receiver, so it misses sites whose
+  type only resolves under a framework extension — a generic-inherited property,
+  a model `@property` chain — which Rector cannot load into its own engine. A
+  larastan-powered PHPStan rule (run consumer-side) emits those findings; this
+  rule applies them by matching the call site:
+  
+  ```php
+  ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
+      NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
+  ])
+  
+  ```
+  Each manifest record is `{file, line, method, argIndex, paramName, value?}`.
+  `method` is the method name for a method/static call (never namespaced) or the
+  resolved class FQCN for a `new` expression; the optional `value` is a literal
+  flag the argument must still hold — a drift guard so a stale line never
+  mis-names a since-changed argument.
+  
+  The rule is **not in any set** and is a **no-op until configured** with a
+  manifest path. It only names positional, not-yet-named, non-unpacked
+  arguments, skips first-class callables, and refuses any rename that would leave
+  a positional argument after a named one (invalid PHP — when the manifest named
+  a non-trailing argument without its trailing siblings). Records are resolved
+  once per file, so the per-node hot path stays a single bool check.
+  
+- **`ManifestCacheMetaExtension`** — keeps the bridge cache-correct. Rector keys
+  its per-file cache on source content and configuration parameters, never the
+  content of a file a rule points at, so a regenerated manifest over unchanged
+  source would be served from cache and silently skipped. Registering this
+  extension folds the manifest's hash into the cache key: Rector reprocesses
+  exactly when the manifest content changes, and keeps the cache while it is
+  stable. Consumers who would rather not wire anything can instead run the pass
+  with `rector process --no-cache`. Both paths are documented in the README.
+  
+
+### Internal
+
+- Repository aligned with the canonical package setup: `.editorconfig`,
+  corrected workflow badge URLs, refreshed `.gitattributes` / `.gitignore`,
+  `phpunit.xml.dist` → `phpunit.xml`, and additional dev dependencies
+  (`laravel/pao`, `mrpunyapal/rector-pest`, `nunomaduro/collision`,
+  `pestphp/pest-plugin-arch`).
+- 14 fixtures cover the rule's conversions (method, static, constructor,
+  namespaced constructor, null literal, cascade) and skips (already-named,
+  value drift, unpacked, method/line mismatch, arg-index out of range,
+  first-class callable, trailing-positional).
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.7.0...0.8.0
+
 ## 0.7.0 - 2026-06-13
 
 <!-- verified-sha: 9755a1ebc7d91cb64a899688f5f79eaea7b503ce -->
@@ -23,6 +84,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   ```
   The run is always anchored on a flag, so a call with no bare flag is never
@@ -295,11 +357,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -342,6 +406,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -446,6 +511,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -453,6 +519,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
