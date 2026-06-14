@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\CodeQuality;
 
+use InvalidArgumentException;
+use JsonException;
 use Override;
 use PhpParser\Node;
 use PhpParser\Node\Arg;
@@ -81,11 +83,47 @@ final class NamedArgumentFromManifestRector extends AbstractRector implements Co
             return;
         }
 
-        /** @var list<array{file: string, line: int, method: string, argIndex: int, paramName: string, value?: string}> $records */
-        $records = json_decode((string) file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
+        try {
+            $records = json_decode((string) file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
+        } catch (JsonException $jsonException) {
+            throw new InvalidArgumentException(
+                sprintf('Manifest at "%s" is not valid JSON: %s', $path, $jsonException->getMessage()),
+                $jsonException->getCode(),
+                previous: $jsonException,
+            );
+        }
+
+        if (! is_array($records) || ! array_is_list($records)) {
+            throw new InvalidArgumentException(sprintf('Manifest at "%s" must be a JSON array of records.', $path));
+        }
+
         foreach ($records as $record) {
+            if (! $this->isValidRecord($record)) {
+                continue;
+            }
+
             $this->recordsByBasename[basename($record['file'])][] = $record;
         }
+    }
+
+    /**
+     * Validate one decoded manifest record before it is trusted by the matching
+     * logic. A structurally-invalid record (missing key, wrong scalar type, or an
+     * empty required string) is skipped — an empty `paramName` would otherwise
+     * become `new Identifier('')` in {@see refactor()} and emit invalid PHP.
+     *
+     * @phpstan-assert-if-true array{file: non-empty-string, line: int, method: non-empty-string, argIndex: int, paramName: non-empty-string, value?: string} $record
+     */
+    private function isValidRecord(mixed $record): bool
+    {
+        return is_array($record)
+            && isset($record['file'], $record['line'], $record['method'], $record['argIndex'], $record['paramName'])
+            && is_string($record['file']) && $record['file'] !== ''
+            && is_int($record['line'])
+            && is_string($record['method']) && $record['method'] !== ''
+            && is_int($record['argIndex'])
+            && is_string($record['paramName']) && $record['paramName'] !== ''
+            && (! array_key_exists('value', $record) || is_string($record['value']));
     }
 
     public function getRuleDefinition(): RuleDefinition

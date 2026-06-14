@@ -57,6 +57,15 @@ final readonly class ManifestCacheMetaExtension implements CacheMetaExtensionInt
             return 'manifest-missing';
         }
 
-        return (string) hash_file('sha256', $this->manifestPath);
+        if (! is_readable($this->manifestPath)) {
+            return 'manifest-unreadable';
+        }
+
+        // hash_file() can still return false on a race (file vanished/locked between
+        // the checks); guard the cast so an empty-string hash never collides across
+        // manifests.
+        $hash = hash_file('sha256', $this->manifestPath);
+
+        return $hash === false ? 'manifest-unreadable' : $hash;
     }
 }

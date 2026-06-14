@@ -27,6 +27,10 @@ final class ManifestCacheMetaExtensionTest extends AbstractLazyTestCase
 
     protected function tearDown(): void
     {
+        // Restore read perms first — the unreadable-manifest test chmods to 0000,
+        // and a 0000 file can resist unlink on some filesystems.
+        @chmod($this->manifest, 0644);
+
         if (is_file($this->manifest)) {
             unlink($this->manifest);
         }
@@ -60,6 +64,22 @@ final class ManifestCacheMetaExtensionTest extends AbstractLazyTestCase
         $extension = new ManifestCacheMetaExtension($this->manifest);
 
         $this->assertSame('manifest-missing', $extension->getHash());
+    }
+
+    public function test_hash_signals_an_unreadable_manifest(): void
+    {
+        file_put_contents($this->manifest, '[{"file":"a.php","line":5,"method":"m","argIndex":1,"paramName":"p"}]');
+        chmod($this->manifest, 0000);
+
+        // Root and filesystems/OSes that ignore mode bits (Windows) still read a
+        // 0000 file — the unreadable branch is unobservable there, so skip.
+        if (is_readable($this->manifest)) {
+            self::markTestSkipped('Filesystem ignores 0000 mode; cannot exercise the unreadable branch.');
+        }
+
+        $extension = new ManifestCacheMetaExtension($this->manifest);
+
+        $this->assertSame('manifest-unreadable', $extension->getHash());
     }
 
     public function test_key_is_stable(): void
