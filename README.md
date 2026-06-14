@@ -136,6 +136,49 @@ self-documenting. The two rules split by what owns the parameter name:
   parameter, a first-class callable (`strlen(...)`, `$store->resolve(...)`), and a
   callee that can't be resolved (dynamic name, closure, `__call`) are all skipped.
 
+#### Opt-in: `NamedArgumentFromManifestRector` (not in any set)
+
+`FirstPartyFlagArgumentToNamedRector` names a flag only when Rector's own
+(bare-PHPStan) type resolution can identify the receiver. It therefore misses
+call sites whose receiver type **only resolves under a PHPStan extension** such as
+larastan — a generic-inherited property, a model `@property` chain — which Rector
+cannot load into its own engine. This rule closes that gap with a **manifest
+bridge**: a larastan-powered PHPStan rule (run on the consumer side) emits the
+findings Rector can't compute, and this rule applies them with **no type
+resolution of its own**.
+
+It is **not in any set** and is a **no-op until configured** with a manifest path:
+
+```php
+->withConfiguredRule(NamedArgumentFromManifestRector::class, [
+    NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
+])
+```
+
+The manifest is a JSON array of records, each naming one argument of one call:
+
+```json
+[{ "file": "app/Services/TokenStore.php", "line": 42, "method": "getToken", "argIndex": 1, "paramName": "inherit", "value": "false" }]
+```
+
+- `file` — project-relative path; matched as a path-segment suffix of the file
+  under traversal, so emit root-relative paths to keep the suffix unambiguous.
+- `method` — the **method name** for a method/static call (never namespaced), or
+  the resolved **class FQCN** for a `new` expression (both producer and Rector run
+  name resolution, so the FQCN is the stable key there).
+- `value` *(optional)* — a literal flag (`true`/`false`/`null`) the argument must
+  still hold; a drift guard so a stale manifest line never mis-names a
+  since-changed argument.
+
+**Scope & safety:** records are matched by `file + line + method`, applied only to
+positional, not-yet-named, non-unpacked arguments. A first-class callable is
+skipped, and a rename that would leave a positional argument after a named one
+(invalid PHP — because the manifest named a non-trailing argument without its
+trailing siblings) is refused for the whole call. The one residual ambiguity is
+two calls of the **same method name on the same physical line** with different
+receiver types and parameter names — keep one call per line (formatters already
+do) to avoid it.
+
 ### Eloquent (`HihahoSetList::ELOQUENT`)
 
 Enforces conventions for Eloquent relation usage.

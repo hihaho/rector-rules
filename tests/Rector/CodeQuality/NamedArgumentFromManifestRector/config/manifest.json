@@ -1,0 +1,32 @@
+[
+  { "file": "convert_method_call.php", "line": 5, "method": "getToken", "argIndex": 1, "paramName": "inherit", "value": "false" },
+
+  { "file": "convert_static_call.php", "line": 5, "method": "resolve", "argIndex": 1, "paramName": "strict", "value": "true" },
+
+  { "file": "convert_constructor.php", "line": 5, "method": "MergeFeedback", "argIndex": 1, "paramName": "answeredCorrectly", "value": "true" },
+  { "file": "convert_constructor.php", "line": 5, "method": "MergeFeedback", "argIndex": 2, "paramName": "answeredPartlyCorrect", "value": "false" },
+
+  { "file": "convert_constructor_namespaced.php", "line": 9, "method": "App\\Feedback\\MergeFeedback", "argIndex": 1, "paramName": "answeredCorrectly", "value": "true" },
+
+  { "file": "convert_null_literal.php", "line": 5, "method": "setOption", "argIndex": 1, "paramName": "option", "value": "null" },
+
+  { "file": "convert_cascade_non_flag.php", "line": 5, "method": "loadCount", "argIndex": 0, "paramName": "hasStarted", "value": "true" },
+  { "file": "convert_cascade_non_flag.php", "line": 5, "method": "loadCount", "argIndex": 1, "paramName": "start" },
+  { "file": "convert_cascade_non_flag.php", "line": 5, "method": "loadCount", "argIndex": 2, "paramName": "end" },
+
+  { "file": "skip_already_named.php", "line": 5, "method": "go", "argIndex": 1, "paramName": "shouldNotApply" },
+
+  { "file": "skip_value_drift.php", "line": 5, "method": "toggle", "argIndex": 1, "paramName": "enabled", "value": "false" },
+
+  { "file": "skip_unpacked.php", "line": 5, "method": "many", "argIndex": 1, "paramName": "shouldNotApply" },
+
+  { "file": "skip_first_class_callable.php", "line": 5, "method": "getToken", "argIndex": 1, "paramName": "shouldNotApply" },
+
+  { "file": "skip_trailing_positional.php", "line": 5, "method": "partial", "argIndex": 1, "paramName": "start" },
+
+  { "file": "skip_method_mismatch.php", "line": 5, "method": "differentMethod", "argIndex": 1, "paramName": "shouldNotApply" },
+
+  { "file": "skip_arg_index_out_of_range.php", "line": 5, "method": "two", "argIndex": 5, "paramName": "shouldNotApply" },
+
+  { "file": "skip_line_mismatch.php", "line": 99, "method": "shifted", "argIndex": 1, "paramName": "shouldNotApply" }
+]
