@@ -209,13 +209,7 @@ CODE_SAMPLE,
             }
         }
 
-        $droppablePositional = [];
-        foreach ($positionalIndexes as $position => $argIndex) {
-            $parameter = $parameters[$position] ?? null;
-            $droppablePositional[$argIndex] = $parameter instanceof ParameterReflection
-                && ! $parameter->isVariadic()
-                && $this->argEqualsDefault($args[$argIndex], $parameter);
-        }
+        $droppablePositional = $this->resolveDroppablePositional($args, $positionalIndexes, $parameters);
 
         if ($firstParty && $this->cascadeDrop) {
             return $this->resolveCascadeDrops($remove, $positionalIndexes, $droppablePositional, $parameters);
@@ -234,6 +228,41 @@ CODE_SAMPLE,
         }
 
         return [array_keys($remove), []];
+    }
+
+    /**
+     * Map each positional arg index to whether its default is droppable.
+     *
+     * A default is load-bearing once an *earlier optional positional* argument was
+     * overridden (passed a non-default value): dropping it strands that override —
+     * e.g. has($relation, '=', 1), where '=' overrides the '>=' default, so the trailing
+     * default 1 reads as the operator's operand and dropping it leaves '=' dangling.
+     * Required arguments never count as overrides (no default to deviate from). Both the
+     * trailing and cascade paths consume this map, so the guard covers both; the
+     * named-argument path is unaffected (named args are order-independent, never stranded).
+     *
+     * @param  Arg[]  $args
+     * @param  list<int>  $positionalIndexes
+     * @param  array<int, ParameterReflection>  $parameters
+     * @return array<int, bool>  keyed by arg index
+     */
+    private function resolveDroppablePositional(array $args, array $positionalIndexes, array $parameters): array
+    {
+        $droppablePositional = [];
+        $sawOverride = false;
+        foreach ($positionalIndexes as $position => $argIndex) {
+            $parameter = $parameters[$position] ?? null;
+            $resolvable = $parameter instanceof ParameterReflection && ! $parameter->isVariadic();
+            $isDroppable = $resolvable && $this->argEqualsDefault($args[$argIndex], $parameter);
+
+            $droppablePositional[$argIndex] = $isDroppable && ! $sawOverride;
+
+            if ($resolvable && $parameter->isOptional() && ! $isDroppable) {
+                $sawOverride = true;
+            }
+        }
+
+        return $droppablePositional;
     }
 
     /**

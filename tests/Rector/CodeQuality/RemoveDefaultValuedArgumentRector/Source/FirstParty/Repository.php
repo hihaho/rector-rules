@@ -102,6 +102,13 @@ final class Repository
         return $this;
     }
 
+    public function relate(string $relation, string $operator = '>=', int $count = 1): self
+    {
+        $this->log[] = $relation . $operator . $count;
+
+        return $this;
+    }
+
     /** @param array<mixed> $attributes */
     public function attach(string $model, array $attributes = [], ?string $relationship = null): self
     {

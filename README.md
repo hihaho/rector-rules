@@ -189,6 +189,12 @@ makes the call state only what differs from the default.
 - By default it drops only an **already-named** default argument (order-independent) or
   a **trailing positional** default (iteratively). These are allowed on any callee,
   including vendor — they couple only to the default *value*.
+- A positional default is **not** dropped once an *earlier optional positional* argument
+  was overridden (passed a non-default value) — that default is often the overridden
+  argument's operand. So `->has($relation, '=', 1)` keeps the `1` (the operator `'='`
+  overrides the `'>='` default and would otherwise dangle), while
+  `->has($relation, '>=', 1)` collapses to `->has($relation)`. Required arguments are
+  never overrides; named arguments are unaffected.
 - **Cascade (opt-in).** `['cascade_drop' => true]` also drops a *mid*-positional
   default by naming the arguments after it — `$factory->attach($user, [], $relationship)`
   → `attach($user, relationship: $relationship)`. First-party only (it couples to
