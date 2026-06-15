@@ -2,6 +2,47 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.12.0 - 2026-06-15
+
+<!-- verified-sha: cc590cff9f50e1b1dd7b1103e5158377096bee5f -->
+`RemoveDefaultValuedArgumentRector` gains an opt-out for calls whose return value is
+serialized in an argument-count-sensitive way.
+
+### Added
+
+- **`RemoveDefaultValuedArgumentRector` accepts an `exclude_calls` config.** Some
+  methods serialize their return value in a way that depends on the argument *count* —
+  the canonical case is a middleware factory whose result is stringified into a route
+  signature:
+  
+  ```php
+  ThrottleRequests::with(60, 1);   // serialized as "throttle:60,1"
+  
+  ```
+  Dropping the all-default `1` (or `60, 1`) there is value-equivalent but changes the
+  serialized string, and the parser can't see that coupling. `exclude_calls` lets a
+  consumer opt specific calls out:
+  
+  ```php
+  ->withConfiguredRule(RemoveDefaultValuedArgumentRector::class, [
+      RemoveDefaultValuedArgumentRector::EXCLUDE_CALLS => [
+          \Illuminate\Routing\Middleware\ThrottleRequests::class => ['with'],
+      ],
+  ])
+  
+  ```
+  It's keyed by class FQN → method names, matched against the resolved method's
+  declaring class **and its subclasses** (so excluding a base covers
+  `ThrottleRequestsWithRedis::with` too); method names match case-insensitively. Off by
+  default — it's a finer-grained alternative to a per-file `withSkip`.
+  
+  Note: a call that *overrides* an earlier argument is already protected by 0.11.2's
+  preceding-default guard (`with(30, 1)` is left untouched without any config). This
+  knob is for the all-default case (`with(60, 1)`) that the guard can't reach.
+  
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.11.2...0.12.0
+
 ## 0.11.2 - 2026-06-15
 
 <!-- verified-sha: d81d730b6f018fd018139da5afb9ae6ce5da3096 -->
@@ -19,6 +60,7 @@ feedback.
   ```diff
   -$query->has('posts', '=', 1);   // 0.11.1 dropped the 1 →
   +$query->has('posts', '=');      // ...leaving the comparison operator without its operand
+  
   
   ```
   A positional default is now droppable only when **no earlier optional positional
@@ -84,6 +126,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   
   
   
+  
   ```
   By default it drops an already-named default argument (order-independent) or a
   trailing positional default (iteratively), and it fires on any callee — those drops
@@ -107,6 +150,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   ```diff
   -$store->paginate(1, perPage: 50);
   +$store->paginate(page: 1, perPage: 50);
+  
   
   
   
@@ -136,11 +180,13 @@ explicit `config()->set()` form.
   
   
   
+  
   ```
   into the explicit setter form:
   
   ```php
   config()->set('queue.default', 'sync');
+  
   
   
   
@@ -234,6 +280,7 @@ in `MiddlewareStringToClassRector`'s default surfaced by real-world adoption.
           'auth', 'auth.basic', 'can', 'guest', 'password.confirm', 'signed', 'verified',
       ],
   ])
+  
   
   
   
@@ -382,6 +429,7 @@ Laravel's class-based fluent form.
   
   
   
+  
   ```
   It is **not in any set** and reachable by FQN only — Laravel doesn't document
   this form as a recommended convention, so adopting it is a deliberate choice.
@@ -439,6 +487,7 @@ type only resolves under a PHPStan extension such as larastan.
   ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
       NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
   ])
+  
   
   
   
@@ -508,6 +557,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   
   
@@ -800,11 +850,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -857,6 +909,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -981,6 +1034,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -988,6 +1042,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
