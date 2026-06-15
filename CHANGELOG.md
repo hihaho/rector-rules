@@ -2,6 +2,45 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.12.1 - 2026-06-15
+
+<!-- verified-sha: 849fbb39795ce3ef98be41b0978990a2155c0bb7 -->
+A patch release sourced from production dogfood: a usability fix to the
+`exclude_calls` knob added in 0.12.0, plus documentation that clarifies how to
+name flag arguments on receivers Rector cannot resolve on its own.
+
+### Fixed
+
+- **`RemoveDefaultValuedArgumentRector` — `exclude_calls` now matches the called
+  class, not only the declaring class.** A call is opted out when the configured
+  class is-a the call's *declaring* class **or** its *called* class. Previously
+  only the declaring class matched, so excluding an inherited factory by the
+  subclass actually invoked — e.g. `ThrottleRequestsWithRedis::with()` where
+  `with()` is declared on `ThrottleRequests` — silently did nothing. Configuring
+  either the base class or the subclass now opts the call out. `self`, `static`,
+  and `parent` receivers resolve correctly as well.
+
+### Documentation
+
+- **Clarified how to name flags on receivers Rector can't resolve.** The
+  `NamedArgumentFromManifestRector` section now distinguishes three cases with a
+  decision table: a native docblock `@property` receiver is already resolved (no
+  extra wiring); an extension-only dynamic property — one whose type is supplied
+  only by a PHPStan `PropertiesClassReflectionExtension`, such as a larastan
+  attribute or a container accessor — can be resolved in-engine by loading that
+  extension into Rector with `->withPHPStanConfigs([...])`; and a runtime macro,
+  which static analysis can't see at all, still needs the manifest bridge. The
+  previous wording incorrectly stated Rector could not load such extensions.
+
+### Internal
+
+- Extracted the `exclude_calls` matching into a dedicated `ExcludedCallMatcher`.
+- Added a committed proof that `FirstPartyFlagArgumentToNamedRector` names a flag
+  on an extension-supplied receiver once the extension is loaded via
+  `phpstanConfig()`, and a single-argument fixture for the manifest rule.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.12.0...0.12.1
+
 ## 0.12.0 - 2026-06-15
 
 <!-- verified-sha: cc590cff9f50e1b1dd7b1103e5158377096bee5f -->
@@ -18,6 +57,7 @@ serialized in an argument-count-sensitive way.
   ```php
   ThrottleRequests::with(60, 1);   // serialized as "throttle:60,1"
   
+  
   ```
   Dropping the all-default `1` (or `60, 1`) there is value-equivalent but changes the
   serialized string, and the parser can't see that coupling. `exclude_calls` lets a
@@ -29,6 +69,7 @@ serialized in an argument-count-sensitive way.
           \Illuminate\Routing\Middleware\ThrottleRequests::class => ['with'],
       ],
   ])
+  
   
   ```
   It's keyed by class FQN → method names, matched against the resolved method's
@@ -60,6 +101,7 @@ feedback.
   ```diff
   -$query->has('posts', '=', 1);   // 0.11.1 dropped the 1 →
   +$query->has('posts', '=');      // ...leaving the comparison operator without its operand
+  
   
   
   ```
@@ -127,6 +169,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   
   
   
+  
   ```
   By default it drops an already-named default argument (order-independent) or a
   trailing positional default (iteratively), and it fires on any callee — those drops
@@ -150,6 +193,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   ```diff
   -$store->paginate(1, perPage: 50);
   +$store->paginate(page: 1, perPage: 50);
+  
   
   
   
@@ -181,11 +225,13 @@ explicit `config()->set()` form.
   
   
   
+  
   ```
   into the explicit setter form:
   
   ```php
   config()->set('queue.default', 'sync');
+  
   
   
   
@@ -280,6 +326,7 @@ in `MiddlewareStringToClassRector`'s default surfaced by real-world adoption.
           'auth', 'auth.basic', 'can', 'guest', 'password.confirm', 'signed', 'verified',
       ],
   ])
+  
   
   
   
@@ -430,6 +477,7 @@ Laravel's class-based fluent form.
   
   
   
+  
   ```
   It is **not in any set** and reachable by FQN only — Laravel doesn't document
   this form as a recommended convention, so adopting it is a deliberate choice.
@@ -487,6 +535,7 @@ type only resolves under a PHPStan extension such as larastan.
   ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
       NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
   ])
+  
   
   
   
@@ -557,6 +606,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   
   
@@ -851,11 +901,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -909,6 +961,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -1035,6 +1088,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -1042,6 +1096,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
