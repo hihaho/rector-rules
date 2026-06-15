@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\CodeQuality;
 
+use Hihaho\RectorRules\Rector\CodeQuality\Support\ExcludedCallMatcher;
 use PhpParser\Node;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Expr;
@@ -70,9 +71,11 @@ final class RemoveDefaultValuedArgumentRector extends AbstractRector implements 
      * middleware factory whose result is stringified into a route signature
      * (`ThrottleRequests::with(60, 1)` → the signature `throttle:60,1`) — dropping a
      * default that equals its parameter default still changes the serialized string.
-     * The parser cannot detect that coupling, so this is an explicit opt-out. Matched
-     * against the resolved method's declaring class (and its subclasses); method names
-     * are compared case-insensitively.
+     * The parser cannot detect that coupling, so this is an explicit opt-out. A call is
+     * excluded when its method name matches and the configured class is-a the call's
+     * *declaring* class or its *called* class — so for an inherited static factory like
+     * `ThrottleRequestsWithRedis::with()` (declared on `ThrottleRequests`), configuring
+     * either the base or the subclass works. Method names match case-insensitively.
      *
      * @var array<string, list<string>>  method names stored lowercased
      */
@@ -80,6 +83,7 @@ final class RemoveDefaultValuedArgumentRector extends AbstractRector implements 
 
     public function __construct(
         private readonly ReflectionResolver $reflectionResolver,
+        private readonly ExcludedCallMatcher $excludedCallMatcher,
     ) {}
 
     public function configure(array $configuration): void
@@ -95,6 +99,15 @@ final class RemoveDefaultValuedArgumentRector extends AbstractRector implements 
 
         $excluded = $configuration[self::EXCLUDE_CALLS] ?? [];
         Assert::isArray($excluded);
+        $this->excludedCalls = $this->normalizeExcludedCalls($excluded);
+    }
+
+    /**
+     * @param  array<mixed>  $excluded
+     * @return array<string, list<string>>  class FQN (no leading slash) → lowercased method names
+     */
+    private function normalizeExcludedCalls(array $excluded): array
+    {
         $normalized = [];
         foreach ($excluded as $class => $methods) {
             Assert::stringNotEmpty($class);
@@ -103,7 +116,7 @@ final class RemoveDefaultValuedArgumentRector extends AbstractRector implements 
             $normalized[ltrim($class, '\\')] = array_map(strtolower(...), array_values($methods));
         }
 
-        $this->excludedCalls = $normalized;
+        return $normalized;
     }
 
     public function getRuleDefinition(): RuleDefinition
@@ -166,12 +179,12 @@ CODE_SAMPLE,
             return null;
         }
 
-        if ($this->excludedCalls !== [] && $this->isExcludedCall($methodReflection)) {
+        $scope = $node->getAttribute(AttributeKey::SCOPE);
+        if (! $scope instanceof Scope) {
             return null;
         }
 
-        $scope = $node->getAttribute(AttributeKey::SCOPE);
-        if (! $scope instanceof Scope) {
+        if ($this->excludedCalls !== [] && $this->excludedCallMatcher->matches($node, $methodReflection, $scope, $this->excludedCalls)) {
             return null;
         }
 
@@ -476,26 +489,6 @@ CODE_SAMPLE,
         $classReflection = $classReflections[0];
 
         return $classReflection->hasMethod($methodName) ? $classReflection->getMethod($methodName, $scope) : null;
-    }
-
-    private function isExcludedCall(MethodReflection $methodReflection): bool
-    {
-        $methodName = strtolower($methodReflection->getName());
-        $declaringClass = $methodReflection->getDeclaringClass();
-
-        foreach ($this->excludedCalls as $class => $methods) {
-            if (! in_array($methodName, $methods, true)) {
-                continue;
-            }
-
-            // is-a match: the configured class is the declaring class, an ancestor, or
-            // an implemented interface — so excluding a base covers its subclasses.
-            if ($declaringClass->is($class)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private function isFirstParty(MethodReflection $methodReflection): bool

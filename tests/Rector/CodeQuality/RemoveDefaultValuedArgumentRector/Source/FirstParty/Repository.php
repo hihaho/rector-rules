@@ -117,6 +117,13 @@ class Repository
         return $limit . ',' . $window;
     }
 
+    // Static counterpart of the inherited factory (mirrors ThrottleRequests::with()):
+    // a subclass call resolves its declaring class to Repository.
+    public static function make(int $limit = 60, int $window = 1): string
+    {
+        return $limit . ':' . $window;
+    }
+
     /** @param array<mixed> $attributes */
     public function attach(string $model, array $attributes = [], ?string $relationship = null): self
     {

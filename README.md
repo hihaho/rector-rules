@@ -200,8 +200,10 @@ makes the call state only what differs from the default.
   → `attach($user, relationship: $relationship)`. First-party only (it couples to
   parameter names) and gated behind `first_party_namespaces` (default `App\`).
 - **Exclude specific calls (opt-in).** `['exclude_calls' => [ThrottleRequests::class => ['with']]]`
-  tells the rule to never touch the listed methods (keyed by class FQN → method names,
-  matched against the resolved method's declaring class and its subclasses). Use it for
+  tells the rule to never touch the listed methods (keyed by class FQN → method names).
+  A call matches when the configured class is-a its *declaring* class or its *called*
+  class — so for an inherited factory like `ThrottleRequestsWithRedis::with()` (declared
+  on `ThrottleRequests`), configuring either the base or the subclass works. Use it for
   methods whose return value is serialized in an argument-count-sensitive way — e.g. a
   middleware factory stringified into a route signature (`ThrottleRequests::with(60, 1)`
   → `throttle:60,1`), where dropping a default that equals its parameter default still
