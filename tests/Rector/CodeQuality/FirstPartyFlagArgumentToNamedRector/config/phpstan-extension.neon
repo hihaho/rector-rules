@@ -1,0 +1,5 @@
+services:
+    -
+        class: Hihaho\RectorRules\Tests\Rector\CodeQuality\FirstPartyFlagArgumentToNamedRector\Source\Magic\MagicPropertyExtension
+        tags:
+            - phpstan.broker.propertiesClassReflectionExtension

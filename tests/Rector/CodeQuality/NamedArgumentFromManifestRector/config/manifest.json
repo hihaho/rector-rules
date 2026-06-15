@@ -10,6 +10,8 @@
 
   { "file": "convert_null_literal.php", "line": 5, "method": "setOption", "argIndex": 1, "paramName": "option", "value": "null" },
 
+  { "file": "convert_single_arg.php", "line": 5, "method": "activate", "argIndex": 0, "paramName": "active", "value": "false" },
+
   { "file": "convert_cascade_non_flag.php", "line": 5, "method": "loadCount", "argIndex": 0, "paramName": "hasStarted", "value": "true" },
   { "file": "convert_cascade_non_flag.php", "line": 5, "method": "loadCount", "argIndex": 1, "paramName": "start" },
   { "file": "convert_cascade_non_flag.php", "line": 5, "method": "loadCount", "argIndex": 2, "paramName": "end" },

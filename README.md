@@ -215,12 +215,27 @@ makes the call state only what differs from the default.
 #### Opt-in: `NamedArgumentFromManifestRector` (not in any set)
 
 `FirstPartyFlagArgumentToNamedRector` names a flag only when Rector's own
-(bare-PHPStan) type resolution can identify the receiver. It therefore misses
-call sites whose receiver type **only resolves under a PHPStan extension** such as
-larastan — a generic-inherited property, a model `@property` chain — which Rector
-cannot load into its own engine. This rule closes that gap with a **manifest
-bridge**: a larastan-powered PHPStan rule (run on the consumer side) emits the
-findings Rector can't compute, and this rule applies them with **no type
+(bare-PHPStan) type resolution can identify the receiver. Whether a receiver
+resolves depends on *how* its type is declared:
+
+| Receiver type source | Rector can resolve the receiver? | What to do |
+|---|---|---|
+| Native docblock `@property` (e.g. `@property Foo $bar` on the class) | **Yes**, already — PHPStan's built-in annotation extension reads it | Nothing extra — the receiver is already visible. (The rule still applies its usual gates: it only names a flag when the receiver is a *single* first-party class, so an `@property` pointing at a vendor class or a union still skips.) |
+| Extension-only dynamic property — no declared property, no typed docblock, type synthesized by a `PropertiesClassReflectionExtension` (larastan attribute synthesis, a container/service accessor, a generic-inherited property) | **No**, not by default | Load the extension into Rector with `->withPHPStanConfigs([...])` — see below |
+| Method invented at runtime (a `Macroable` macro / mixin, never statically registered) | **No**, and static analysis can't see it at all | Use the manifest bridge below |
+
+**In-engine option (extension-only properties).** Rector loads consumer PHPStan
+config into the same engine that powers its type resolution, so pointing it at a
+larastan-enabled neon lets `FirstPartyFlagArgumentToNamedRector` resolve those
+receivers directly — no manifest:
+
+```php
+->withPHPStanConfigs([__DIR__ . '/phpstan.neon']) // must include larastan's extension
+```
+
+**Manifest bridge (`NamedArgumentFromManifestRector`).** For receivers static
+analysis can't resolve even with extensions loaded — chiefly runtime macros — this
+rule applies findings a consumer-side PHPStan pass computed, with **no type
 resolution of its own**. A ready-made producer ships in
 [`hihaho/phpstan-rules`](https://github.com/hihaho/phpstan-rules) (a Collector that
 writes the JSON manifest in this schema) — include its
