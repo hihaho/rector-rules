@@ -42,6 +42,8 @@ final class RemoveDefaultValuedArgumentRector extends AbstractRector implements 
 
     public const string CASCADE_DROP = 'cascade_drop';
 
+    public const string EXCLUDE_CALLS = 'exclude_calls';
+
     /**
      * Gates the *cascade* drop only: renaming the arguments after a dropped
      * mid-positional default couples to the callee's parameter names, which is safe
@@ -62,6 +64,20 @@ final class RemoveDefaultValuedArgumentRector extends AbstractRector implements 
      */
     private bool $cascadeDrop = false;
 
+    /**
+     * Calls the rule must never touch, keyed by class FQN → method names. For methods
+     * whose return value is serialized in an argument-count-sensitive way — e.g. a
+     * middleware factory whose result is stringified into a route signature
+     * (`ThrottleRequests::with(60, 1)` → the signature `throttle:60,1`) — dropping a
+     * default that equals its parameter default still changes the serialized string.
+     * The parser cannot detect that coupling, so this is an explicit opt-out. Matched
+     * against the resolved method's declaring class (and its subclasses); method names
+     * are compared case-insensitively.
+     *
+     * @var array<string, list<string>>  method names stored lowercased
+     */
+    private array $excludedCalls = [];
+
     public function __construct(
         private readonly ReflectionResolver $reflectionResolver,
     ) {}
@@ -76,6 +92,18 @@ final class RemoveDefaultValuedArgumentRector extends AbstractRector implements 
         $cascade = $configuration[self::CASCADE_DROP] ?? false;
         Assert::boolean($cascade);
         $this->cascadeDrop = $cascade;
+
+        $excluded = $configuration[self::EXCLUDE_CALLS] ?? [];
+        Assert::isArray($excluded);
+        $normalized = [];
+        foreach ($excluded as $class => $methods) {
+            Assert::stringNotEmpty($class);
+            Assert::isArray($methods);
+            Assert::allStringNotEmpty($methods);
+            $normalized[ltrim($class, '\\')] = array_map(strtolower(...), array_values($methods));
+        }
+
+        $this->excludedCalls = $normalized;
     }
 
     public function getRuleDefinition(): RuleDefinition
@@ -135,6 +163,10 @@ CODE_SAMPLE,
 
         $methodReflection = $this->resolveCalleeReflection($node);
         if (! $methodReflection instanceof MethodReflection) {
+            return null;
+        }
+
+        if ($this->excludedCalls !== [] && $this->isExcludedCall($methodReflection)) {
             return null;
         }
 
@@ -444,6 +476,26 @@ CODE_SAMPLE,
         $classReflection = $classReflections[0];
 
         return $classReflection->hasMethod($methodName) ? $classReflection->getMethod($methodName, $scope) : null;
+    }
+
+    private function isExcludedCall(MethodReflection $methodReflection): bool
+    {
+        $methodName = strtolower($methodReflection->getName());
+        $declaringClass = $methodReflection->getDeclaringClass();
+
+        foreach ($this->excludedCalls as $class => $methods) {
+            if (! in_array($methodName, $methods, true)) {
+                continue;
+            }
+
+            // is-a match: the configured class is the declaring class, an ancestor, or
+            // an implemented interface — so excluding a base covers its subclasses.
+            if ($declaringClass->is($class)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function isFirstParty(MethodReflection $methodReflection): bool

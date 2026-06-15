@@ -199,6 +199,14 @@ makes the call state only what differs from the default.
   default by naming the arguments after it — `$factory->attach($user, [], $relationship)`
   → `attach($user, relationship: $relationship)`. First-party only (it couples to
   parameter names) and gated behind `first_party_namespaces` (default `App\`).
+- **Exclude specific calls (opt-in).** `['exclude_calls' => [ThrottleRequests::class => ['with']]]`
+  tells the rule to never touch the listed methods (keyed by class FQN → method names,
+  matched against the resolved method's declaring class and its subclasses). Use it for
+  methods whose return value is serialized in an argument-count-sensitive way — e.g. a
+  middleware factory stringified into a route signature (`ThrottleRequests::with(60, 1)`
+  → `throttle:60,1`), where dropping a default that equals its parameter default still
+  changes the serialized string. The parser can't detect that coupling, so it's an
+  explicit opt-out — finer than a per-file skip.
 - An unpacked argument (`...$args`), a variadic target parameter, a first-class
   callable, and an unresolved callee are all skipped.
 

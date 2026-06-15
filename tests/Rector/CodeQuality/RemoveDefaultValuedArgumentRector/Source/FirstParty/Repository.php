@@ -12,7 +12,8 @@ use Closure;
  * carries a default-valued argument, so the rule (and the CI auto-fix bot) leaves
  * this file unchanged.
  */
-final class Repository
+// Not final: ExtendedRepository subclasses it to exercise the exclude_calls is-a match.
+class Repository
 {
     private const int DEFAULT_PER_PAGE = 15;
 
@@ -107,6 +108,13 @@ final class Repository
         $this->log[] = $relation . $operator . $count;
 
         return $this;
+    }
+
+    // Stands in for a factory whose return value is serialized in an argument-count-
+    // sensitive way (e.g. a middleware signature string) — the exclude_calls case.
+    public function signature(int $limit = 60, int $window = 1): string
+    {
+        return $limit . ',' . $window;
     }
 
     /** @param array<mixed> $attributes */
