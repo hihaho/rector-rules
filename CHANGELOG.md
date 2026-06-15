@@ -2,6 +2,38 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.11.2 - 2026-06-15
+
+<!-- verified-sha: d81d730b6f018fd018139da5afb9ae6ce5da3096 -->
+A readability fix for `RemoveDefaultValuedArgumentRector`, from real-world adoption
+feedback.
+
+### Fixed
+
+- **`RemoveDefaultValuedArgumentRector` no longer strands an overridden argument's
+  operand.** It used to drop a trailing default whose value equalled its parameter
+  default even when an *earlier* optional positional argument was overridden — leaving
+  that override dangling. The canonical case is Eloquent's
+  `has($relation, $operator, $count)`:
+  
+  ```diff
+  -$query->has('posts', '=', 1);   // 0.11.1 dropped the 1 →
+  +$query->has('posts', '=');      // ...leaving the comparison operator without its operand
+  
+  ```
+  A positional default is now droppable only when **no earlier optional positional
+  argument was overridden** (passed a non-default value). So `has('posts', '=', 1)` is
+  left untouched (the `'='` overrides the `'>='` default, so the `1` is its operand),
+  while `has('posts', '>=', 1)` — where every optional argument is at its default —
+  still collapses to `has('posts')`. Required arguments never count as overrides, and
+  the named-argument path is unaffected (named arguments are self-labelling and never
+  dangle). The guard applies to both the default and `cascade_drop` paths.
+  
+  Consumers carrying a per-file `withSkip` for this case can remove it.
+  
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.11.1...0.11.2
+
 ## 0.11.1 - 2026-06-14
 
 <!-- verified-sha: 2e9a7a829d62c1b566410a30b2c7acfd59c12a69 -->
@@ -51,6 +83,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   +$user->factory()->withPosts(times: 2);
   
   
+  
   ```
   By default it drops an already-named default argument (order-independent) or a
   trailing positional default (iteratively), and it fires on any callee — those drops
@@ -74,6 +107,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   ```diff
   -$store->paginate(1, perPage: 50);
   +$store->paginate(page: 1, perPage: 50);
+  
   
   
   ```
@@ -101,11 +135,13 @@ explicit `config()->set()` form.
   
   
   
+  
   ```
   into the explicit setter form:
   
   ```php
   config()->set('queue.default', 'sync');
+  
   
   
   
@@ -198,6 +234,7 @@ in `MiddlewareStringToClassRector`'s default surfaced by real-world adoption.
           'auth', 'auth.basic', 'can', 'guest', 'password.confirm', 'signed', 'verified',
       ],
   ])
+  
   
   
   
@@ -344,6 +381,7 @@ Laravel's class-based fluent form.
   
   
   
+  
   ```
   It is **not in any set** and reachable by FQN only — Laravel doesn't document
   this form as a recommended convention, so adopting it is a deliberate choice.
@@ -401,6 +439,7 @@ type only resolves under a PHPStan extension such as larastan.
   ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
       NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
   ])
+  
   
   
   
@@ -469,6 +508,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   
   
@@ -759,11 +799,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -815,6 +857,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -937,6 +980,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -944,6 +988,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
