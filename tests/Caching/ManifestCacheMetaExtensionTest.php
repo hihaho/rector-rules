@@ -88,4 +88,48 @@ final class ManifestCacheMetaExtensionTest extends AbstractLazyTestCase
 
         $this->assertSame('hihaho_named_argument_manifest', $extension->getKey());
     }
+
+    public function test_one_instance_tracks_several_manifests(): void
+    {
+        // The cache-meta key is constant, so multiple manifest-driven rules must share
+        // one instance (a second registration would collide). That instance folds every
+        // manifest's hash together: changing any one must change the combined hash.
+        $second = sys_get_temp_dir() . '/test-field-manifest-' . bin2hex(random_bytes(8)) . '.json';
+
+        try {
+            file_put_contents($this->manifest, '[]');
+            file_put_contents($second, '[]');
+            $extension = new ManifestCacheMetaExtension($this->manifest, $second);
+
+            $before = $extension->getHash();
+
+            file_put_contents($second, '[{"file":"a.php","line":5,"value":"id","constFqcn":"App\\\\Models\\\\Order::ID"}]');
+            $after = $extension->getHash();
+
+            $this->assertNotSame($before, $after);
+        } finally {
+            if (is_file($second)) {
+                unlink($second);
+            }
+        }
+    }
+
+    public function test_path_order_does_not_affect_the_combined_hash(): void
+    {
+        $second = sys_get_temp_dir() . '/test-field-manifest-' . bin2hex(random_bytes(8)) . '.json';
+
+        try {
+            file_put_contents($this->manifest, '[{"file":"a.php","line":1,"value":"id","constFqcn":"App\\\\Models\\\\Order::ID"}]');
+            file_put_contents($second, '[{"file":"b.php","line":2,"value":"id","constFqcn":"App\\\\Models\\\\Order::ID"}]');
+
+            $oneWay = (new ManifestCacheMetaExtension($this->manifest, $second))->getHash();
+            $other = (new ManifestCacheMetaExtension($second, $this->manifest))->getHash();
+
+            $this->assertSame($oneWay, $other);
+        } finally {
+            if (is_file($second)) {
+                unlink($second);
+            }
+        }
+    }
 }

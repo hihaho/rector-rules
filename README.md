@@ -290,7 +290,7 @@ correct:
 - **Register `ManifestCacheMetaExtension`** to fold the manifest's hash into the
   cache key, so Rector reprocesses exactly when the manifest content changes and
   keeps the cache while it is stable (useful for a standing CI Rector check). Bind
-  it with the **same** manifest path and tag it directly — do *not* use
+  it with the manifest path and tag it directly — do *not* use
   `cacheMetaExtension()`, which re-binds the class to autowiring and drops the
   path:
 
@@ -311,6 +311,13 @@ correct:
   cannot register a tagged singleton, so put the `ManifestCacheMetaExtension`
   `singleton()` + `tag()` in a classic-style config file (the rule itself can still be
   configured either way).
+
+  Enabling **more than one** manifest-driven rule (e.g. this rule *and*
+  `TestFieldStringToConstantRector`)? Register **one** extension and pass it
+  **every** manifest path — `new ManifestCacheMetaExtension($manifestA, $manifestB)`.
+  A cache-meta extension is keyed by one identifier, so a second instance would
+  collide with the first; one instance folds all the manifests together, reprocessing
+  when any of them changes.
 
 > **Running under an agent wrapper?** `laravel/pao` rewrites `--error-format` (and can
 > interfere with Rector's stream handling), so run the manifest pass with `PAO_DISABLE=1`
@@ -706,7 +713,9 @@ position structurally untouchable rather than relying on the producer to never e
 it. Site identity is `file + line + value`, so the producer emits a record only
 where that key is unique on its line. The same caching caveat as
 `NamedArgumentFromManifestRector` applies — register `ManifestCacheMetaExtension`
-so a regenerated manifest invalidates Rector's per-file cache.
+so a regenerated manifest invalidates Rector's per-file cache. If you enable both
+manifest-driven rules, register **one** extension with **both** manifest paths (see
+the cache note under `NamedArgumentFromManifestRector` above).
 
 ## Covered by upstream Rector
 
