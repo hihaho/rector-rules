@@ -649,6 +649,65 @@ Replaces magic table-name strings in database assertions with the model class, a
 - Skips multi-key arrays (those assert attribute values, not just existence).
 - Only fires inside a `PHPUnit\Framework\TestCase` subclass called on `$this` or `self::`/`static::` — non-test helpers with a same-named method are left alone.
 
+#### Opt-in: `TestFieldStringToConstantRector` (not in any set)
+
+```diff
+-$this->postJson('/internal/orders', ['id' => $order->id]);
++$this->postJson('/internal/orders', [Order::ID => $order->id]);
+```
+
+**Why?** In a test that exercises an *internal* endpoint, a hard-coded field-name
+string (`'id'`, `'player_url'`) is a refactor hazard — a column rename silently
+desyncs the test from the model. But in a test that exercises a *public API
+surface*, that same literal **is the wire contract**: swapping it for a constant
+lets a value-rename pass the test while silently breaking the public API. The
+conversion is therefore safe only for a *proven-internal* endpoint with a
+*resolvable* target constant — and neither fact is reachable from the test file's
+own AST.
+
+Like `NamedArgumentFromManifestRector`, this rule does **no resolution of its own**:
+it applies a manifest a consumer-side PHPStan pass computed, rewriting only the
+sites the producer proved safe. The producer ships in
+[`hihaho/phpstan-rules`](https://github.com/hihaho/phpstan-rules)
+(`test-const-manifest.neon` — Collectors that join a model field→constant map with a
+public-route denylist) — include it, or write your own producer to the format
+below. A site that is public, ambiguous, or dynamic is simply absent from the
+manifest, so the rule leaves it untouched (default-safe).
+
+It is **not in any set** and is a **no-op until configured** with a manifest path:
+
+```php
+->withConfiguredRule(TestFieldStringToConstantRector::class, [
+    TestFieldStringToConstantRector::MANIFEST => __DIR__ . '/test-field-manifest.json',
+])
+```
+
+The manifest is a JSON array of records, each pointing one array-key literal at one model constant:
+
+```json
+[{ "file": "tests/Feature/OrderTest.php", "line": 120, "value": "id", "constFqcn": "App\\Models\\Order::ID", "enclosingMethod": "postJson" }]
+```
+
+- `file` — project-relative path; matched as a path-segment suffix of the file
+  under traversal, so emit root-relative paths to keep the suffix unambiguous.
+- `line` + `value` — the literal's line and exact string; `value` doubles as a
+  drift guard, so a stale manifest line whose literal has since changed never
+  mis-converts.
+- `constFqcn` — the `Class::CONST` replacement. A malformed value (not a
+  `Class::CONST` pair, an illegal PHP identifier, the magic `::class`, or a bare
+  `self`/`static`/`parent`) is dropped at load time, never applied.
+- `enclosingMethod` *(optional)* — the call verb (`postJson`/`assertJson`/…),
+  carried for audit; the rule does not match on it.
+
+**Scope & safety:** the rule rewrites a string **only in array-key position** (a
+request-payload or assertion key), never in value position — it visits `Array_` and
+touches only `ArrayItem::$key`, which makes a public-wire literal sitting in value
+position structurally untouchable rather than relying on the producer to never emit
+it. Site identity is `file + line + value`, so the producer emits a record only
+where that key is unique on its line. The same caching caveat as
+`NamedArgumentFromManifestRector` applies — register `ManifestCacheMetaExtension`
+so a regenerated manifest invalidates Rector's per-file cache.
+
 ## Covered by upstream Rector
 
 Some rules in [`hihaho/phpstan-rules`](https://github.com/hihaho/phpstan-rules) have no counterpart here because the fix already ships in an upstream Rector set. Enable the upstream set instead of waiting for a rule in this package.

@@ -1,0 +1,319 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Hihaho\RectorRules\Rector\Testing;
+
+use InvalidArgumentException;
+use JsonException;
+use PhpParser\Node;
+use PhpParser\Node\ArrayItem;
+use PhpParser\Node\Expr\Array_;
+use PhpParser\Node\Expr\ClassConstFetch;
+use PhpParser\Node\Identifier;
+use PhpParser\Node\Name\FullyQualified;
+use PhpParser\Node\Scalar\String_;
+use Rector\Contract\Rector\ConfigurableRectorInterface;
+use Rector\PhpParser\Node\FileNode;
+use Rector\Rector\AbstractRector;
+use Rector\ValueObject\PhpVersion;
+use Rector\VersionBonding\Contract\MinPhpVersionInterface;
+use Symplify\RuleDocGenerator\ValueObject\CodeSample\ConfiguredCodeSample;
+use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
+use Webmozart\Assert\Assert;
+
+/**
+ * Replace a hard-coded field-name string in a test with a model class constant,
+ * driven entirely by a manifest an external analyser produced.
+ *
+ * The thread that motivated this rule established an **asymmetric risk**: in a test
+ * that exercises an *internal* endpoint, a literal field name (`'id'`,
+ * `'player_url'`) is a refactor hazard — a column rename silently desyncs the test
+ * from the model. But in a test that exercises a *public API surface*, that same
+ * literal **is the wire contract**; swapping it for a constant lets a value-rename
+ * pass the test while breaking the public API. So the conversion is safe to apply
+ * only when the endpoint is *proven internal* and a target constant *exists*.
+ *
+ * Neither fact is reachable from the test file's AST: the route's middleware/domain
+ * (the internal-vs-public signal) and the field→constant mapping both live
+ * elsewhere. This rule therefore does **no resolution of its own** — exactly like
+ * {@see \Hihaho\RectorRules\Rector\CodeQuality\NamedArgumentFromManifestRector}, it
+ * applies the findings a consumer-side analyser computed. The producer emits one
+ * record per *proven-safe* site `{file, line, value, constFqcn}`; the absence of a
+ * record means "leave the string", which makes the default-safe behaviour the
+ * thread requires automatic — an unknown, dynamic, or public site is simply never
+ * in the manifest, so it is never touched.
+ *
+ * The rule is method-name-agnostic but position-aware: it rewrites a matching
+ * `String_` only where it is an **array key** — a request-payload key
+ * (`->postJson($url, ['id' => $x])`) or an assertion key (`->assertJson(['id' => $x])`),
+ * regardless of the enclosing call. The array-key gate is load-bearing for the
+ * asymmetric-risk contract: a field name in *value* position (`['type' => 'id']`)
+ * is never a column reference, and a public-wire literal sitting in value position
+ * on the same line as a real key must not be swapped — visiting `Array_` and
+ * touching only `ArrayItem::$key` makes that structurally impossible, rather than
+ * relying on the producer to never emit such a site. Which *call shapes* are
+ * emitted stays the producer's concern; the one position this rule will not
+ * silently widen to is value position.
+ *
+ * @see \Hihaho\RectorRules\Tests\Rector\Testing\TestFieldStringToConstantRector\TestFieldStringToConstantRectorTest
+ *
+ * @phpstan-type ManifestRecord array{file: string, line: int, value: string, constFqcn: string, enclosingMethod?: string}
+ */
+final class TestFieldStringToConstantRector extends AbstractRector implements ConfigurableRectorInterface, MinPhpVersionInterface
+{
+    public const string MANIFEST = 'manifest';
+
+    /**
+     * Manifest records grouped by the basename of their `file`, so the per-node
+     * lookup is a single hash hit; the full path is verified by suffix afterwards.
+     *
+     * @var array<string, list<array{file: string, line: int, value: string, constFqcn: string, enclosingMethod?: string}>>
+     */
+    private array $recordsByBasename = [];
+
+    /**
+     * Resolved once per file in the {@see FileNode} branch of {@see refactor()}, so the
+     * path normalisation and basename lookup happen once per file — not once per
+     * literal node — and the per-node hot path stays a single bool check.
+     */
+    private string $currentFilePath = '';
+
+    /** @var list<array{file: string, line: int, value: string, constFqcn: string, enclosingMethod?: string}> */
+    private array $currentFileRecords = [];
+
+    private bool $currentFileHasNoRecords = true;
+
+    public function configure(array $configuration): void
+    {
+        $path = $configuration[self::MANIFEST] ?? null;
+        Assert::stringNotEmpty($path);
+
+        $this->recordsByBasename = [];
+        if (! is_file($path)) {
+            return;
+        }
+
+        try {
+            $records = json_decode((string) file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
+        } catch (JsonException $jsonException) {
+            throw new InvalidArgumentException(
+                sprintf('Manifest at "%s" is not valid JSON: %s', $path, $jsonException->getMessage()),
+                $jsonException->getCode(),
+                previous: $jsonException,
+            );
+        }
+
+        if (! is_array($records) || ! array_is_list($records)) {
+            throw new InvalidArgumentException(sprintf('Manifest at "%s" must be a JSON array of records.', $path));
+        }
+
+        foreach ($records as $record) {
+            if (! $this->isValidRecord($record)) {
+                continue;
+            }
+
+            $this->recordsByBasename[basename($record['file'])][] = $record;
+        }
+    }
+
+    /**
+     * Validate one decoded manifest record before the matching logic trusts it. A
+     * structurally-invalid record is skipped rather than fatalling the run: a
+     * `constFqcn` without a `Class::CONST` shape would otherwise build a malformed
+     * {@see ClassConstFetch} and emit invalid PHP.
+     *
+     * @phpstan-assert-if-true array{file: non-empty-string, line: int, value: non-empty-string, constFqcn: non-empty-string, enclosingMethod?: string} $record
+     */
+    private function isValidRecord(mixed $record): bool
+    {
+        if (! is_array($record)
+            || ! isset($record['file'], $record['line'], $record['value'], $record['constFqcn'])
+            || ! is_string($record['file']) || $record['file'] === ''
+            || ! is_int($record['line'])
+            || ! is_string($record['value']) || $record['value'] === ''
+            || ! is_string($record['constFqcn']) || $record['constFqcn'] === ''
+            || (array_key_exists('enclosingMethod', $record) && ! is_string($record['enclosingMethod']))) {
+            return false;
+        }
+
+        // constFqcn must be exactly a `Class::CONST` pair. No explode limit here on
+        // purpose: a name with more than one `::` splits into 3+ parts and is rejected,
+        // so refactor()'s limit-2 split only ever sees a record this method proved
+        // well-formed. Both halves must also be syntactically legal — a `Class::CONST`
+        // with both parts non-empty can still hold an illegal token (`Order::bad-name`,
+        // `Bad Segment::ID`) that would build a ClassConstFetch printing invalid PHP, so
+        // a malformed manifest is dropped here rather than corrupting source downstream.
+        $parts = explode('::', $record['constFqcn']);
+        if (count($parts) !== 2 || ! $this->isClassName($parts[0]) || ! $this->isIdentifier($parts[1])) {
+            return false;
+        }
+
+        // `Order::class` is a legal label but the magic class-name pseudo-constant, not
+        // a field constant — it would always resolve and silently rewrite a field key
+        // into a class-string. The rule targets real field constants only, so reject it.
+        return strcasecmp($parts[1], 'class') !== 0;
+    }
+
+    /**
+     * A single PHP label — a constant name, or one namespace segment. ASCII-only is
+     * deliberate: the analyser emits real model/const names, which are ASCII in
+     * practice, and a tight pattern is the point (reject `bad-name`, `2foo`, `a b`).
+     */
+    private function isIdentifier(string $value): bool
+    {
+        return preg_match('/^[A-Za-z_]\w*$/', $value) === 1;
+    }
+
+    /**
+     * A namespaced class name: `\`-separated {@see isIdentifier()} segments, optional
+     * leading `\`. The reserved pseudo-class keywords (`self`, `static`, `parent`) are
+     * rejected only as the **terminal** segment — PHP forbids them as a class short
+     * name (`class Parent {}` is a fatal error) but permits them mid-namespace
+     * (`Foo\Parent\Bar` is a valid class). Checking the terminal segment alone both
+     * drops an impossible target (`Foo\Parent::ID`, bare `self::ID`) and keeps a
+     * legitimately-namespaced model.
+     */
+    private function isClassName(string $value): bool
+    {
+        $value = ltrim($value, '\\');
+
+        if ($value === '') {
+            return false;
+        }
+
+        $segments = explode('\\', $value);
+        foreach ($segments as $segment) {
+            if (! $this->isIdentifier($segment)) {
+                return false;
+            }
+        }
+
+        $terminal = strtolower($segments[count($segments) - 1]);
+
+        return ! in_array($terminal, ['self', 'static', 'parent'], true);
+    }
+
+    public function getRuleDefinition(): RuleDefinition
+    {
+        return new RuleDefinition(
+            'Replace a hard-coded field-name string in a test with a model class constant, matching the site by file/line/value from an external analyser manifest — applies only to sites the producer proved safe',
+            [
+                new ConfiguredCodeSample(
+                    <<<'CODE_SAMPLE'
+$this->postJson($url, ['id' => $order->id]);
+CODE_SAMPLE,
+                    <<<'CODE_SAMPLE'
+$this->postJson($url, [\App\Models\Order::ID => $order->id]);
+CODE_SAMPLE,
+                    [self::MANIFEST => '/abs/path/to/test-field-manifest.json'],
+                ),
+            ],
+        );
+    }
+
+    /** @return array<class-string<Node>> */
+    public function getNodeTypes(): array
+    {
+        // Array_ (not String_) is the node type: the rule only ever rewrites a string in
+        // array-key position, so visiting arrays and touching ArrayItem::$key keeps a
+        // value-position literal structurally untouchable (see the class docblock).
+        // FileNode is the per-file root, visited first for the once-per-file record setup.
+        return [FileNode::class, Array_::class];
+    }
+
+    public function refactor(Node $node): ?Node
+    {
+        // FileNode fires first for each file (Rector wraps every file's stmts in one).
+        // Resolve the file's manifest records here so the per-node hot path is cheap.
+        // getFile() is used (not the @internal CurrentFileProvider) — it is the
+        // accessor AbstractRector exposes and does not trip this package's PHPStan.
+        if ($node instanceof FileNode) {
+            $this->currentFilePath = str_replace('\\', '/', $this->getFile()->getFilePath());
+            $this->currentFileRecords = $this->recordsByBasename[basename($this->currentFilePath)] ?? [];
+            $this->currentFileHasNoRecords = $this->currentFileRecords === [];
+
+            return null;
+        }
+
+        if ($this->currentFileHasNoRecords || ! $node instanceof Array_) {
+            return null;
+        }
+
+        $changed = false;
+        foreach ($node->items as $item) {
+            if (! $item instanceof ArrayItem) {
+                continue;
+            }
+
+            if (! $item->key instanceof String_) {
+                continue;
+            }
+
+            $constFetch = $this->constForKey($item->key);
+            if ($constFetch instanceof ClassConstFetch) {
+                $item->key = $constFetch;
+                $changed = true;
+            }
+        }
+
+        return $changed ? $node : null;
+    }
+
+    /**
+     * The manifest constant for an array-key literal, or null when no record matches.
+     * `value` is both the site key and the drift guard: a stale manifest line whose
+     * literal has since changed simply does not match, so the key is left alone rather
+     * than mis-converted.
+     *
+     * Site identity is `file + line + value`, which is unambiguous for one key of a
+     * given name per physical line — the norm in PSR-12 / Pint-formatted code this
+     * package targets, and the same assumption {@see NamedArgumentFromManifestRector}
+     * makes for call sites. The residual ambiguity is two array keys of the *same*
+     * name on the *same* line (e.g. nested inline arrays): one record then matches
+     * both, so the producer emits a record only when that site is unique on its line
+     * and skips it otherwise. Keep one such key per line (formatters already do).
+     */
+    private function constForKey(String_ $key): ?ClassConstFetch
+    {
+        $line = $key->getStartLine();
+        foreach ($this->currentFileRecords as $record) {
+            if ($record['line'] !== $line) {
+                continue;
+            }
+
+            if ($record['value'] !== $key->value) {
+                continue;
+            }
+
+            if (! $this->pathMatches($this->currentFilePath, $record['file'])) {
+                continue;
+            }
+
+            [$class, $const] = explode('::', $record['constFqcn'], 2);
+
+            return new ClassConstFetch(new FullyQualified($class), new Identifier($const));
+        }
+
+        return null;
+    }
+
+    public function provideMinPhpVersion(): int
+    {
+        return PhpVersion::PHP_80;
+    }
+
+    /**
+     * The manifest stores a project-relative path; the file under traversal is
+     * absolute. Match on a path-segment boundary so `Foo.php` never matches
+     * `BarFoo.php`. The producer emits root-relative paths so the suffix is specific;
+     * a stray suffix collision would also have to coincide on line and value to
+     * misfire.
+     */
+    private function pathMatches(string $filePath, string $manifestFile): bool
+    {
+        $manifestFile = str_replace('\\', '/', $manifestFile);
+
+        return $filePath === $manifestFile || str_ends_with($filePath, '/' . $manifestFile);
+    }
+}
