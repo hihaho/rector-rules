@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Caching;
 
+use InvalidArgumentException;
 use Rector\Caching\Contract\CacheMetaExtensionInterface;
 
 /**
@@ -59,6 +60,16 @@ final readonly class ManifestCacheMetaExtension implements CacheMetaExtensionInt
 
     public function __construct(string ...$manifestPaths)
     {
+        // Fail loud on zero paths. The variadic accepts none, but an empty instance
+        // would hash to a constant and silently stop invalidating the cache — exactly
+        // the failure mode the "bind it yourself" caveat guards against, since
+        // autowiring / cacheMetaExtension() construct with no arguments.
+        if ($manifestPaths === []) {
+            throw new InvalidArgumentException(
+                self::class . ' needs at least one manifest path. Bind and tag the instance yourself with the path(s); do not rely on autowiring or RectorConfig::cacheMetaExtension(), which drop the constructor argument.',
+            );
+        }
+
         // Sort so the combined hash is order-independent — a consumer reordering the
         // paths in their config must not trigger a spurious full reprocess.
         sort($manifestPaths);

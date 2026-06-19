@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Hihaho\RectorRules\Tests\Caching;
 
 use Hihaho\RectorRules\Caching\ManifestCacheMetaExtension;
+use InvalidArgumentException;
 use Rector\Testing\PHPUnit\AbstractLazyTestCase;
 
 /**
@@ -112,6 +113,17 @@ final class ManifestCacheMetaExtensionTest extends AbstractLazyTestCase
                 unlink($second);
             }
         }
+    }
+
+    public function test_construction_without_a_manifest_path_fails_loudly(): void
+    {
+        // Guards the documented misconfiguration: autowiring / cacheMetaExtension()
+        // drop the constructor argument, and a silent empty instance would disable
+        // cache invalidation instead of erroring.
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('needs at least one manifest path');
+
+        new ManifestCacheMetaExtension();
     }
 
     public function test_path_order_does_not_affect_the_combined_hash(): void
