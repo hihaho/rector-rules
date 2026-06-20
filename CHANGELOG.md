@@ -2,6 +2,54 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.14.0 - 2026-06-20
+
+<!-- verified-sha: b095db81c2663e9a6fc76fd76e6842ee4634e6a2 -->
+Retargets the opt-in `TestFieldStringToConstantRector` (added in 0.13.0) to its
+correct shape, from production adoption feedback: constants come from the
+endpoint's **FormRequest**, not the model, and the rewrite is **bidirectional**,
+keyed on the endpoint. The rule is still not in any set and a no-op until
+configured.
+
+### Changed
+
+- **`TestFieldStringToConstantRector` is now bidirectional and FormRequest-targeted.**
+  The safe move is asymmetric by endpoint, so the rule applies whichever direction a
+  per-site manifest record names:
+  
+  - `to_const` (internal endpoint) — a string-literal array key becomes the
+    FormRequest constant (`['id' => …]` → `[StoreOrderRequest::ID => …]`), keeping the
+    test rename-safe.
+  - `to_literal` (public endpoint) — a constant key is inlined back to its literal
+    string (`[StoreOrderRequest::ID => …]` → `['id' => …]`), preserving the wire
+    contract that a public API's field name *is*.
+  
+  As before, the rule does no resolution of its own — it visits `Array_` and rewrites
+  only an `ArrayItem` key (value-position nodes stay untouchable), applying a manifest
+  a consumer-side PHPStan pass produced. Each direction drift-guards on the token
+  currently in source: the literal for `to_const`, the constant for `to_literal`.
+  
+- **Manifest schema gained a required `operation` field** (`to_const` | `to_literal`),
+  and `constFqcn` now appears on both directions — the target to write for `to_const`,
+  the constant to match for `to_literal`. A record missing or misnaming `operation`,
+  or carrying a malformed `constFqcn`, is dropped at load. Consumers who built a
+  0.13.0-format manifest must regenerate it; the producer in
+  [`hihaho/phpstan-rules`](https://github.com/hihaho/phpstan-rules) emits the new
+  shape. The README documents the full record format.
+  
+
+### Internal
+
+- Strip-direction fixtures (constant key → literal, plus a strip drift guard)
+  alongside the existing convert and skip cases; `ConfigureManifestTest` now covers
+  `operation` validation.
+- Documented two manifest-contract boundaries on the rule: it is target-class-agnostic
+  (it trusts the producer's FormRequest sourcing rather than verifying it), and
+  `to_literal` trusts a freshly generated manifest for the resolved literal value —
+  the same-tree assumption `NamedArgumentFromManifestRector` already carries.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.13.0...0.14.0
+
 ## 0.13.0 - 2026-06-19
 
 <!-- verified-sha: a9af58b7e5d712596069f1199136142b4c0fcc9e -->
@@ -112,6 +160,7 @@ serialized in an argument-count-sensitive way.
   
   
   
+  
   ```
   Dropping the all-default `1` (or `60, 1`) there is value-equivalent but changes the
   serialized string, and the parser can't see that coupling. `exclude_calls` lets a
@@ -123,6 +172,7 @@ serialized in an argument-count-sensitive way.
           \Illuminate\Routing\Middleware\ThrottleRequests::class => ['with'],
       ],
   ])
+  
   
   
   
@@ -156,6 +206,7 @@ feedback.
   ```diff
   -$query->has('posts', '=', 1);   // 0.11.1 dropped the 1 →
   +$query->has('posts', '=');      // ...leaving the comparison operator without its operand
+  
   
   
   
@@ -227,6 +278,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   
   
   
+  
   ```
   By default it drops an already-named default argument (order-independent) or a
   trailing positional default (iteratively), and it fires on any callee — those drops
@@ -250,6 +302,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   ```diff
   -$store->paginate(1, perPage: 50);
   +$store->paginate(page: 1, perPage: 50);
+  
   
   
   
@@ -285,11 +338,13 @@ explicit `config()->set()` form.
   
   
   
+  
   ```
   into the explicit setter form:
   
   ```php
   config()->set('queue.default', 'sync');
+  
   
   
   
@@ -386,6 +441,7 @@ in `MiddlewareStringToClassRector`'s default surfaced by real-world adoption.
           'auth', 'auth.basic', 'can', 'guest', 'password.confirm', 'signed', 'verified',
       ],
   ])
+  
   
   
   
@@ -540,6 +596,7 @@ Laravel's class-based fluent form.
   
   
   
+  
   ```
   It is **not in any set** and reachable by FQN only — Laravel doesn't document
   this form as a recommended convention, so adopting it is a deliberate choice.
@@ -597,6 +654,7 @@ type only resolves under a PHPStan extension such as larastan.
   ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
       NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
   ])
+  
   
   
   
@@ -669,6 +727,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   
   
@@ -967,11 +1026,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -1027,6 +1088,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -1157,6 +1219,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -1164,6 +1227,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
