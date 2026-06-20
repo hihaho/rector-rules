@@ -72,9 +72,9 @@ final class ConfigureManifestTest extends AbstractLazyTestCase
         // First record is missing `constFqcn`; second has an empty `value`; third is
         // the lone valid record. Only the valid one must load.
         file_put_contents($this->manifest, json_encode([
-            ['file' => 'a.php', 'line' => 5, 'value' => 'id'],
-            ['file' => 'a.php', 'line' => 6, 'value' => '', 'constFqcn' => 'App\\Models\\Order::ID'],
-            ['file' => 'a.php', 'line' => 7, 'value' => 'id', 'constFqcn' => 'App\\Models\\Order::ID'],
+            ['file' => 'a.php', 'line' => 5, 'operation' => 'to_const', 'value' => 'id'],
+            ['file' => 'a.php', 'line' => 6, 'operation' => 'to_const', 'value' => '', 'constFqcn' => 'App\\Models\\Order::ID'],
+            ['file' => 'a.php', 'line' => 7, 'operation' => 'to_const', 'value' => 'id', 'constFqcn' => 'App\\Models\\Order::ID'],
         ]));
 
         $rule = new TestFieldStringToConstantRector();
@@ -91,8 +91,8 @@ final class ConfigureManifestTest extends AbstractLazyTestCase
     {
         // `line` arrives as a string (a hand-edited manifest); skipped.
         file_put_contents($this->manifest, json_encode([
-            ['file' => 'a.php', 'line' => '5', 'value' => 'id', 'constFqcn' => 'App\\Models\\Order::ID'],
-            ['file' => 'b.php', 'line' => 9, 'value' => 'id', 'constFqcn' => 'App\\Models\\Order::ID'],
+            ['file' => 'a.php', 'line' => '5', 'operation' => 'to_const', 'value' => 'id', 'constFqcn' => 'App\\Models\\Order::ID'],
+            ['file' => 'b.php', 'line' => 9, 'operation' => 'to_const', 'value' => 'id', 'constFqcn' => 'App\\Models\\Order::ID'],
         ]));
 
         $rule = new TestFieldStringToConstantRector();
@@ -108,8 +108,8 @@ final class ConfigureManifestTest extends AbstractLazyTestCase
         // `enclosingMethod` is informational, but when present it must be a string;
         // a non-string value marks the record malformed and drops it.
         file_put_contents($this->manifest, json_encode([
-            ['file' => 'a.php', 'line' => 5, 'value' => 'id', 'constFqcn' => 'App\\Models\\Order::ID', 'enclosingMethod' => 42],
-            ['file' => 'b.php', 'line' => 9, 'value' => 'id', 'constFqcn' => 'App\\Models\\Order::ID'],
+            ['file' => 'a.php', 'line' => 5, 'operation' => 'to_const', 'value' => 'id', 'constFqcn' => 'App\\Models\\Order::ID', 'enclosingMethod' => 42],
+            ['file' => 'b.php', 'line' => 9, 'operation' => 'to_const', 'value' => 'id', 'constFqcn' => 'App\\Models\\Order::ID'],
         ]));
 
         $rule = new TestFieldStringToConstantRector();
@@ -129,8 +129,8 @@ final class ConfigureManifestTest extends AbstractLazyTestCase
     public function test_malformed_const_fqcn_is_skipped(string $constFqcn): void
     {
         file_put_contents($this->manifest, json_encode([
-            ['file' => 'bad.php', 'line' => 5, 'value' => 'id', 'constFqcn' => $constFqcn],
-            ['file' => 'good.php', 'line' => 9, 'value' => 'id', 'constFqcn' => 'App\\Models\\Order::ID'],
+            ['file' => 'bad.php', 'line' => 5, 'operation' => 'to_const', 'value' => 'id', 'constFqcn' => $constFqcn],
+            ['file' => 'good.php', 'line' => 9, 'operation' => 'to_const', 'value' => 'id', 'constFqcn' => 'App\\Models\\Order::ID'],
         ]));
 
         $rule = new TestFieldStringToConstantRector();
@@ -173,7 +173,7 @@ final class ConfigureManifestTest extends AbstractLazyTestCase
     public function test_reserved_word_as_namespace_segment_loads(string $constFqcn): void
     {
         file_put_contents($this->manifest, json_encode([
-            ['file' => 'ns.php', 'line' => 5, 'value' => 'id', 'constFqcn' => $constFqcn],
+            ['file' => 'ns.php', 'line' => 5, 'operation' => 'to_const', 'value' => 'id', 'constFqcn' => $constFqcn],
         ]));
 
         $rule = new TestFieldStringToConstantRector();
@@ -188,6 +188,22 @@ final class ConfigureManifestTest extends AbstractLazyTestCase
         yield 'parent as segment' => ['Foo\\Parent\\Bar::ID'];
         yield 'self as segment' => ['Foo\\Self\\Bar::ID'];
         yield 'static as segment' => ['Foo\\Static\\Bar::ID'];
+    }
+
+    public function test_record_with_missing_or_unknown_operation_is_skipped(): void
+    {
+        // `operation` is required and must be one of the two known directions; a record
+        // missing it, or naming an unknown op, is dropped so the rule never guesses.
+        file_put_contents($this->manifest, json_encode([
+            ['file' => 'missing.php', 'line' => 5, 'value' => 'id', 'constFqcn' => 'App\\Models\\Order::ID'],
+            ['file' => 'unknown.php', 'line' => 6, 'operation' => 'to_array', 'value' => 'id', 'constFqcn' => 'App\\Models\\Order::ID'],
+            ['file' => 'good.php', 'line' => 9, 'operation' => 'to_literal', 'value' => 'id', 'constFqcn' => 'App\\Models\\Order::ID'],
+        ]));
+
+        $rule = new TestFieldStringToConstantRector();
+        $rule->configure([TestFieldStringToConstantRector::MANIFEST => $this->manifest]);
+
+        $this->assertSame(['good.php'], array_keys($this->loadedRecords($rule)));
     }
 
     public function test_a_missing_manifest_file_is_a_no_op(): void
@@ -218,13 +234,13 @@ final class ConfigureManifestTest extends AbstractLazyTestCase
     }
 
     /**
-     * @return array<string, list<array{file: string, line: int, value: string, constFqcn: string, enclosingMethod?: string}>>
+     * @return array<string, list<array{file: string, line: int, operation: string, value: string, constFqcn: string, enclosingMethod?: string}>>
      */
     private function loadedRecords(TestFieldStringToConstantRector $rule): array
     {
         $property = new ReflectionProperty(TestFieldStringToConstantRector::class, 'recordsByBasename');
 
-        /** @var array<string, list<array{file: string, line: int, value: string, constFqcn: string, enclosingMethod?: string}>> $value */
+        /** @var array<string, list<array{file: string, line: int, operation: string, value: string, constFqcn: string, enclosingMethod?: string}>> $value */
         $value = $property->getValue($rule);
 
         return $value;

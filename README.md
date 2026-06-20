@@ -659,27 +659,33 @@ Replaces magic table-name strings in database assertions with the model class, a
 #### Opt-in: `TestFieldStringToConstantRector` (not in any set)
 
 ```diff
--$this->postJson('/internal/orders', ['id' => $order->id]);
-+$this->postJson('/internal/orders', [Order::ID => $order->id]);
+ // internal endpoint — a field rename would silently desync the test
+-$this->postJson('/admin/orders', ['id' => $order->id]);
++$this->postJson('/admin/orders', [StoreOrderRequest::ID => $order->id]);
+
+ // public API endpoint — the literal IS the wire contract, so keep it a string
+-$this->getJson('/api/orders/1')->assertJson([StoreOrderRequest::ID => 1]);
++$this->getJson('/api/orders/1')->assertJson(['id' => 1]);
 ```
 
-**Why?** In a test that exercises an *internal* endpoint, a hard-coded field-name
-string (`'id'`, `'player_url'`) is a refactor hazard — a column rename silently
-desyncs the test from the model. But in a test that exercises a *public API
-surface*, that same literal **is the wire contract**: swapping it for a constant
-lets a value-rename pass the test while silently breaking the public API. The
-conversion is therefore safe only for a *proven-internal* endpoint with a
-*resolvable* target constant — and neither fact is reachable from the test file's
-own AST.
+**Why?** The safe move is *asymmetric* by endpoint. In a test that exercises an
+*internal* endpoint, a hard-coded field-name string (`'id'`, `'player_url'`) is a
+refactor hazard — a field rename silently desyncs the test from its FormRequest.
+But in a test that exercises a *public API surface*, that same literal **is the wire
+contract**: a constant there lets a value-rename pass the test while silently
+breaking the public API. So the rule is **bidirectional** — it converts a literal
+key to the FormRequest constant on internal endpoints and inlines a constant key
+back to its literal on public ones. The endpoint classification and the
+field→constant mapping both live outside the test's AST.
 
 Like `NamedArgumentFromManifestRector`, this rule does **no resolution of its own**:
 it applies a manifest a consumer-side PHPStan pass computed, rewriting only the
 sites the producer proved safe. The producer ships in
-[`hihaho/phpstan-rules`](https://github.com/hihaho/phpstan-rules)
-(`test-const-manifest.neon` — Collectors that join a model field→constant map with a
-public-route denylist) — include it, or write your own producer to the format
-below. A site that is public, ambiguous, or dynamic is simply absent from the
-manifest, so the rule leaves it untouched (default-safe).
+[`hihaho/phpstan-rules`](https://github.com/hihaho/phpstan-rules) — it resolves each
+test call's route, classifies it (internal vs public), and for an internal site maps
+the field to its FormRequest constant; include its config, or write your own
+producer to the format below. A site that is unclassified, dynamic, or unmapped is
+simply absent from the manifest, so the rule leaves it untouched (default-safe).
 
 It is **not in any set** and is a **no-op until configured** with a manifest path:
 
@@ -689,29 +695,37 @@ It is **not in any set** and is a **no-op until configured** with a manifest pat
 ])
 ```
 
-The manifest is a JSON array of records, each pointing one array-key literal at one model constant:
+The manifest is a JSON array of per-site records, each naming the rewrite direction:
 
 ```json
-[{ "file": "tests/Feature/OrderTest.php", "line": 120, "value": "id", "constFqcn": "App\\Models\\Order::ID", "enclosingMethod": "postJson" }]
+[
+  { "file": "tests/Feature/OrderTest.php", "line": 120, "operation": "to_const",   "value": "id", "constFqcn": "App\\Http\\Requests\\StoreOrderRequest::ID", "enclosingMethod": "postJson" },
+  { "file": "tests/Feature/OrderTest.php", "line": 140, "operation": "to_literal", "value": "id", "constFqcn": "App\\Http\\Requests\\StoreOrderRequest::ID", "enclosingMethod": "assertJson" }
+]
 ```
 
 - `file` — project-relative path; matched as a path-segment suffix of the file
   under traversal, so emit root-relative paths to keep the suffix unambiguous.
-- `line` + `value` — the literal's line and exact string; `value` doubles as a
-  drift guard, so a stale manifest line whose literal has since changed never
-  mis-converts.
-- `constFqcn` — the `Class::CONST` replacement. A malformed value (not a
-  `Class::CONST` pair, an illegal PHP identifier, the magic `::class`, or a bare
-  `self`/`static`/`parent`) is dropped at load time, never applied.
+- `operation` — `to_const` (internal: literal key → constant) or `to_literal`
+  (public: constant key → literal). Any other value drops the record.
+- `value` — for `to_const`, the string-literal key currently in source (matched +
+  drift guard); for `to_literal`, the literal to **write** (the producer already
+  resolved it from the constant, so the rule never reflects).
+- `constFqcn` — the `Class::CONST`. For `to_const` it is the target to write; for
+  `to_literal` it is the constant currently in source (matched + drift guard). A
+  malformed value (not a `Class::CONST` pair, an illegal PHP identifier, the magic
+  `::class`, or a bare `self`/`static`/`parent`) is dropped at load, never applied.
 - `enclosingMethod` *(optional)* — the call verb (`postJson`/`assertJson`/…),
   carried for audit; the rule does not match on it.
 
-**Scope & safety:** the rule rewrites a string **only in array-key position** (a
+**Scope & safety:** the rule rewrites **only in array-key position** (a
 request-payload or assertion key), never in value position — it visits `Array_` and
-touches only `ArrayItem::$key`, which makes a public-wire literal sitting in value
-position structurally untouchable rather than relying on the producer to never emit
-it. Site identity is `file + line + value`, so the producer emits a record only
-where that key is unique on its line. The same caching caveat as
+touches only `ArrayItem::$key`, which makes a value-position node structurally
+untouchable rather than relying on the producer to never emit it. Each direction
+matches on the token *currently in source* (the literal for `to_const`, the constant
+for `to_literal`), so a stale manifest whose site has changed simply does not match
+and is left alone. Site identity is `file + line` plus that token, so the producer
+emits a record only where the site is unique on its line. The same caching caveat as
 `NamedArgumentFromManifestRector` applies — register `ManifestCacheMetaExtension`
 so a regenerated manifest invalidates Rector's per-file cache. If you enable both
 manifest-driven rules, register **one** extension with **both** manifest paths (see

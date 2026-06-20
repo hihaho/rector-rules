@@ -8,9 +8,11 @@ use InvalidArgumentException;
 use JsonException;
 use PhpParser\Node;
 use PhpParser\Node\ArrayItem;
+use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\ClassConstFetch;
 use PhpParser\Node\Identifier;
+use PhpParser\Node\Name;
 use PhpParser\Node\Name\FullyQualified;
 use PhpParser\Node\Scalar\String_;
 use Rector\Contract\Rector\ConfigurableRectorInterface;
@@ -23,52 +25,61 @@ use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 use Webmozart\Assert\Assert;
 
 /**
- * Replace a hard-coded field-name string in a test with a model class constant,
- * driven entirely by a manifest an external analyser produced.
+ * Align a test's field-name array keys with the endpoint's FormRequest constants,
+ * in whichever direction the endpoint requires, driven entirely by a manifest an
+ * external analyser produced.
  *
- * The thread that motivated this rule established an **asymmetric risk**: in a test
- * that exercises an *internal* endpoint, a literal field name (`'id'`,
- * `'player_url'`) is a refactor hazard — a column rename silently desyncs the test
- * from the model. But in a test that exercises a *public API surface*, that same
- * literal **is the wire contract**; swapping it for a constant lets a value-rename
- * pass the test while breaking the public API. So the conversion is safe to apply
- * only when the endpoint is *proven internal* and a target constant *exists*.
+ * The motivating risk is **asymmetric**: in a test that exercises an *internal*
+ * endpoint, a literal field name (`'id'`, `'player_url'`) is a refactor hazard — a
+ * field rename silently desyncs the test from the request. But in a test that
+ * exercises a *public API surface*, that same literal **is the wire contract**, and
+ * a constant there lets a value-rename pass the test while breaking the public API.
+ * So the safe move differs by endpoint, and the rule is **bidirectional**:
  *
- * Neither fact is reachable from the test file's AST: the route's middleware/domain
- * (the internal-vs-public signal) and the field→constant mapping both live
- * elsewhere. This rule therefore does **no resolution of its own** — exactly like
- * {@see \Hihaho\RectorRules\Rector\CodeQuality\NamedArgumentFromManifestRector}, it
- * applies the findings a consumer-side analyser computed. The producer emits one
- * record per *proven-safe* site `{file, line, value, constFqcn}`; the absence of a
- * record means "leave the string", which makes the default-safe behaviour the
- * thread requires automatic — an unknown, dynamic, or public site is simply never
- * in the manifest, so it is never touched.
+ * - `to_const` (internal endpoint) — a string-literal key becomes the FormRequest's
+ *   matching constant (`['id' => …]` → `[StoreOrderRequest::ID => …]`).
+ * - `to_literal` (public endpoint) — a constant key is inlined back to its literal
+ *   string (`[StoreOrderRequest::ID => …]` → `['id' => …]`), restoring the wire
+ *   contract.
  *
- * The rule is method-name-agnostic but position-aware: it rewrites a matching
- * `String_` only where it is an **array key** — a request-payload key
+ * Neither the endpoint classification nor the field→constant mapping is reachable
+ * from the test file's AST. This rule therefore does **no resolution of its own** —
+ * exactly like {@see \Hihaho\RectorRules\Rector\CodeQuality\NamedArgumentFromManifestRector},
+ * it applies the findings a consumer-side analyser computed. The producer emits one
+ * record per *proven-safe* site `{file, line, operation, value, constFqcn}`; the
+ * absence of a record means "leave the key", so an unknown, dynamic, or
+ * unclassified site is never touched (default-safe). For `to_literal` the producer
+ * also resolves the constant's string value into `value`, so the rule writes it
+ * verbatim and never reflects a constant.
+ *
+ * The rule is method-name-agnostic but position-aware: it rewrites a matching key
+ * only where it is an **array key** — a request-payload key
  * (`->postJson($url, ['id' => $x])`) or an assertion key (`->assertJson(['id' => $x])`),
- * regardless of the enclosing call. The array-key gate is load-bearing for the
- * asymmetric-risk contract: a field name in *value* position (`['type' => 'id']`)
- * is never a column reference, and a public-wire literal sitting in value position
- * on the same line as a real key must not be swapped — visiting `Array_` and
- * touching only `ArrayItem::$key` makes that structurally impossible, rather than
- * relying on the producer to never emit such a site. Which *call shapes* are
- * emitted stays the producer's concern; the one position this rule will not
- * silently widen to is value position.
+ * regardless of the enclosing call. The array-key gate is load-bearing: a field
+ * name in *value* position (`['type' => 'id']`) is never a field reference, and a
+ * public-wire literal in value position on the same line as a real key must not be
+ * swapped — visiting `Array_` and touching only `ArrayItem::$key` makes that
+ * structurally impossible, rather than relying on the producer to never emit it.
  *
  * @see \Hihaho\RectorRules\Tests\Rector\Testing\TestFieldStringToConstantRector\TestFieldStringToConstantRectorTest
  *
- * @phpstan-type ManifestRecord array{file: string, line: int, value: string, constFqcn: string, enclosingMethod?: string}
+ * @phpstan-type ManifestRecord array{file: string, line: int, operation: string, value: string, constFqcn: string, enclosingMethod?: string}
  */
 final class TestFieldStringToConstantRector extends AbstractRector implements ConfigurableRectorInterface, MinPhpVersionInterface
 {
     public const string MANIFEST = 'manifest';
 
+    /** Convert a string-literal array key into the manifest's class constant. */
+    private const string OP_TO_CONST = 'to_const';
+
+    /** Inline a class-constant array key back to its literal string value. */
+    private const string OP_TO_LITERAL = 'to_literal';
+
     /**
      * Manifest records grouped by the basename of their `file`, so the per-node
      * lookup is a single hash hit; the full path is verified by suffix afterwards.
      *
-     * @var array<string, list<array{file: string, line: int, value: string, constFqcn: string, enclosingMethod?: string}>>
+     * @var array<string, list<array{file: string, line: int, operation: string, value: string, constFqcn: string, enclosingMethod?: string}>>
      */
     private array $recordsByBasename = [];
 
@@ -79,7 +90,7 @@ final class TestFieldStringToConstantRector extends AbstractRector implements Co
      */
     private string $currentFilePath = '';
 
-    /** @var list<array{file: string, line: int, value: string, constFqcn: string, enclosingMethod?: string}> */
+    /** @var list<array{file: string, line: int, operation: string, value: string, constFqcn: string, enclosingMethod?: string}> */
     private array $currentFileRecords = [];
 
     private bool $currentFileHasNoRecords = true;
@@ -123,14 +134,15 @@ final class TestFieldStringToConstantRector extends AbstractRector implements Co
      * `constFqcn` without a `Class::CONST` shape would otherwise build a malformed
      * {@see ClassConstFetch} and emit invalid PHP.
      *
-     * @phpstan-assert-if-true array{file: non-empty-string, line: int, value: non-empty-string, constFqcn: non-empty-string, enclosingMethod?: string} $record
+     * @phpstan-assert-if-true array{file: non-empty-string, line: int, operation: non-empty-string, value: non-empty-string, constFqcn: non-empty-string, enclosingMethod?: string} $record
      */
     private function isValidRecord(mixed $record): bool
     {
         if (! is_array($record)
-            || ! isset($record['file'], $record['line'], $record['value'], $record['constFqcn'])
+            || ! isset($record['file'], $record['line'], $record['operation'], $record['value'], $record['constFqcn'])
             || ! is_string($record['file']) || $record['file'] === ''
             || ! is_int($record['line'])
+            || ! in_array($record['operation'], [self::OP_TO_CONST, self::OP_TO_LITERAL], true)
             || ! is_string($record['value']) || $record['value'] === ''
             || ! is_string($record['constFqcn']) || $record['constFqcn'] === ''
             || (array_key_exists('enclosingMethod', $record) && ! is_string($record['enclosingMethod']))) {
@@ -197,14 +209,14 @@ final class TestFieldStringToConstantRector extends AbstractRector implements Co
     public function getRuleDefinition(): RuleDefinition
     {
         return new RuleDefinition(
-            'Replace a hard-coded field-name string in a test with a model class constant, matching the site by file/line/value from an external analyser manifest — applies only to sites the producer proved safe',
+            "Align a test's field-name array keys with the endpoint's FormRequest constants, in the direction an external analyser manifest dictates per site (internal endpoint → constant, public endpoint → literal) — applies only to sites the producer proved safe",
             [
                 new ConfiguredCodeSample(
                     <<<'CODE_SAMPLE'
 $this->postJson($url, ['id' => $order->id]);
 CODE_SAMPLE,
                     <<<'CODE_SAMPLE'
-$this->postJson($url, [\App\Models\Order::ID => $order->id]);
+$this->postJson($url, [\App\Http\Requests\StoreOrderRequest::ID => $order->id]);
 CODE_SAMPLE,
                     [self::MANIFEST => '/abs/path/to/test-field-manifest.json'],
                 ),
@@ -215,9 +227,9 @@ CODE_SAMPLE,
     /** @return array<class-string<Node>> */
     public function getNodeTypes(): array
     {
-        // Array_ (not String_) is the node type: the rule only ever rewrites a string in
-        // array-key position, so visiting arrays and touching ArrayItem::$key keeps a
-        // value-position literal structurally untouchable (see the class docblock).
+        // Array_ (not String_/ClassConstFetch) is the node type: the rule only ever
+        // rewrites an array *key*, so visiting arrays and touching ArrayItem::$key keeps
+        // a value-position node structurally untouchable (see the class docblock).
         // FileNode is the per-file root, visited first for the once-per-file record setup.
         return [FileNode::class, Array_::class];
     }
@@ -246,13 +258,13 @@ CODE_SAMPLE,
                 continue;
             }
 
-            if (! $item->key instanceof String_) {
+            if (! $item->key instanceof Expr) {
                 continue;
             }
 
-            $constFetch = $this->constForKey($item->key);
-            if ($constFetch instanceof ClassConstFetch) {
-                $item->key = $constFetch;
+            $replacement = $this->replacementForKey($item->key);
+            if ($replacement instanceof Expr) {
+                $item->key = $replacement;
                 $changed = true;
             }
         }
@@ -261,20 +273,21 @@ CODE_SAMPLE,
     }
 
     /**
-     * The manifest constant for an array-key literal, or null when no record matches.
-     * `value` is both the site key and the drift guard: a stale manifest line whose
-     * literal has since changed simply does not match, so the key is left alone rather
-     * than mis-converted.
+     * The rewritten array key for a matching manifest record, or null when none
+     * matches. The direction is per-record: `to_const` turns a string-literal key into
+     * the manifest's constant; `to_literal` inlines a class-constant key back to its
+     * literal string. Each direction matches on the token that is *currently in source*
+     * — the string `value` for `to_const`, the `constFqcn` for `to_literal` — so a
+     * stale manifest whose site has since changed simply does not match and the key is
+     * left alone (drift guard), exactly as {@see NamedArgumentFromManifestRector} does.
      *
-     * Site identity is `file + line + value`, which is unambiguous for one key of a
-     * given name per physical line — the norm in PSR-12 / Pint-formatted code this
-     * package targets, and the same assumption {@see NamedArgumentFromManifestRector}
-     * makes for call sites. The residual ambiguity is two array keys of the *same*
-     * name on the *same* line (e.g. nested inline arrays): one record then matches
-     * both, so the producer emits a record only when that site is unique on its line
-     * and skips it otherwise. Keep one such key per line (formatters already do).
+     * Site identity is `file + line` plus that source token, unambiguous for one such
+     * key per physical line — the norm in PSR-12 / Pint-formatted code. The residual
+     * ambiguity is two identical source keys on one line (e.g. nested inline arrays):
+     * one record then matches both, so the producer emits a record only when the site
+     * is unique on its line. Keep one such key per line (formatters already do).
      */
-    private function constForKey(String_ $key): ?ClassConstFetch
+    private function replacementForKey(Expr $key): ?Expr
     {
         $line = $key->getStartLine();
         foreach ($this->currentFileRecords as $record) {
@@ -282,20 +295,52 @@ CODE_SAMPLE,
                 continue;
             }
 
-            if ($record['value'] !== $key->value) {
-                continue;
-            }
-
             if (! $this->pathMatches($this->currentFilePath, $record['file'])) {
                 continue;
             }
 
-            [$class, $const] = explode('::', $record['constFqcn'], 2);
+            if ($record['operation'] === self::OP_TO_CONST) {
+                if ($key instanceof String_ && $key->value === $record['value']) {
+                    [$class, $const] = explode('::', $record['constFqcn'], 2);
 
-            return new ClassConstFetch(new FullyQualified($class), new Identifier($const));
+                    return new ClassConstFetch(new FullyQualified($class), new Identifier($const));
+                }
+
+                continue;
+            }
+
+            // OP_TO_LITERAL — inline a class-constant key back to the wire-contract
+            // string. `value` is the literal the producer already resolved from the
+            // constant; the rule writes it verbatim, never reflecting the constant.
+            if ($key instanceof ClassConstFetch && $this->classConstFetchMatches($key, $record['constFqcn'])) {
+                return new String_($record['value']);
+            }
         }
 
         return null;
+    }
+
+    /**
+     * Whether a class-constant key node is the `Class::CONST` the record names. The
+     * class half is compared case-insensitively (PHP class names are), the constant
+     * name exactly (constant names are case-sensitive). A dynamic class
+     * (`$x::FOO`), a `::class` fetch, or an unresolved name never matches.
+     */
+    private function classConstFetchMatches(ClassConstFetch $key, string $constFqcn): bool
+    {
+        if (! $key->class instanceof Name || ! $key->name instanceof Identifier) {
+            return false;
+        }
+
+        $resolvedClass = $this->getName($key->class);
+        if ($resolvedClass === null) {
+            return false;
+        }
+
+        [$class, $const] = explode('::', $constFqcn, 2);
+
+        return strcasecmp(ltrim($resolvedClass, '\\'), ltrim($class, '\\')) === 0
+            && $key->name->toString() === $const;
     }
 
     public function provideMinPhpVersion(): int
