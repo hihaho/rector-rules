@@ -52,6 +52,17 @@ use Webmozart\Assert\Assert;
  * also resolves the constant's string value into `value`, so the rule writes it
  * verbatim and never reflects a constant.
  *
+ * Two consequences of doing no resolution, both inherited from the manifest contract
+ * (as with {@see NamedArgumentFromManifestRector}). First, the rule is
+ * target-class-**agnostic**: it writes whatever `Class::CONST` the producer emits and
+ * trusts the producer's choice of source (a FormRequest, here) rather than verifying
+ * the class — "FormRequest" describes where the producer reads constants, not a rule
+ * invariant. Second, `to_literal` trusts that the producer-resolved `value` is
+ * *current*: it drift-guards on the constant token still being present, but not on
+ * the token's *value* having changed since generation (which would need reflection).
+ * So the manifest must be generated against the same tree Rector then processes — a
+ * stale manifest whose constant changed value is an operator concern, not caught here.
+ *
  * The rule is method-name-agnostic but position-aware: it rewrites a matching key
  * only where it is an **array key** — a request-payload key
  * (`->postJson($url, ['id' => $x])`) or an assertion key (`->assertJson(['id' => $x])`),
