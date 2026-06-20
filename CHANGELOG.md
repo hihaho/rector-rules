@@ -26,16 +26,17 @@ configured.
   
   As before, the rule does no resolution of its own — it visits `Array_` and rewrites
   only an `ArrayItem` key (value-position nodes stay untouchable), applying a manifest
-  a consumer-side PHPStan pass produced. Each direction drift-guards on the token
+  a consumer-side producer produced. Each direction drift-guards on the token
   currently in source: the literal for `to_const`, the constant for `to_literal`.
   
 - **Manifest schema gained a required `operation` field** (`to_const` | `to_literal`),
   and `constFqcn` now appears on both directions — the target to write for `to_const`,
   the constant to match for `to_literal`. A record missing or misnaming `operation`,
   or carrying a malformed `constFqcn`, is dropped at load. Consumers who built a
-  0.13.0-format manifest must regenerate it; the producer in
-  [`hihaho/phpstan-rules`](https://github.com/hihaho/phpstan-rules) emits the new
-  shape. The README documents the full record format.
+  0.13.0-format manifest must regenerate it against the new record format, which the
+  README documents in full. Generating the manifest needs the live route table
+  (route → FormRequest) plus a test-file scan, so the producer is an application-side
+  step (a booted artisan command), not a static analyser.
   
 
 ### Internal

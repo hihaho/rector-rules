@@ -679,13 +679,16 @@ back to its literal on public ones. The endpoint classification and the
 field→constant mapping both live outside the test's AST.
 
 Like `NamedArgumentFromManifestRector`, this rule does **no resolution of its own**:
-it applies a manifest a consumer-side PHPStan pass computed, rewriting only the
-sites the producer proved safe. The producer ships in
-[`hihaho/phpstan-rules`](https://github.com/hihaho/phpstan-rules) — it resolves each
-test call's route, classifies it (internal vs public), and for an internal site maps
-the field to its FormRequest constant; include its config, or write your own
-producer to the format below. A site that is unclassified, dynamic, or unmapped is
-simply absent from the manifest, so the rule leaves it untouched (default-safe).
+it applies a manifest a consumer-side producer computed, rewriting only the sites
+that producer proved safe. Generating the manifest needs the **live route table**
+(resolving each test call's route → its FormRequest, and classifying the route as
+internal or public) plus a test-file scan — so the producer is naturally an
+**application-side step** (an artisan command with the framework booted), not a
+static analyser, which is why it does not ship in this package or in
+[`hihaho/phpstan-rules`](https://github.com/hihaho/phpstan-rules). Write a producer
+that emits the format below against your own app's routes. A site that is
+unclassified, dynamic, or unmapped is simply absent from the manifest, so the rule
+leaves it untouched (default-safe).
 
 It is **not in any set** and is a **no-op until configured** with a manifest path:
 
