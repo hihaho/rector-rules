@@ -23,6 +23,7 @@ use Rector\ValueObject\Application\File;
  * Implementation detail — not part of the package's public API.
  *
  * @internal
+ * @see \Hihaho\RectorRules\Tests\Rector\Support\DirectoryContextCacheTest
  */
 final class DirectoryContextCache
 {

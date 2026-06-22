@@ -119,6 +119,9 @@ CODE_SAMPLE,
         return [Expression::class];
     }
 
+    /**
+     * @param Expression $node
+     */
     public function refactor(Node $node): ?Node
     {
         if (! $this->confirmMysqlCompatible) {
@@ -129,7 +132,7 @@ CODE_SAMPLE,
             return null;
         }
 
-        if (! $node instanceof Expression || ! $node->expr instanceof MethodCall) {
+        if (! $node->expr instanceof MethodCall) {
             return null;
         }
 

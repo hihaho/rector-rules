@@ -159,7 +159,9 @@ CODE_SAMPLE,
         ];
     }
 
-    /** @return NodeVisitor::REMOVE_NODE|Node|null */
+    /**
+     * @param Use_|GroupUse|Name|ClassMethod|Property|Class_|Interface_|Trait_|Enum_|Function_|Expression|Foreach_|If_|While_|For_|Do_|Switch_|Return_|Echo_ $node *//** @return NodeVisitor::REMOVE_NODE|Node|null
+
     public function refactor(Node $node): Node|int|null
     {
         $this->ensureFileState();

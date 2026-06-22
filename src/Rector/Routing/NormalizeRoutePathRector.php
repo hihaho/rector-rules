@@ -50,12 +50,11 @@ CODE_SAMPLE,
         return [StaticCall::class];
     }
 
+    /**
+     * @param StaticCall $node
+     */
     public function refactor(Node $node): ?Node
     {
-        if (! $node instanceof StaticCall) {
-            return null;
-        }
-
         // Cheap structural gate first: the method-name Identifier check bails the bulk
         // of static calls before the per-node directory context is consulted.
         if (! $this->isRouteStaticCallForMethods($node, self::ROUTE_METHODS)) {

@@ -152,6 +152,9 @@ CODE_SAMPLE,
         return [FileNode::class, MethodCall::class, StaticCall::class, New_::class];
     }
 
+    /**
+     * @param FileNode|MethodCall|StaticCall|New_ $node
+     */
     public function refactor(Node $node): ?Node
     {
         // FileNode fires first for each file (Rector wraps every file's stmts in one).

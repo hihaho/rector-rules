@@ -245,6 +245,9 @@ CODE_SAMPLE,
         return [FileNode::class, Array_::class];
     }
 
+    /**
+     * @param FileNode|Array_ $node
+     */
     public function refactor(Node $node): ?Node
     {
         // FileNode fires first for each file (Rector wraps every file's stmts in one).
