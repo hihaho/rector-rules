@@ -75,6 +75,9 @@ CODE_SAMPLE,
         return [Class_::class];
     }
 
+    /**
+     * @param Class_ $node
+     */
     public function refactor(Node $node): ?Node
     {
         assert($node instanceof Class_);

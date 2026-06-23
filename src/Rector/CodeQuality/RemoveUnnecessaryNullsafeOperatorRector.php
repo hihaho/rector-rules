@@ -68,6 +68,9 @@ CODE_SAMPLE,
         return [NullsafePropertyFetch::class, NullsafeMethodCall::class];
     }
 
+    /**
+     * @param NullsafePropertyFetch|NullsafeMethodCall $node
+     */
     public function refactor(Node $node): ?Node
     {
         if (! $node instanceof NullsafePropertyFetch && ! $node instanceof NullsafeMethodCall) {

@@ -44,12 +44,11 @@ CODE_SAMPLE,
         return [MethodCall::class];
     }
 
+    /**
+     * @param MethodCall $node
+     */
     public function refactor(Node $node): ?Node
     {
-        if (! $node instanceof MethodCall) {
-            return null;
-        }
-
         // Cheapest, most-selective gate first: almost no method call is named
         // `after`, so bail on the name before the per-node directory string scan.
         if (! $node->name instanceof Identifier || strcasecmp($node->name->toString(), 'after') !== 0) {

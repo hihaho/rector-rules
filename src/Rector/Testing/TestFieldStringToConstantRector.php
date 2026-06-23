@@ -160,6 +160,9 @@ CODE_SAMPLE,
         return [MethodCall::class];
     }
 
+    /**
+     * @param MethodCall $node
+     */
     public function refactor(Node $node): ?Node
     {
         if (! $node instanceof MethodCall
