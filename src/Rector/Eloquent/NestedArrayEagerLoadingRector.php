@@ -84,11 +84,12 @@ CODE_SAMPLE,
         return [MethodCall::class];
     }
 
-    /**
-     * @param MethodCall $node
-     */
     public function refactor(Node $node): ?Node
     {
+        if (! $node instanceof MethodCall) {
+            return null;
+        }
+
         // Literal method names are always Identifier nodes; gating on that
         // directly avoids the generic name-resolver machinery isNames() runs on
         // every visited call. Match case-insensitively (as isNames() did) since
