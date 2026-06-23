@@ -9,9 +9,8 @@ use Rector\Caching\Contract\CacheMetaExtensionInterface;
 
 /**
  * Folds manifest content into Rector's per-file cache key, so a manifest-driven
- * rule ({@see \Hihaho\RectorRules\Rector\CodeQuality\NamedArgumentFromManifestRector},
- * {@see \Hihaho\RectorRules\Rector\Testing\TestFieldStringToConstantRector}) stays
- * cache-correct.
+ * rule ({@see \Hihaho\RectorRules\Rector\CodeQuality\NamedArgumentFromManifestRector})
+ * stays cache-correct.
  *
  * Rector keys each file's cache on the source content, the configuration
  * *parameters*, and any registered cache-meta extensions — but **not** a rule's
@@ -36,15 +35,11 @@ use Rector\Caching\Contract\CacheMetaExtensionInterface;
  * use Rector\Caching\Contract\CacheMetaExtensionInterface;
  *
  * $namedArgs = __DIR__ . '/named-arguments-manifest.json';
- * $testFields = __DIR__ . '/test-field-manifest.json';
  * $rectorConfig->ruleWithConfiguration(NamedArgumentFromManifestRector::class, [
  *     NamedArgumentFromManifestRector::MANIFEST => $namedArgs,
  * ]);
- * $rectorConfig->ruleWithConfiguration(TestFieldStringToConstantRector::class, [
- *     TestFieldStringToConstantRector::MANIFEST => $testFields,
- * ]);
- * // one extension, every manifest path:
- * $rectorConfig->singleton(ManifestCacheMetaExtension::class, fn () => new ManifestCacheMetaExtension($namedArgs, $testFields));
+ * // one extension, every manifest path (pass more paths as further arguments):
+ * $rectorConfig->singleton(ManifestCacheMetaExtension::class, fn () => new ManifestCacheMetaExtension($namedArgs));
  * $rectorConfig->tag(ManifestCacheMetaExtension::class, CacheMetaExtensionInterface::class);
  * ```
  *

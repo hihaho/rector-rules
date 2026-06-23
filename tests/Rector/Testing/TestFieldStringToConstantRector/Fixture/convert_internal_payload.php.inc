@@ -4,11 +4,11 @@ namespace Hihaho\RectorRules\Tests\Rector\Testing\TestFieldStringToConstantRecto
 
 use Illuminate\Foundation\Testing\TestCase;
 
-final class PayloadKeyConvertTest extends TestCase
+final class ConvertInternalPayloadTest extends TestCase
 {
     public function test_create_order(): void
     {
-        $this->postJson('/internal/orders', ['id' => 1]);
+        $this->postJson(route('orders.store'), ['id' => 1]);
     }
 }
 -----
@@ -16,13 +16,13 @@ final class PayloadKeyConvertTest extends TestCase
 
 namespace Hihaho\RectorRules\Tests\Rector\Testing\TestFieldStringToConstantRector\Fixture;
 
-use Hihaho\RectorRules\Tests\Rector\Testing\TestFieldStringToConstantRector\Source\Order;
+use Hihaho\RectorRules\Tests\Rector\Testing\TestFieldStringToConstantRector\Source\Http\Requests\StoreOrderRequest;
 use Illuminate\Foundation\Testing\TestCase;
 
-final class PayloadKeyConvertTest extends TestCase
+final class ConvertInternalPayloadTest extends TestCase
 {
     public function test_create_order(): void
     {
-        $this->postJson('/internal/orders', [Order::ID => 1]);
+        $this->postJson(route('orders.store'), [StoreOrderRequest::ID => 1]);
     }
 }

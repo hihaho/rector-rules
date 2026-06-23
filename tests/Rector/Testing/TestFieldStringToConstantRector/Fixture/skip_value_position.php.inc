@@ -4,10 +4,12 @@ namespace Hihaho\RectorRules\Tests\Rector\Testing\TestFieldStringToConstantRecto
 
 use Illuminate\Foundation\Testing\TestCase;
 
-final class ValuePositionSkipTest extends TestCase
+final class SkipValuePositionTest extends TestCase
 {
-    public function test_field_name_in_value_position_is_left_alone(): void
+    public function test_create_order(): void
     {
-        $this->postJson('/internal/orders', ['type' => 'id']);
+        // 'id' is a field name, but in value position — only ArrayItem::$key is ever
+        // rewritten, so this is structurally untouchable. 'type' is not a field constant.
+        $this->postJson(route('orders.store'), ['type' => 'id']);
     }
 }

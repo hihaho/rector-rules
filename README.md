@@ -312,9 +312,9 @@ correct:
   `singleton()` + `tag()` in a classic-style config file (the rule itself can still be
   configured either way).
 
-  Enabling **more than one** manifest-driven rule (e.g. this rule *and*
-  `TestFieldStringToConstantRector`)? Register **one** extension and pass it
-  **every** manifest path — `new ManifestCacheMetaExtension($manifestA, $manifestB)`.
+  Pointing at **more than one** manifest (a future manifest-driven rule, or one rule
+  reading several manifests)? Register **one** extension and pass it **every** manifest
+  path — `new ManifestCacheMetaExtension($manifestA, $manifestB)`.
   A cache-meta extension is keyed by one identifier, so a second instance would
   collide with the first; one instance folds all the manifests together, reprocessing
   when any of them changes.
@@ -660,12 +660,12 @@ Replaces magic table-name strings in database assertions with the model class, a
 
 ```diff
  // internal endpoint — a field rename would silently desync the test
--$this->postJson('/admin/orders', ['id' => $order->id]);
-+$this->postJson('/admin/orders', [StoreOrderRequest::ID => $order->id]);
+-$this->postJson(route('orders.store'), ['id' => $order->id]);
++$this->postJson(route('orders.store'), [StoreOrderRequest::ID => $order->id]);
 
  // public API endpoint — the literal IS the wire contract, so keep it a string
--$this->getJson('/api/orders/1')->assertJson([StoreOrderRequest::ID => 1]);
-+$this->getJson('/api/orders/1')->assertJson(['id' => 1]);
+-$this->postJson(route('api.orders.store'), [StoreOrderRequest::ID => 1]);
++$this->postJson(route('api.orders.store'), ['id' => 1]);
 ```
 
 **Why?** The safe move is *asymmetric* by endpoint. In a test that exercises an
@@ -675,65 +675,90 @@ But in a test that exercises a *public API surface*, that same literal **is the 
 contract**: a constant there lets a value-rename pass the test while silently
 breaking the public API. So the rule is **bidirectional** — it converts a literal
 key to the FormRequest constant on internal endpoints and inlines a constant key
-back to its literal on public ones. The endpoint classification and the
-field→constant mapping both live outside the test's AST.
+back to its literal on public ones.
 
-Like `NamedArgumentFromManifestRector`, this rule does **no resolution of its own**:
-it applies a manifest a consumer-side producer computed, rewriting only the sites
-that producer proved safe. Generating the manifest needs the **live route table**
-(resolving each test call's route → its FormRequest, and classifying the route as
-internal or public) plus a test-file scan — so the producer is naturally an
-**application-side step** (an artisan command with the framework booted), not a
-static analyser, which is why it does not ship in this package or in
-[`hihaho/phpstan-rules`](https://github.com/hihaho/phpstan-rules). Write a producer
-that emits the format below against your own app's routes. A site that is
-unclassified, dynamic, or unmapped is simply absent from the manifest, so the rule
-leaves it untouched (default-safe).
+**How?** The rule resolves everything itself, statically, from your **route files** —
+no manifest, no generator, no application boot. For each `route('name')` it reads the
+route file to find the controller action, reflects the action's first
+`FormRequest` parameter (whose first-party `string` constants name the fields), and
+classifies the route **internal or public** by whether a configured internal-middleware
+token appears in its statically-accumulated middleware stack. A route it cannot prove —
+unknown name, unparseable middleware, no FormRequest — is left untouched (default-safe).
 
-It is **not in any set** and is a **no-op until configured** with a manifest path:
+It is **not in any set** and is a **no-op until configured**. Three config values:
 
 ```php
 ->withConfiguredRule(TestFieldStringToConstantRector::class, [
-    TestFieldStringToConstantRector::MANIFEST => __DIR__ . '/test-field-manifest.json',
+    TestFieldStringToConstantRector::ROUTE_FILES => [
+        __DIR__ . '/routes/web.php',
+        __DIR__ . '/routes/api.php',
+    ],
+    TestFieldStringToConstantRector::INTERNAL_MIDDLEWARE => [
+        \App\Http\Middleware\Authenticate::class,
+    ],
+    TestFieldStringToConstantRector::FIRST_PARTY_PREFIX => 'App\\',
 ])
 ```
 
-The manifest is a JSON array of per-site records, each naming the rewrite direction:
+- `ROUTE_FILES` — absolute paths to the route files to parse for the route → request map.
+- `INTERNAL_MIDDLEWARE` — the tokens that mark a route internal: middleware FQCNs
+  (matched as `Foo::class`) and/or string aliases (matched as `'auth'`). **The config
+  contract:** list *every* token (FQCN or alias) that marks an endpoint internal; a token
+  not listed is treated **public**. Get this wrong in the omitting direction and an
+  internal route is classified public, which would inline a constant back to a literal and
+  drop the refactor safety — so list the auth boundary for every internal area.
+- `FIRST_PARTY_PREFIX` — the namespace prefix of constants eligible for rewriting, so
+  only your own request constants are written (never a vendor constant).
 
-```json
-[
-  { "file": "tests/Feature/OrderTest.php", "line": 120, "operation": "to_const",   "value": "id", "constFqcn": "App\\Http\\Requests\\StoreOrderRequest::ID", "enclosingMethod": "postJson" },
-  { "file": "tests/Feature/OrderTest.php", "line": 140, "operation": "to_literal", "value": "id", "constFqcn": "App\\Http\\Requests\\StoreOrderRequest::ID", "enclosingMethod": "assertJson" }
-]
-```
+**Cache correctness:** the rule derives its rewrites from your route files (and the
+reflected request constants), but Rector keys its per-file cache on the *test* file's
+content and the config *parameters* — not the route files' content. So with caching on, a
+route change (a new route, a moved middleware, a renamed constant) over unchanged test
+files would be served stale until you clear the cache. Fold the route files into the cache
+key the same way the manifest rules do: register `ManifestCacheMetaExtension` with your
+route file paths (it hashes any file paths you give it), or run the rule's pass with
+`rector process --no-cache`. See the cache note under `NamedArgumentFromManifestRector`
+above for the singleton-binding wiring.
 
-- `file` — project-relative path; matched as a path-segment suffix of the file
-  under traversal, so emit root-relative paths to keep the suffix unambiguous.
-- `operation` — `to_const` (internal: literal key → constant) or `to_literal`
-  (public: constant key → literal). Any other value drops the record.
-- `value` — for `to_const`, the string-literal key currently in source (matched +
-  drift guard); for `to_literal`, the literal to **write** (the producer already
-  resolved it from the constant, so the rule never reflects).
-- `constFqcn` — the `Class::CONST`. For `to_const` it is the target to write; for
-  `to_literal` it is the constant currently in source (matched + drift guard). A
-  malformed value (not a `Class::CONST` pair, an illegal PHP identifier, the magic
-  `::class`, or a bare `self`/`static`/`parent`) is dropped at load, never applied.
-- `enclosingMethod` *(optional)* — the call verb (`postJson`/`assertJson`/…),
-  carried for audit; the rule does not match on it.
+**Correlation is same-call-site:** the rule rewrites a payload only where the verb call
+names its route directly — `$this->postJson(route('orders.store'), ['id' => …])`. The
+route name is read from a literal `route('name', …)` in argument position 0; the payload is
+the **first array argument** of the verb call (Laravel's `$uri, $data, $headers`
+signature, so a trailing headers array is never mistaken for the payload, and `route()`'s
+own nested params array stays inside the `route()` call). A variable URL
+(`post($url, …)`), a raw-string URL, or a non-literal route name is skipped.
 
-**Scope & safety:** the rule rewrites **only in array-key position** (a
-request-payload or assertion key), never in value position — it visits `Array_` and
-touches only `ArrayItem::$key`, which makes a value-position node structurally
-untouchable rather than relying on the producer to never emit it. Each direction
-matches on the token *currently in source* (the literal for `to_const`, the constant
-for `to_literal`), so a stale manifest whose site has changed simply does not match
-and is left alone. Site identity is `file + line` plus that token, so the producer
-emits a record only where the site is unique on its line. The same caching caveat as
-`NamedArgumentFromManifestRector` applies — register `ManifestCacheMetaExtension`
-so a regenerated manifest invalidates Rector's per-file cache. If you enable both
-manifest-driven rules, register **one** extension with **both** manifest paths (see
-the cache note under `NamedArgumentFromManifestRector` above).
+**Boundary and coverage caveats** (hihaho's own routes hit none of these):
 
+- The internal boundary must appear as a **direct token** in the route files — inline or
+  on an enclosing group. If your auth middleware is pulled in by a **middleware-group
+  expansion** (e.g. the `web` group adds it via the HTTP kernel), the static parse cannot
+  see it; those routes look public and must be excluded from the rule's scope.
+- A `Foo::using(...)` static call is treated as **public** (it is not the bare `::class`
+  token, exactly as the booted middleware stack would see it). A **dynamic** middleware
+  argument (a variable, concatenation, or call) makes the route's stack unknowable, so the
+  route is **skipped**, not guessed.
+- Route **actions** are resolved only when written as `Controller::class` (invokable) or
+  `[Controller::class, 'method']`. A **string action** inside a
+  `Route::controller(Controller::class)->group(...)` block (`Route::post('/x', 'store')`)
+  is not resolved — the enclosing controller is not carried into the nested route — so
+  those endpoints are a **no-op** (left untouched, never mis-rewritten). Use the
+  array-callable form for tests you want this rule to cover.
+
+**Scope & safety:** the rule rewrites **only in array-key position** (a request-payload
+key), never in value position — it touches only `ArrayItem::$key`, which makes a
+value-position field name structurally untouchable. `to_const` matches the literal
+currently in source; `to_literal` reads the constant's value fresh by reflection and only
+inlines a first-party `string` constant of that route's request, so a constant that is no
+longer a string field (drift) is left alone. **Assertion arrays (`assertJson([...])`) are
+out of scope** — they check the *response*, whose keys are resource/response keys, not the
+request's FormRequest constants, so rewriting them would be unsound.
+
+**Scope the rule to your tests.** It matches a *test* idiom — `post/put/patch(+Json)` with
+a `route('name')` URL and a payload array — but that shape can appear in application code
+too (an HTTP-client call, say). The rule does not gate on filename, so restrict its Rector
+**paths** to your test suite (the conventional Rector approach), e.g. register it in a
+config whose `->withPaths([...])` covers `tests/` only, rather than app-wide.
 ## Covered by upstream Rector
 
 Some rules in [`hihaho/phpstan-rules`](https://github.com/hihaho/phpstan-rules) have no counterpart here because the fix already ships in an upstream Rector set. Enable the upstream set instead of waiting for a rule in this package.

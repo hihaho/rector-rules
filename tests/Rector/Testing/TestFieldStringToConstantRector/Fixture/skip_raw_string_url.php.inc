@@ -4,10 +4,11 @@ namespace Hihaho\RectorRules\Tests\Rector\Testing\TestFieldStringToConstantRecto
 
 use Illuminate\Foundation\Testing\TestCase;
 
-final class ValueDriftSkipTest extends TestCase
+final class SkipRawStringUrlTest extends TestCase
 {
     public function test_create_order(): void
     {
-        $this->postJson('/internal/orders', ['identifier' => 1]);
+        // arg0 is a raw string URL, not a route() call — no route name to resolve, skip.
+        $this->postJson('/internal/orders', ['id' => 1]);
     }
 }
