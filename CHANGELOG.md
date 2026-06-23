@@ -2,6 +2,59 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.15.0 - 2026-06-23
+
+<!-- verified-sha: 1bce1042a0e18fe5d8798e451cdfbb66d3f1bde4 -->
+### 0.15.0
+
+Makes the opt-in `TestFieldStringToConstantRector` **self-resolving**: it now derives
+everything it needs from your route files, with no generated manifest, no producer command,
+and no application boot. Adopting it drops from running a per-project generator to three
+lines of configuration.
+
+#### Breaking
+
+- **`TestFieldStringToConstantRector` configuration changed.** The `MANIFEST` constant is
+  removed and replaced by three keys:
+  
+  ```php
+  ->withConfiguredRule(TestFieldStringToConstantRector::class, [
+      TestFieldStringToConstantRector::ROUTE_FILES => [__DIR__ . '/routes/web.php', __DIR__ . '/routes/api.php'],
+      TestFieldStringToConstantRector::INTERNAL_MIDDLEWARE => [\App\Http\Middleware\Authenticate::class],
+      TestFieldStringToConstantRector::FIRST_PARTY_PREFIX => 'App\\',
+  ])
+  
+  ```
+  The rule's purpose is unchanged — it aligns a test's request-payload field-name array
+  keys with their endpoint's FormRequest constants, bidirectionally by endpoint (internal →
+  constant, public → literal). Only how it obtains the route → request map and the
+  internal/public classification changed: it parses the route files itself, reflects each
+  route's controller action for its first FormRequest parameter, and classifies a route
+  internal when a configured internal-middleware token appears in its statically-read
+  middleware stack. See `UPGRADING.md` for the migration.
+  
+
+#### Changed
+
+- The rule resolves the route → FormRequest mapping and the public/internal verdict
+  statically from the route files, replacing the external JSON manifest and its generator.
+- `INTERNAL_MIDDLEWARE` accepts both middleware FQCNs (matched as `Foo::class`) and string
+  aliases (matched as `'auth'`); a token not listed is treated public.
+- Correlation is same-call-site: a payload is rewritten only where the verb call names its
+  route directly (`$this->postJson(route('orders.store'), ['id' => …])`).
+- Assertion arrays (`assertJson([...])`) are out of scope — their keys are response/resource
+  keys, not the request's FormRequest constants.
+
+`NamedArgumentFromManifestRector` and `ManifestCacheMetaExtension` are unchanged.
+
+#### Notes
+
+- Scope the rule's Rector paths to your test suite — it matches a test idiom whose shape can
+  also appear in application code.
+- Two boundary caveats are documented in the README and `UPGRADING.md`: a middleware-group
+  expansion that injects the auth boundary is not statically visible, and a string action
+  inside a `Route::controller(...)->group(...)` block is left untouched.
+
 ## 0.14.0 - 2026-06-20
 
 <!-- verified-sha: b095db81c2663e9a6fc76fd76e6842ee4634e6a2 -->
@@ -162,6 +215,7 @@ serialized in an argument-count-sensitive way.
   
   
   
+  
   ```
   Dropping the all-default `1` (or `60, 1`) there is value-equivalent but changes the
   serialized string, and the parser can't see that coupling. `exclude_calls` lets a
@@ -173,6 +227,7 @@ serialized in an argument-count-sensitive way.
           \Illuminate\Routing\Middleware\ThrottleRequests::class => ['with'],
       ],
   ])
+  
   
   
   
@@ -207,6 +262,7 @@ feedback.
   ```diff
   -$query->has('posts', '=', 1);   // 0.11.1 dropped the 1 →
   +$query->has('posts', '=');      // ...leaving the comparison operator without its operand
+  
   
   
   
@@ -280,6 +336,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   
   
   
+  
   ```
   By default it drops an already-named default argument (order-independent) or a
   trailing positional default (iteratively), and it fires on any callee — those drops
@@ -303,6 +360,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   ```diff
   -$store->paginate(1, perPage: 50);
   +$store->paginate(page: 1, perPage: 50);
+  
   
   
   
@@ -340,11 +398,13 @@ explicit `config()->set()` form.
   
   
   
+  
   ```
   into the explicit setter form:
   
   ```php
   config()->set('queue.default', 'sync');
+  
   
   
   
@@ -442,6 +502,7 @@ in `MiddlewareStringToClassRector`'s default surfaced by real-world adoption.
           'auth', 'auth.basic', 'can', 'guest', 'password.confirm', 'signed', 'verified',
       ],
   ])
+  
   
   
   
@@ -598,6 +659,7 @@ Laravel's class-based fluent form.
   
   
   
+  
   ```
   It is **not in any set** and reachable by FQN only — Laravel doesn't document
   this form as a recommended convention, so adopting it is a deliberate choice.
@@ -655,6 +717,7 @@ type only resolves under a PHPStan extension such as larastan.
   ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
       NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
   ])
+  
   
   
   
@@ -728,6 +791,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   
   
@@ -1028,11 +1092,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -1089,6 +1155,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -1221,6 +1288,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -1228,6 +1296,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
