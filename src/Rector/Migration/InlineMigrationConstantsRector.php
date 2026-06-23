@@ -52,12 +52,11 @@ CODE_SAMPLE,
         return [ClassConstFetch::class];
     }
 
+    /**
+     * @param ClassConstFetch $node
+     */
     public function refactor(Node $node): ?Node
     {
-        if (! $node instanceof ClassConstFetch) {
-            return null;
-        }
-
         if (! $node->name instanceof Identifier) {
             return null;
         }
