@@ -18,6 +18,7 @@ use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PhpParser\Node\Scalar\String_;
 use PhpParser\Node\Stmt\Expression;
+use PhpParser\Node\Stmt\Namespace_;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitor\NameResolver;
 use PhpParser\ParserFactory;
@@ -169,6 +170,16 @@ final class RouteRequestResolver
     private function walk(array $nodes, array $inherited, bool $inheritedAmbiguous, array &$routes): void
     {
         foreach ($nodes as $node) {
+            // A non-braced `namespace App\Http\Controllers;` wraps every following statement in
+            // one Namespace_ node (a braced `namespace X { … }` wraps its block); a route file
+            // can also declare several. Descend into it — carrying the inherited stack and
+            // ambiguity — so routes in namespaced files are walked, not skipped as a non-call.
+            if ($node instanceof Namespace_) {
+                $this->walk($node->stmts, $inherited, $inheritedAmbiguous, $routes);
+
+                continue;
+            }
+
             $expr = $node instanceof Expression ? $node->expr : $node;
 
             if (! $expr instanceof MethodCall && ! $expr instanceof StaticCall) {

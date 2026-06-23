@@ -34,6 +34,7 @@ final class RouteRequestResolverTest extends AbstractRectorTestCase
             [
                 __DIR__ . '/Source/RouteFiles/classified.php',
                 __DIR__ . '/Source/RouteFiles/skipped.php',
+                __DIR__ . '/Source/RouteFiles/namespaced.php',
             ],
             [Authenticate::class],
             $this->make(ReflectionProvider::class),
@@ -145,6 +146,14 @@ final class RouteRequestResolverTest extends AbstractRectorTestCase
         // A non-::class const ref (SignedMiddleware::ALIAS) holds an unknown value — it could
         // be the internal middleware — so the route is omitted rather than guessed public.
         $this->assertArrayNotHasKey('skip.const.middleware', $this->routes);
+    }
+
+    public function test_namespaced_route_file_is_walked(): void
+    {
+        // A route file with a non-braced `namespace …;` wraps all statements in one
+        // Stmt\Namespace_; the resolver must descend into it, or the whole file is skipped.
+        $this->assertTrue($this->routes['namespaced.store']['internal'] ?? null);
+        $this->assertSame(StoreOrderRequest::class, $this->routes['namespaced.store']['request'] ?? null);
     }
 
     public function test_control_route_proves_the_skip_file_parsed(): void
