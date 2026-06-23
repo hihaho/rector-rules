@@ -66,6 +66,22 @@ jobs:
           configPath: pint.json
           verboseMode: true
 
+      # Guard: never commit an auto-fix that breaks static analysis. Rector/Pint run in a
+      # clean CI environment (fresh cache, PHP 8.4) and have produced output that fails
+      # PHPStan level max — e.g. adding a contravariant `@param` to a rule's refactor()
+      # override. Those commits used to land on `main` unverified, because a bot push does
+      # not trigger the PHPStan workflow. Analyse the fixed tree here; if it fails, discard
+      # the changes so the commit step has nothing to commit (the run stays green, main
+      # stays clean) instead of shipping a broken auto-fix.
+      - name: Discard auto-fixes that fail PHPStan
+        run: |
+          if vendor/bin/phpstan analyse --no-progress --memory-limit=2G; then
+            echo "PHPStan passed — auto-fix changes (if any) will be committed."
+          else
+            echo "::warning::Auto-fix changes fail PHPStan — discarding them; nothing will be committed."
+            git reset --hard HEAD
+          fi
+
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@04702edda442b2e678b25b537cec683a1493fcb9 # v7.1.0
         with:
