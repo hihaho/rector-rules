@@ -146,9 +146,6 @@ final class MiddlewareStringToClassRector extends AbstractRector implements Conf
         return [MethodCall::class, StaticCall::class, New_::class];
     }
 
-    /**
-     * @param MethodCall|StaticCall|New_ $node
-     */
     public function refactor(Node $node): ?Node
     {
         if (! $node instanceof MethodCall && ! $node instanceof StaticCall && ! $node instanceof New_) {

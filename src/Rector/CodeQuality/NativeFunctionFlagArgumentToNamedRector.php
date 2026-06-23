@@ -89,13 +89,10 @@ CODE_SAMPLE,
         return [FuncCall::class];
     }
 
-    /**
-     * @param FuncCall $node
-     */
     public function refactor(Node $node): ?Node
     {
         // Cheap gate: bail on dynamic calls before resolving the name.
-        if (! $node->name instanceof Name) {
+        if (! $node instanceof FuncCall || ! $node->name instanceof Name) {
             return null;
         }
 

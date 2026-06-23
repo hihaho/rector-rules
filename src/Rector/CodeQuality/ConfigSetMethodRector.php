@@ -46,11 +46,13 @@ CODE_SAMPLE,
         return [Expression::class];
     }
 
-    /**
-     * @param Expression $node *//** @return Expression[]|null
-
+    /** @return Expression[]|null */
     public function refactor(Node $node): ?array
     {
+        if (! $node instanceof Expression) {
+            return null;
+        }
+
         if (! $node->expr instanceof FuncCall) {
             return null;
         }
