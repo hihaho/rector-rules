@@ -2,6 +2,22 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.15.1 - 2026-06-23
+
+<!-- verified-sha: c03a969a1f6fa20f9ba96091c3cacea67262224e -->
+### 0.15.1
+
+#### Fixed
+
+- **`TestFieldStringToConstantRector` now reads namespaced route files.** A route file
+  with a non-braced `namespace App\Http\Controllers;` declaration wraps every following
+  statement in a single namespace node. The resolver walked only the top-level statement
+  list and skipped that wrapper, so a route file declaring a namespace contributed **zero**
+  routes — the rule silently no-opped against any application whose route files are
+  namespaced. The resolver now descends into namespace declarations (non-braced, braced,
+  and multiple per file); fully-qualified name resolution is unchanged. Surfaced while
+  adopting the rule against a real application's route files.
+
 ## 0.15.0 - 2026-06-23
 
 <!-- verified-sha: 1bce1042a0e18fe5d8798e451cdfbb66d3f1bde4 -->
@@ -23,6 +39,7 @@ lines of configuration.
       TestFieldStringToConstantRector::INTERNAL_MIDDLEWARE => [\App\Http\Middleware\Authenticate::class],
       TestFieldStringToConstantRector::FIRST_PARTY_PREFIX => 'App\\',
   ])
+  
   
   ```
   The rule's purpose is unchanged — it aligns a test's request-payload field-name array
@@ -216,6 +233,7 @@ serialized in an argument-count-sensitive way.
   
   
   
+  
   ```
   Dropping the all-default `1` (or `60, 1`) there is value-equivalent but changes the
   serialized string, and the parser can't see that coupling. `exclude_calls` lets a
@@ -227,6 +245,7 @@ serialized in an argument-count-sensitive way.
           \Illuminate\Routing\Middleware\ThrottleRequests::class => ['with'],
       ],
   ])
+  
   
   
   
@@ -262,6 +281,7 @@ feedback.
   ```diff
   -$query->has('posts', '=', 1);   // 0.11.1 dropped the 1 →
   +$query->has('posts', '=');      // ...leaving the comparison operator without its operand
+  
   
   
   
@@ -337,6 +357,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   
   
   
+  
   ```
   By default it drops an already-named default argument (order-independent) or a
   trailing positional default (iteratively), and it fires on any callee — those drops
@@ -360,6 +381,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   ```diff
   -$store->paginate(1, perPage: 50);
   +$store->paginate(page: 1, perPage: 50);
+  
   
   
   
@@ -399,11 +421,13 @@ explicit `config()->set()` form.
   
   
   
+  
   ```
   into the explicit setter form:
   
   ```php
   config()->set('queue.default', 'sync');
+  
   
   
   
@@ -502,6 +526,7 @@ in `MiddlewareStringToClassRector`'s default surfaced by real-world adoption.
           'auth', 'auth.basic', 'can', 'guest', 'password.confirm', 'signed', 'verified',
       ],
   ])
+  
   
   
   
@@ -660,6 +685,7 @@ Laravel's class-based fluent form.
   
   
   
+  
   ```
   It is **not in any set** and reachable by FQN only — Laravel doesn't document
   this form as a recommended convention, so adopting it is a deliberate choice.
@@ -717,6 +743,7 @@ type only resolves under a PHPStan extension such as larastan.
   ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
       NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
   ])
+  
   
   
   
@@ -791,6 +818,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   
   
@@ -1093,11 +1121,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -1155,6 +1185,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -1289,6 +1320,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -1296,6 +1328,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
