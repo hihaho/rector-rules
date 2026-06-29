@@ -206,7 +206,27 @@ CODE_SAMPLE,
             ARRAY_FILTER_USE_KEY,
         ));
 
+        if ($node instanceof MethodCall) {
+            $this->preserveFluentNewline($node);
+        }
+
         return $node;
+    }
+
+    // MethodCall->startLine equals var->startLine (both track the expression start), so
+    // "was on its own line" must be detected via name-token line > receiver endLine instead.
+    private function preserveFluentNewline(MethodCall $node): void
+    {
+        if (! $node->name instanceof Identifier) {
+            return;
+        }
+
+        $nameStartLine = $node->name->getAttribute('startLine');
+        $varEndLine = $node->var->getAttribute('endLine');
+
+        if (is_int($nameStartLine) && is_int($varEndLine) && $nameStartLine > $varEndLine) {
+            $node->setAttribute(AttributeKey::NEWLINE_ON_FLUENT_CALL, true);
+        }
     }
 
     public function provideMinPhpVersion(): int

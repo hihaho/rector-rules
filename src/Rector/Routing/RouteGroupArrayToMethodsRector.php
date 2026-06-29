@@ -15,6 +15,7 @@ use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PhpParser\Node\Scalar\String_;
+use Rector\NodeTypeResolver\Node\AttributeKey;
 use Rector\Rector\AbstractRector;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
@@ -176,18 +177,23 @@ CODE_SAMPLE,
         );
 
         foreach ($methodCalls as $methodCall) {
-            $current = new MethodCall(
+            $node = new MethodCall(
                 $current,
                 new Identifier($methodCall['method']),
                 $methodCall['args'],
             );
+            $node->setAttribute(AttributeKey::NEWLINE_ON_FLUENT_CALL, true);
+            $current = $node;
         }
 
-        return new MethodCall(
+        $group = new MethodCall(
             $current,
             new Identifier('group'),
             [$closureArg],
         );
+        $group->setAttribute(AttributeKey::NEWLINE_ON_FLUENT_CALL, true);
+
+        return $group;
     }
 
     private function resolveArrayKey(Expr $key): ?string

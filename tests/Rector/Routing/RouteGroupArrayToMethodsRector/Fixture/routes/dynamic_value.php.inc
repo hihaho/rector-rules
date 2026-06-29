@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Route;
 
 $prefix = 'admin';
 
-Route::prefix($prefix)->group(function (): void {
+Route::prefix($prefix)
+    ->group(function (): void {
     Route::get('dashboard', fn () => 'dashboard');
 });
