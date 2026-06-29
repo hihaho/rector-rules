@@ -2,6 +2,19 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.16.0 - 2026-06-29
+
+<!-- verified-sha: ec8ac8158db3b1000abcbb4d21262cd6335bf7a7 -->
+### Changed
+
+- `RouteGroupArrayToMethodsRector` — generated fluent chains now emit each step on its own line. Previously the rule produced a single-line chain (`Route::middleware('web')->prefix('admin')->name('admin.')->group(...)`); it now produces one method per line, consistent with standard Laravel fluent-chain style.
+
+### Fixed
+
+- `RemoveDefaultValuedArgumentRector` — when removing a default-valued argument from a `MethodCall` that was written on its own line in a multi-line fluent chain, the printer previously lost the line position and collapsed the chain. The rule now stamps `NEWLINE_ON_FLUENT_CALL` on the modified node so the line break is preserved.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.15.1...0.16.0
+
 ## 0.15.1 - 2026-06-23
 
 <!-- verified-sha: c03a969a1f6fa20f9ba96091c3cacea67262224e -->
@@ -39,6 +52,7 @@ lines of configuration.
       TestFieldStringToConstantRector::INTERNAL_MIDDLEWARE => [\App\Http\Middleware\Authenticate::class],
       TestFieldStringToConstantRector::FIRST_PARTY_PREFIX => 'App\\',
   ])
+  
   
   
   ```
@@ -234,6 +248,7 @@ serialized in an argument-count-sensitive way.
   
   
   
+  
   ```
   Dropping the all-default `1` (or `60, 1`) there is value-equivalent but changes the
   serialized string, and the parser can't see that coupling. `exclude_calls` lets a
@@ -245,6 +260,7 @@ serialized in an argument-count-sensitive way.
           \Illuminate\Routing\Middleware\ThrottleRequests::class => ['with'],
       ],
   ])
+  
   
   
   
@@ -281,6 +297,7 @@ feedback.
   ```diff
   -$query->has('posts', '=', 1);   // 0.11.1 dropped the 1 →
   +$query->has('posts', '=');      // ...leaving the comparison operator without its operand
+  
   
   
   
@@ -358,6 +375,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   
   
   
+  
   ```
   By default it drops an already-named default argument (order-independent) or a
   trailing positional default (iteratively), and it fires on any callee — those drops
@@ -381,6 +399,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   ```diff
   -$store->paginate(1, perPage: 50);
   +$store->paginate(page: 1, perPage: 50);
+  
   
   
   
@@ -422,11 +441,13 @@ explicit `config()->set()` form.
   
   
   
+  
   ```
   into the explicit setter form:
   
   ```php
   config()->set('queue.default', 'sync');
+  
   
   
   
@@ -526,6 +547,7 @@ in `MiddlewareStringToClassRector`'s default surfaced by real-world adoption.
           'auth', 'auth.basic', 'can', 'guest', 'password.confirm', 'signed', 'verified',
       ],
   ])
+  
   
   
   
@@ -686,6 +708,7 @@ Laravel's class-based fluent form.
   
   
   
+  
   ```
   It is **not in any set** and reachable by FQN only — Laravel doesn't document
   this form as a recommended convention, so adopting it is a deliberate choice.
@@ -743,6 +766,7 @@ type only resolves under a PHPStan extension such as larastan.
   ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
       NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
   ])
+  
   
   
   
@@ -818,6 +842,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   
   
@@ -1122,11 +1147,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -1185,6 +1212,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -1321,6 +1349,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -1328,6 +1357,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
