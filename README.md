@@ -428,7 +428,10 @@ Enforces consistent route definitions. Only applies to files under a `routes/` d
 
 ```diff
 -Route::group(['middleware' => 'web', 'prefix' => 'admin', 'name' => 'admin.'], function (): void {
-+Route::middleware('web')->prefix('admin')->name('admin.')->group(function (): void {
++Route::middleware('web')
++    ->prefix('admin')
++    ->name('admin.')
++    ->group(function (): void {
      Route::get('dashboard', fn () => 'dashboard');
  });
 ```
