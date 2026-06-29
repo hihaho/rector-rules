@@ -5,11 +5,13 @@ use Rector\CodeQuality\Rector\ClassMethod\InlineArrayReturnAssignRector;
 use Rector\CodeQuality\Rector\If_\ExplicitBoolCompareRector;
 use Rector\CodingStyle\Rector\Encapsed\EncapsedStringsToSprintfRector;
 use Rector\Config\RectorConfig;
+use Rector\DeadCode\Rector\Class_\RemoveRefactorDuplicatedNodeInstanceCheckRector;
 use Rector\DeadCode\Rector\ClassMethod\RemoveUselessParamTagRector;
 use Rector\DeadCode\Rector\ClassMethod\RemoveUselessReturnTagRector;
 use Rector\Php81\Rector\FuncCall\NullToStrictStringFuncCallArgRector;
 use Rector\Privatization\Rector\ClassMethod\PrivatizeFinalClassMethodRector;
 use Rector\TypeDeclaration\Rector\ArrowFunction\AddArrowFunctionReturnTypeRector;
+use Rector\TypeDeclarationDocblocks\Rector\Class_\AddParamTypeToRefactorMethodRector;
 
 return RectorConfig::configure()
     ->withCache(
@@ -23,11 +25,13 @@ return RectorConfig::configure()
     ])
     ->withSkip([
         AddArrowFunctionReturnTypeRector::class,
+        AddParamTypeToRefactorMethodRector::class,
         EncapsedStringsToSprintfRector::class,
         ExplicitBoolCompareRector::class,
         InlineArrayReturnAssignRector::class,
         NullToStrictStringFuncCallArgRector::class,
         PrivatizeFinalClassMethodRector::class,
+        RemoveRefactorDuplicatedNodeInstanceCheckRector::class,
         RemoveUselessParamTagRector::class,
         RemoveUselessReturnTagRector::class,
     ])
