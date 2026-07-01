@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\CodeQuality;
 
+use Hihaho\RectorRules\Rector\CodeQuality\Concerns\PreservesFluentNewline;
 use PhpParser\Node;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\NullsafeMethodCall;
@@ -25,6 +26,8 @@ use Webmozart\Assert\Assert;
  */
 final class RemoveUnnecessaryNullsafeOperatorRector extends AbstractRector implements ConfigurableRectorInterface, MinPhpVersionInterface
 {
+    use PreservesFluentNewline;
+
     /**
      * Opt in to trusting phpdoc-derived non-nullability (e.g. Eloquent `@property`).
      * Off by default: a stale `@property` would let the rule strip a load-bearing
@@ -103,6 +106,10 @@ CODE_SAMPLE,
         $replacement = $node instanceof NullsafePropertyFetch
             ? new PropertyFetch($node->var, $node->name)
             : new MethodCall($node->var, $node->name, $node->args);
+
+        if ($replacement instanceof MethodCall) {
+            $this->preserveFluentNewline($replacement);
+        }
 
         $this->mirrorComments($replacement, $node);
 

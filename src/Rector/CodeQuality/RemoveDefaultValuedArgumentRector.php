@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\CodeQuality;
 
+use Hihaho\RectorRules\Rector\CodeQuality\Concerns\PreservesFluentNewline;
 use Hihaho\RectorRules\Rector\CodeQuality\Support\ExcludedCallMatcher;
 use PhpParser\Node;
 use PhpParser\Node\Arg;
@@ -39,6 +40,8 @@ use Webmozart\Assert\Assert;
  */
 final class RemoveDefaultValuedArgumentRector extends AbstractRector implements ConfigurableRectorInterface, MinPhpVersionInterface
 {
+    use PreservesFluentNewline;
+
     public const string FIRST_PARTY_NAMESPACES = 'first_party_namespaces';
 
     public const string CASCADE_DROP = 'cascade_drop';
@@ -211,22 +214,6 @@ CODE_SAMPLE,
         }
 
         return $node;
-    }
-
-    // MethodCall->startLine equals var->startLine (both track the expression start), so
-    // "was on its own line" must be detected via name-token line > receiver endLine instead.
-    private function preserveFluentNewline(MethodCall $node): void
-    {
-        if (! $node->name instanceof Identifier) {
-            return;
-        }
-
-        $nameStartLine = $node->name->getAttribute('startLine');
-        $varEndLine = $node->var->getAttribute('endLine');
-
-        if (is_int($nameStartLine) && is_int($varEndLine) && $nameStartLine > $varEndLine) {
-            $node->setAttribute(AttributeKey::NEWLINE_ON_FLUENT_CALL, true);
-        }
     }
 
     public function provideMinPhpVersion(): int
