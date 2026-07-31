@@ -38,15 +38,34 @@ jobs:
       - name: Install composer dependencies
         uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4 (4.0.0)
 
-      - name: Cache Rector results
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      # Split restore/save, keyed on the commit, saved only on `main` — see the note in
+      # phpstan.yml for the full rationale. In short: actions/cache never overwrites a
+      # key, so keying on rector.php (a file that changes a few times a year) meant the
+      # entry was written once and only ever restored, freezing Rector's result cache;
+      # and a cache written on a topic-branch push is not readable by the PR checks.
+      # This workflow is the only one that runs Rector on a push to `main`, so it is
+      # where the shared entry gets published; rector-check.yml restores it.
+      #
+      # `.cache/rectorContainer/` is deliberately no longer cached. Timed locally on
+      # this repo against the locked versions, min of 5 runs each: `rector process
+      # --dry-run` takes 6.4s cold, 3.1s with only `.cache/rector/` (744 KB) restored,
+      # and 2.7s with the 29 MB container directory restored on top. Trading 29 MB of
+      # download-and-upload for that last ~0.5s is a net loss once transfer is counted;
+      # restoring the old combined cache measured ~1s in CI, and saving it costs more.
+      # The container's own `nette.configurator` subdirectory could never hit anyway,
+      # for the environment-keyed reason described in phpstan.yml.
+      - name: Restore Rector result cache
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
-          path: |
-            .cache/rector/
-            .cache/rectorContainer/
-          key: rector-cache-${{ hashFiles('rector.php') }}
-          restore-keys: rector-cache-
+          path: .cache/rector/
+          key: rector-result-cache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            rector-result-cache-${{ runner.os }}-
 
+      # Left on a stable key, unlike the Rector cache above and PHPStan's. Pint's cache
+      # measures 28 KB, so the frozen-entry problem costs it about a second of
+      # re-checking across ~110 files — not worth two more steps and a rotating entry
+      # per push to fix.
       - name: Cache Pint results
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
@@ -59,6 +78,19 @@ jobs:
 
       - name: Run Rector
         run: vendor/bin/rector process --no-diffs
+
+      # What gets stored is Rector's result cache, not the working tree, so the later
+      # steps that rewrite files (Pint) or discard them (the PHPStan guard's
+      # `git reset --hard`) do not change it: `.cache/` is gitignored, so `reset --hard`
+      # leaves it in place, and Pint only ever writes its own `.cache/pint/`. Placed
+      # directly after Rector purely so a failure in one of those later steps does not
+      # cost the entry — the content would be identical at the end of the job.
+      - name: Save Rector result cache
+        if: github.ref == 'refs/heads/main'
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .cache/rector/
+          key: rector-result-cache-${{ runner.os }}-${{ github.sha }}
 
       - name: Run Pint
         uses: aglipanci/laravel-pint-action@36de00d5f5a8a4e12d443e01671daa12a18f4c79 # 2.6

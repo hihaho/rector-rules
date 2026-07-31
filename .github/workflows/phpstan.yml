@@ -38,12 +38,48 @@ jobs:
       - name: Install composer dependencies
         uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4 (4.0.0)
 
-      - name: Cache PHPStan results
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      # Split restore/save rather than actions/cache, for two reasons.
+      #
+      # 1. actions/cache never overwrites an existing key. Keyed on composer.lock and
+      #    the config, the entry was written once and from then on every run logged
+      #    "Cache hit occurred on the primary key ..., not saving cache" — so the
+      #    result cache froze at whatever that first run produced and the re-analysed
+      #    set grew with every commit after it. Keying the save on the commit makes
+      #    each save a fresh entry.
+      # 2. Only `main` saves. A cache written on a pull_request run lands in that PR's
+      #    refs/pull/<n>/merge scope, which no other PR and not `main` can read, so
+      #    saving there stores a copy nothing else can restore. Pushes to a topic
+      #    branch are skipped for the same reason; they restore from `main` instead.
+      #
+      # composer.lock is deliberately not in the key. PHPStan's result cache tracks
+      # the lock itself and invalidates per package, which is strictly more precise
+      # than a key that discards the whole cache on any lock change. The commit SHA
+      # already rotates whenever the lock or the config changes.
+      - name: Restore PHPStan result cache
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
-          path: .cache/phpstan/
-          key: phpstan-result-cache-${{ hashFiles('composer.lock', 'phpstan.neon.dist') }}
-          restore-keys: phpstan-result-cache-
+          # Only the reusable parts of tmpDir, not all of `.cache/phpstan/`.
+          # `cache/nette.configurator` holds the compiled DI container, and
+          # Configurator::loadContainer() builds its key from $staticParameters —
+          # which includes the runner's whole environment, with a denylist that does
+          # not cover GITHUB_SHA or GITHUB_RUN_ID. It can therefore never hit on CI,
+          # and under the commit-keyed save below it would instead accumulate one
+          # dead ~770 KB container per push to `main`.
+          path: |
+            .cache/phpstan/resultCache.php
+            .cache/phpstan/cache/PHPStan
+          key: phpstan-result-cache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            phpstan-result-cache-${{ runner.os }}-
 
       - name: Run PHPStan
         run: ./vendor/bin/phpstan --error-format=github --no-interaction
+
+      - name: Save PHPStan result cache
+        if: github.ref == 'refs/heads/main'
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: |
+            .cache/phpstan/resultCache.php
+            .cache/phpstan/cache/PHPStan
+          key: phpstan-result-cache-${{ runner.os }}-${{ github.sha }}
