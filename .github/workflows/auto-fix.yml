@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # Push-only workflow: head_ref is only set on pull_request events,
           # which we don't trigger on. ref_name is always the pushed branch
@@ -55,7 +55,7 @@ jobs:
       # The container's own `nette.configurator` subdirectory could never hit anyway,
       # for the environment-keyed reason described in phpstan.yml.
       - name: Restore Rector result cache
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .cache/rector/
           key: rector-result-cache-${{ runner.os }}-${{ github.sha }}
@@ -67,7 +67,7 @@ jobs:
       # re-checking across ~110 files — not worth two more steps and a rotating entry
       # per push to fix.
       - name: Cache Pint results
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .cache/pint/
           key: pint-cache-${{ hashFiles('pint.json') }}
@@ -87,7 +87,7 @@ jobs:
       # cost the entry — the content would be identical at the end of the job.
       - name: Save Rector result cache
         if: github.ref == 'refs/heads/main'
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .cache/rector/
           key: rector-result-cache-${{ runner.os }}-${{ github.sha }}
@@ -115,6 +115,6 @@ jobs:
           fi
 
       - name: Commit changes
-        uses: stefanzweifel/git-auto-commit-action@04702edda442b2e678b25b537cec683a1493fcb9 # v7.1.0
+        uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7.2.0
         with:
           commit_message: 'chore: auto-fix'

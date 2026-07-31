@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Setup PHP
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
@@ -56,7 +56,7 @@ jobs:
       # than a key that discards the whole cache on any lock change. The commit SHA
       # already rotates whenever the lock or the config changes.
       - name: Restore PHPStan result cache
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           # Only the reusable parts of tmpDir, not all of `.cache/phpstan/`.
           # `cache/nette.configurator` holds the compiled DI container, and
@@ -77,7 +77,7 @@ jobs:
 
       - name: Save PHPStan result cache
         if: github.ref == 'refs/heads/main'
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .cache/phpstan/resultCache.php
