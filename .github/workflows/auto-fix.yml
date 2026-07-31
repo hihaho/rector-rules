@@ -79,9 +79,12 @@ jobs:
       - name: Run Rector
         run: vendor/bin/rector process --no-diffs
 
-      # Saved here rather than at the end of the job: this is the state that lands on
-      # `main` (Rector has already applied its fixes), and it should still be published
-      # if a later step fails.
+      # What gets stored is Rector's result cache, not the working tree, so the later
+      # steps that rewrite files (Pint) or discard them (the PHPStan guard's
+      # `git reset --hard`) do not change it: `.cache/` is gitignored, so `reset --hard`
+      # leaves it in place, and Pint only ever writes its own `.cache/pint/`. Placed
+      # directly after Rector purely so a failure in one of those later steps does not
+      # cost the entry — the content would be identical at the end of the job.
       - name: Save Rector result cache
         if: github.ref == 'refs/heads/main'
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5

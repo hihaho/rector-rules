@@ -157,7 +157,7 @@ final class MiddlewareStackReader
         }
 
         if ($value instanceof ClassConstFetch) {
-            return ! ($value->name instanceof Identifier && $value->name->toLowerString() === 'class');
+            return ! $value->name instanceof Identifier || $value->name->toLowerString() !== 'class';
         }
 
         if ($value instanceof Array_) {
