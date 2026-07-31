@@ -50,8 +50,9 @@ final class RouteRequestResolverTest extends AbstractRectorTestCase
 
     public function test_bare_authenticate_class_group_is_internal(): void
     {
-        $this->assertTrue($this->routes['orders.store']['internal'] ?? null);
-        $this->assertSame(StoreOrderRequest::class, $this->routes['orders.store']['request'] ?? null);
+        $this->assertArrayHasKey('orders.store', $this->routes);
+        $this->assertTrue($this->routes['orders.store']['internal']);
+        $this->assertSame(StoreOrderRequest::class, $this->routes['orders.store']['request']);
     }
 
     public function test_authenticate_using_static_call_stays_public(): void
@@ -87,8 +88,9 @@ final class RouteRequestResolverTest extends AbstractRectorTestCase
     {
         // Route::match([$methods], $uri, $action) shifts the action by one — the offset must
         // still land on the FormRequest action.
-        $this->assertTrue($this->routes['match.store']['internal'] ?? null);
-        $this->assertSame(StoreOrderRequest::class, $this->routes['match.store']['request'] ?? null);
+        $this->assertArrayHasKey('match.store', $this->routes);
+        $this->assertTrue($this->routes['match.store']['internal']);
+        $this->assertSame(StoreOrderRequest::class, $this->routes['match.store']['request']);
     }
 
     public function test_invokable_controller_resolves_its_form_request(): void
@@ -152,8 +154,9 @@ final class RouteRequestResolverTest extends AbstractRectorTestCase
     {
         // A route file with a non-braced `namespace …;` wraps all statements in one
         // Stmt\Namespace_; the resolver must descend into it, or the whole file is skipped.
-        $this->assertTrue($this->routes['namespaced.store']['internal'] ?? null);
-        $this->assertSame(StoreOrderRequest::class, $this->routes['namespaced.store']['request'] ?? null);
+        $this->assertArrayHasKey('namespaced.store', $this->routes);
+        $this->assertTrue($this->routes['namespaced.store']['internal']);
+        $this->assertSame(StoreOrderRequest::class, $this->routes['namespaced.store']['request']);
     }
 
     public function test_control_route_proves_the_skip_file_parsed(): void

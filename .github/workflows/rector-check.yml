@@ -32,14 +32,18 @@ jobs:
       - name: Install composer dependencies
         uses: ramsey/composer-install@26d8a556604053a9612623447203a691f406fbe6 # v4 (4.0.0)
 
-      - name: Cache Rector results
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # Restore-only: this workflow runs on pull_request, and a cache saved there lands
+      # in the PR's own refs/pull/<n>/merge scope where nothing else can read it. The
+      # entry this restores is published by auto-fix.yml on push to `main`. See the
+      # notes there for why the key is commit-based and why `.cache/rectorContainer/`
+      # is no longer cached.
+      - name: Restore Rector result cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: |
-            .cache/rector/
-            .cache/rectorContainer/
-          key: rector-cache-${{ hashFiles('rector.php') }}
-          restore-keys: rector-cache-
+          path: .cache/rector/
+          key: rector-result-cache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            rector-result-cache-${{ runner.os }}-
 
       - name: Ensure Rector cache directories exist
         run: mkdir -p .cache/rector .cache/rectorContainer
