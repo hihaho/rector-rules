@@ -410,6 +410,26 @@ Enforces class naming suffixes based on the parent class.
 
 **Why?** Suffixes make artifact types obvious from the class name alone, and they prevent collisions like `App\Mail\Welcome` vs `App\Notifications\Welcome` from biting you later. IDE search and `grep` are a lot more useful when the convention holds.
 
+**These rules move files.** Renaming a class breaks PSR-4 unless the file is renamed with it, and it breaks every reference unless those are rewritten too, so all four rules do the whole job:
+
+1. The declaration is renamed.
+2. Every reference — `new`, `::class`, type hints, docblocks, imports — is rewritten. The rules register their renames with Rector's rename collector and pull in `RenameClassRector` automatically, so `->withRules([AddNotificationSuffixRector::class])` on its own is enough.
+3. The declaring file is renamed to match, once the run has written its changes.
+
+To make that work regardless of the order Rector happens to process files in — and regardless of how many parallel workers it spreads them over — the rules scan every configured path once, up front, before traversal begins. On a 2,000-file corpus that costs roughly 250 ms per worker process; the four rules share the scan, so adding more of them is nearly free.
+
+A few consequences worth knowing:
+
+- **`--dry-run` never renames a file.** The diff shows the class rename; the filesystem is left alone.
+- **Enable `withImportNames(removeUnusedImports: true)`** for clean output. Without it, Rector emits fully-qualified references and leaves the now-unused `use` behind — valid PHP, but ugly.
+- **Collisions are skipped, not forced.** If the destination class already exists, or two classes would converge on one name, both are left alone.
+- **Files holding more than one class are not renamed**, nor are files whose name never matched the class in the first place. The class rename still happens.
+- **Path-discovered classes** — Artisan commands, Livewire components, Filament resources — keep working, because the file name is kept in sync with the class.
+- **Skipped paths are respected.** A declaration under a `withSkip()` path is left out of the rename map entirely, so its references are not rewritten either.
+- **Configure paths in `rector.php` via `withPaths()`.** When paths are given *only* as command-line arguments, Rector does not expose them early enough for the pre-scan, and the rules fall back to registering each rename as they meet it — which still renames the class, the file and any reference in a file processed later, but can miss a reference in a file processed earlier.
+- **A reference spelled in a different case** (`new ORDERSHIPPED()`) is not rewritten. Rector matches class names exactly when rewriting.
+- **Using Rector as a library?** The file renames run from a shutdown hook. Call `SuffixRenameMap::flushFileRenames()` yourself if the process keeps running and needs the files in place. If a rename fails — an unwritable directory, say — the failure is reported on `STDERR`.
+
 **Skipped:** abstract classes, classes already suffixed correctly, and (in the Resource rule only) `JsonResource` subclasses whose names already end in `Collection`. Those look like naming mistakes; renaming them to `FooCollectionResource` would just bury the bug.
 
 ### Routing (`HihahoSetList::ROUTING`)

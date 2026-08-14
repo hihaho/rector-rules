@@ -1,0 +1,583 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Hihaho\RectorRules\Rector\NamingClasses\Support;
+
+use FilesystemIterator;
+use PhpParser\Node;
+use PhpParser\Node\Identifier;
+use PhpParser\Node\Name;
+use PhpParser\Node\Stmt\Class_;
+use PhpParser\Node\Stmt\ClassLike;
+use PhpParser\NodeTraverser;
+use PhpParser\NodeVisitor\FindingVisitor;
+use PhpParser\NodeVisitor\NameResolver;
+use PhpParser\Parser;
+use PhpParser\ParserFactory;
+use Rector\Configuration\Option;
+use Rector\Configuration\Parameter\SimpleParameterProvider;
+use Rector\Configuration\RenamedClassesDataCollector;
+use Rector\Contract\DependencyInjection\ResettableInterface;
+use Rector\Skipper\Skipper\Skipper;
+use Rector\Skipper\ValueObject\SkipMatch;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use SplFileInfo;
+use Throwable;
+
+/**
+ * Builds the complete class-rename map for a suffix rule **before** Rector traverses
+ * any file, and renames the declaring files once the run is over.
+ *
+ * Why a pre-scan rather than registering each rename as it is found: Rector processes
+ * files one at a time and never revisits an earlier one, and under the default
+ * parallel run each worker holds its own collector. A map populated during traversal
+ * therefore only reaches files that happen to sort after the declaration, in the same
+ * worker. Scanning up front sidesteps both — every worker independently builds the
+ * same complete map before its first file.
+ *
+ * @internal not public API; may change in any release
+ * @see \Hihaho\RectorRules\Tests\Rector\NamingClasses\Support\SuffixRenameMapTest
+ */
+final class SuffixRenameMap implements ResettableInterface
+{
+    /**
+     * Scan keys already folded into the collector, so N rules sharing this service
+     * each scan once. Keyed by caller-supplied key plus the resolved path list.
+     *
+     * @var array<string, true>
+     */
+    private array $scanned = [];
+
+    /**
+     * Renames to apply to the filesystem once the run has written its changes.
+     *
+     * @var list<array{path: string, oldShortName: string, newShortName: string}>
+     */
+    private array $pendingFileRenames = [];
+
+    /**
+     * Every rename this service registered, `$oldFqcn => $newFqcn`. The rules consult
+     * it so a class the scan declined (a collision) is not renamed in isolation.
+     *
+     * @var array<string, string>
+     */
+    private array $renames = [];
+
+    /**
+     * Classes the scan deliberately refused (a collision). Kept apart from "never seen",
+     * so the per-file fallback can tell a refusal from an absence.
+     *
+     * @var array<string, true>
+     */
+    private array $declined = [];
+
+    private bool $shutdownRegistered = false;
+
+    private ?Parser $parser = null;
+
+    /**
+     * Parsed classes per file, so a corpus file is read and parsed at most once.
+     *
+     * @var array<string, list<Class_>>
+     */
+    private array $classesByFile = [];
+
+    /**
+     * Class-like names declared per file, memoised alongside the parsed classes.
+     *
+     * @var array<string, list<string>>
+     */
+    private array $declaredNamesByFile = [];
+
+    public function __construct(
+        private readonly RenamedClassesDataCollector $renamedClassesDataCollector,
+        private readonly Skipper $skipper,
+    ) {}
+
+    public function reset(): void
+    {
+        $this->scanned = [];
+        $this->pendingFileRenames = [];
+        $this->renames = [];
+        $this->declined = [];
+        $this->classesByFile = [];
+        $this->declaredNamesByFile = [];
+    }
+
+    /**
+     * Whether this class may be renamed, and if so, register the rename.
+     *
+     * The pre-scan is the authority whenever it saw the class: it alone can spot a
+     * collision across the whole corpus. When it did not see the file at all — a
+     * single-file run, or the fixture harness, where the path list is not yet known at
+     * container-build time — the rename is cleared here instead, with the cheap
+     * same-directory collision check that context allows.
+     */
+    public function claim(string $oldFqcn, string $newShortName, string $filePath): bool
+    {
+        $newFqcn = $this->replaceShortName($oldFqcn, $newShortName);
+
+        if (isset($this->renames[$oldFqcn])) {
+            // Two rules claiming the same class for different targets would leave the
+            // declaration, the references and the file move disagreeing. Honour whichever
+            // registered first and refuse the other.
+            return $this->collisionKey($this->renames[$oldFqcn]) === $this->collisionKey($newFqcn);
+        }
+
+        if (isset($this->declined[$oldFqcn])) {
+            return false;
+        }
+
+        // Cannot see the corpus here, so fall back to what this file and its directory
+        // can tell us: another class in the same file already holding the destination
+        // name (renaming would emit a duplicate declaration), or a sibling file named
+        // after it.
+        if ($this->declaresClass($filePath, $newFqcn) || file_exists(dirname($filePath) . '/' . $newShortName . '.php')) {
+            $this->declined[$oldFqcn] = true;
+
+            return false;
+        }
+
+        $this->renames[$oldFqcn] = $newFqcn;
+
+        $this->renamedClassesDataCollector->addOldToNewClasses([$oldFqcn => $newFqcn]);
+
+        $this->scheduleFileRename([
+            'oldFqcn' => $oldFqcn,
+            'newShortName' => $newShortName,
+            'oldShortName' => $this->shortNameOf($oldFqcn),
+            'path' => $filePath,
+            'isOnlyClassInFile' => count($this->classesIn($filePath)) === 1,
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Scan every configured path and register `[$oldFqcn => $newFqcn]` for each class
+     * the resolver claims.
+     *
+     * @param  string  $key  Identifies the calling rule, so two rules don't share a scan.
+     * @param  callable(Class_): ?string  $resolveNewShortName  Returns the new short name
+     *                                                           for a class this rule claims, or null to leave it alone.
+     */
+    public function register(string $key, callable $resolveNewShortName): void
+    {
+        $paths = $this->scanPaths();
+
+        $scanKey = $key . '|' . implode('|', $paths);
+
+        if (isset($this->scanned[$scanKey])) {
+            return;
+        }
+
+        $this->scanned[$scanKey] = true;
+
+        $candidates = [];
+        $declaredFqcns = [];
+
+        foreach ($this->phpFilesIn($paths) as $filePath) {
+            // A file the consumer skipped is never processed, so its declaration would
+            // stay put while references to it got rewritten — a broken tree. Both a
+            // global skip and one scoped to this rule count.
+            if ($this->skipper->shouldSkipFilePath($filePath) || $this->skipper->matchSkip($key, $filePath) instanceof SkipMatch) {
+                continue;
+            }
+
+            // Interfaces, traits and enums share the class namespace, so a rename onto
+            // one of them is just as fatal as onto a class.
+            foreach ($this->declaredNamesIn($filePath) as $declaredFqcn) {
+                $declaredFqcns[$this->collisionKey($declaredFqcn)] = true;
+            }
+
+            foreach ($this->classesIn($filePath) as $class) {
+                $oldFqcn = $this->fqcnOf($class);
+
+                if ($oldFqcn === null) {
+                    continue;
+                }
+
+                $declaredFqcns[$this->collisionKey($oldFqcn)] = true;
+
+                $newShortName = $resolveNewShortName($class);
+
+                if ($newShortName === null) {
+                    continue;
+                }
+
+                $candidates[] = [
+                    'oldFqcn' => $oldFqcn,
+                    'newFqcn' => $this->replaceShortName($oldFqcn, $newShortName),
+                    'newShortName' => $newShortName,
+                    'oldShortName' => $this->shortNameOf($oldFqcn),
+                    'path' => $filePath,
+                    'isOnlyClassInFile' => count($this->classesIn($filePath)) === 1,
+                ];
+            }
+        }
+
+        $this->applyCandidates($candidates, $declaredFqcns);
+    }
+
+    /**
+     * @param  list<array{oldFqcn: string, newFqcn: string, newShortName: string, oldShortName: string, path: string, isOnlyClassInFile: bool}>  $candidates
+     * @param  array<string, true>  $declaredFqcns
+     */
+    private function applyCandidates(array $candidates, array $declaredFqcns): void
+    {
+        $destinationCounts = [];
+
+        foreach ($candidates as $candidate) {
+            $destinationCounts[$this->collisionKey($candidate['newFqcn'])] ??= 0;
+            ++$destinationCounts[$this->collisionKey($candidate['newFqcn'])];
+        }
+
+        $map = [];
+
+        foreach ($candidates as $candidate) {
+            // Two classes converging on one name, or a destination that already exists:
+            // renaming either would silently merge two types. Leave both alone.
+            if ($destinationCounts[$this->collisionKey($candidate['newFqcn'])] > 1) {
+                $this->declined[$candidate['oldFqcn']] = true;
+
+                continue;
+            }
+
+            if (isset($declaredFqcns[$this->collisionKey($candidate['newFqcn'])])) {
+                $this->declined[$candidate['oldFqcn']] = true;
+
+                continue;
+            }
+
+            $map[$candidate['oldFqcn']] = $candidate['newFqcn'];
+            $this->renames[$candidate['oldFqcn']] = $candidate['newFqcn'];
+
+            $this->scheduleFileRename($candidate);
+        }
+
+        if ($map === []) {
+            return;
+        }
+
+        $this->renamedClassesDataCollector->addOldToNewClasses($map);
+    }
+
+    /**
+     * @param  array{oldFqcn: string, newShortName: string, oldShortName: string, path: string, isOnlyClassInFile: bool, ...}  $candidate
+     */
+    private function scheduleFileRename(array $candidate): void
+    {
+        // A file holding more than one class is not named after any single one of them.
+        if (! $candidate['isOnlyClassInFile']) {
+            return;
+        }
+
+        // The basename never matched the class, so PSR-4 was never relying on it.
+        if (pathinfo($candidate['path'], PATHINFO_FILENAME) !== $candidate['oldShortName']) {
+            return;
+        }
+
+        // A move we could not complete would leave the new class name in the old file —
+        // exactly the breakage this rule exists to prevent. Refuse the rename entirely
+        // rather than half-applying it.
+        if (! is_writable(dirname($candidate['path']))) {
+            $this->declined[$candidate['oldFqcn']] = true;
+            unset($this->renames[$candidate['oldFqcn']]);
+
+            return;
+        }
+
+        $this->pendingFileRenames[] = [
+            'path' => $candidate['path'],
+            'oldShortName' => $candidate['oldShortName'],
+            'newShortName' => $candidate['newShortName'],
+        ];
+
+        $this->registerShutdownFlush();
+    }
+
+    private function registerShutdownFlush(): void
+    {
+        if ($this->shutdownRegistered) {
+            return;
+        }
+
+        $this->shutdownRegistered = true;
+
+        register_shutdown_function(function (): void {
+            $this->flushFileRenames();
+        });
+    }
+
+    /**
+     * Rector has no file-move API, so the rename happens after the run has written
+     * every file. Each guard below also makes `--dry-run` a no-op: nothing was
+     * written, so the new class name is never found on disk.
+     *
+     * @internal exposed for tests; not part of the public API
+     */
+    public function flushFileRenames(): void
+    {
+        foreach ($this->pendingFileRenames as $pendingFileRename) {
+            $path = $pendingFileRename['path'];
+
+            if (! is_file($path)) {
+                continue;
+            }
+
+            // Rector did not write the rename — a dry run, or another worker owns this
+            // file. Parsed rather than grepped, so a mention of the name in a comment or
+            // a string literal cannot be mistaken for the declaration.
+            if (! $this->declaresShortName($path, $pendingFileRename['newShortName'])) {
+                continue;
+            }
+
+            $destination = dirname($path) . '/' . $pendingFileRename['newShortName'] . '.php';
+
+            if (file_exists($destination)) {
+                continue;
+            }
+
+            if (! @rename($path, $destination)) {
+                // Loud, because the tree is now inconsistent: the class was renamed but
+                // its file was not, so it no longer autoloads.
+                fwrite(
+                    STDERR,
+                    sprintf(
+                        '[hihaho/rector-rules] Could not rename "%s" to "%s". The class was renamed but the file was not, so it will not autoload. Rename it by hand.%s',
+                        $path,
+                        basename($destination),
+                        PHP_EOL,
+                    ),
+                );
+            }
+        }
+
+        $this->pendingFileRenames = [];
+    }
+
+    /**
+     * The fixture harness supplies files through `Option::SOURCE` and leaves
+     * `Option::PATHS` empty; a real run is the other way round.
+     *
+     * @return list<string>
+     */
+    private function scanPaths(): array
+    {
+        $paths = SimpleParameterProvider::provideArrayParameter(Option::PATHS);
+
+        if ($paths === []) {
+            $paths = SimpleParameterProvider::provideArrayParameter(Option::SOURCE);
+        }
+
+        /** @var list<string> $stringPaths */
+        $stringPaths = array_values(array_filter($paths, is_string(...)));
+
+        sort($stringPaths);
+
+        return $stringPaths;
+    }
+
+    /**
+     * @param  list<string>  $paths
+     * @return list<string>
+     */
+    private function phpFilesIn(array $paths): array
+    {
+        $filePaths = [];
+
+        foreach ($paths as $path) {
+            if (is_file($path)) {
+                if (pathinfo($path, PATHINFO_EXTENSION) === 'php') {
+                    $filePaths[] = $path;
+                }
+
+                continue;
+            }
+
+            if (! is_dir($path)) {
+                continue;
+            }
+
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS),
+            );
+
+            foreach ($iterator as $fileInfo) {
+                if ($fileInfo instanceof SplFileInfo && $fileInfo->getExtension() === 'php') {
+                    $filePaths[] = $fileInfo->getPathname();
+                }
+            }
+        }
+
+        $filePaths = array_values(array_unique($filePaths));
+
+        sort($filePaths);
+
+        return $filePaths;
+    }
+
+    /**
+     * Whether this file already declares the given class, which makes renaming another
+     * class in it to that name a duplicate declaration.
+     */
+    private function declaresClass(string $filePath, string $fqcn): bool
+    {
+        foreach ($this->declaredNamesIn($filePath) as $declaredFqcn) {
+            if ($this->collisionKey($declaredFqcn) === $this->collisionKey($fqcn)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Whether the file declares a class of this short name. Used as the written-to-disk
+     * signal before a file rename.
+     */
+    private function declaresShortName(string $filePath, string $shortName): bool
+    {
+        foreach ($this->parseClasses($filePath) as $class) {
+            if ($class->name instanceof Identifier && strcasecmp($class->name->toString(), $shortName) === 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Every class-like name the file declares — classes, interfaces, traits and enums.
+     *
+     * @return list<string>
+     */
+    private function declaredNamesIn(string $filePath): array
+    {
+        if (isset($this->declaredNamesByFile[$filePath])) {
+            return $this->declaredNamesByFile[$filePath];
+        }
+
+        $statements = $this->parseStatements($filePath);
+
+        $findingVisitor = new FindingVisitor(static fn (Node $node): bool => $node instanceof ClassLike);
+
+        (new NodeTraverser($findingVisitor))->traverse($statements);
+
+        $names = [];
+
+        foreach ($findingVisitor->getFoundNodes() as $foundNode) {
+            if ($foundNode instanceof ClassLike && $foundNode->namespacedName instanceof Name) {
+                $names[] = $foundNode->namespacedName->toString();
+            }
+        }
+
+        return $this->declaredNamesByFile[$filePath] = $names;
+    }
+
+    /**
+     * PHP class names are case-insensitive, so collisions must be too.
+     */
+    private function collisionKey(string $fqcn): string
+    {
+        return strtolower($fqcn);
+    }
+
+    /**
+     * @return list<Class_>
+     */
+    private function classesIn(string $filePath): array
+    {
+        if (isset($this->classesByFile[$filePath])) {
+            return $this->classesByFile[$filePath];
+        }
+
+        return $this->classesByFile[$filePath] = $this->parseClasses($filePath);
+    }
+
+    /**
+     * Parses the file fresh from disk — no memo, so a caller running after Rector has
+     * written its changes sees them.
+     *
+     * @return list<Class_>
+     */
+    private function parseClasses(string $filePath): array
+    {
+        $classes = [];
+
+        $findingVisitor = new FindingVisitor(static fn (Node $node): bool => $node instanceof Class_);
+
+        (new NodeTraverser($findingVisitor))->traverse($this->parseStatements($filePath));
+
+        foreach ($findingVisitor->getFoundNodes() as $foundNode) {
+            if ($foundNode instanceof Class_) {
+                $classes[] = $foundNode;
+            }
+        }
+
+        return $classes;
+    }
+
+    /**
+     * @return list<Node>
+     */
+    private function parseStatements(string $filePath): array
+    {
+        $contents = @file_get_contents($filePath);
+
+        if ($contents === false) {
+            return [];
+        }
+
+        try {
+            $statements = $this->parser()->parse($contents);
+        } catch (Throwable) {
+            // A file Rector itself would report as a parse error; not this rule's problem.
+            return [];
+        }
+
+        if ($statements === null) {
+            return [];
+        }
+
+        return array_values((new NodeTraverser(new NameResolver()))->traverse($statements));
+    }
+
+    private function parser(): Parser
+    {
+        return $this->parser ??= (new ParserFactory())->createForNewestSupportedVersion();
+    }
+
+    /**
+     * Null for an anonymous class — a *named* class in the global namespace does get a
+     * `namespacedName`, so the guard belongs here rather than on the namespace.
+     */
+    private function fqcnOf(Class_ $class): ?string
+    {
+        if (! $class->name instanceof Identifier) {
+            return null;
+        }
+
+        if (! $class->namespacedName instanceof Name) {
+            return null;
+        }
+
+        return $class->namespacedName->toString();
+    }
+
+    private function shortNameOf(string $fqcn): string
+    {
+        $position = strrpos($fqcn, '\\');
+
+        return $position === false ? $fqcn : substr($fqcn, $position + 1);
+    }
+
+    private function replaceShortName(string $fqcn, string $newShortName): string
+    {
+        $position = strrpos($fqcn, '\\');
+
+        return $position === false ? $newShortName : substr($fqcn, 0, $position + 1) . $newShortName;
+    }
+}

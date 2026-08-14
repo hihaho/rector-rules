@@ -47,6 +47,10 @@ use Rector\Caching\Contract\CacheMetaExtensionInterface;
  * the manifest pass with `rector process --no-cache`.
  *
  * @see \Hihaho\RectorRules\Tests\Caching\ManifestCacheMetaExtensionTest
+ *
+ * @deprecated Rector 2.6 deprecated CacheMetaExtensionInterface ("no longer applied";
+ *             let Rector manage its own cache, or clear the cache directory in CI).
+ *             This class is a no-op there and will be removed in the next major.
  */
 final readonly class ManifestCacheMetaExtension implements CacheMetaExtensionInterface
 {

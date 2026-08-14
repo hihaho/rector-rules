@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Hihaho\RectorRules\Rector\NamingClasses;
 
 use Hihaho\RectorRules\Rector\NamingClasses\Concerns\ChecksClassHierarchy;
+use Hihaho\RectorRules\Rector\NamingClasses\Support\SuffixRenameMap;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 use PhpParser\Node;
@@ -12,6 +13,7 @@ use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\Class_;
 use PHPStan\Reflection\ReflectionProvider;
+use Rector\Contract\DependencyInjection\RelatedConfigInterface;
 use Rector\Rector\AbstractRector;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
@@ -19,7 +21,7 @@ use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 /**
  * @see \Hihaho\RectorRules\Tests\Rector\NamingClasses\AddResourceSuffixRector\AddResourceSuffixRectorTest
  */
-final class AddResourceSuffixRector extends AbstractRector
+final class AddResourceSuffixRector extends AbstractRector implements RelatedConfigInterface
 {
     use ChecksClassHierarchy;
 
@@ -46,7 +48,24 @@ final class AddResourceSuffixRector extends AbstractRector
 
     public function __construct(
         protected readonly ReflectionProvider $reflectionProvider,
-    ) {}
+        private readonly SuffixRenameMap $suffixRenameMap,
+    ) {
+        // Runs while the container is built — before Rector traverses its first file —
+        // so the rename map is complete for every file in the run, whatever the order.
+        $this->suffixRenameMap->register(
+            self::class,
+            fn (Class_ $class): ?string => $this->newShortNameFor($class),
+        );
+    }
+
+    /**
+     * Registers `RenameClassRector`, which rewrites the references this rule's renames
+     * invalidate. See `config/related/rename-propagation.php`.
+     */
+    public static function getConfigFile(): string
+    {
+        return __DIR__ . '/../../../config/related/rename-propagation.php';
+    }
 
     public function getRuleDefinition(): RuleDefinition
     {
@@ -89,34 +108,61 @@ CODE_SAMPLE,
             return null;
         }
 
-        if ($node->isAbstract()) {
+        $newShortName = $this->newShortNameFor($node);
+
+        if ($newShortName === null) {
             return null;
         }
 
-        if (! $node->name instanceof Identifier) {
+        $oldFqcn = $node->namespacedName?->toString();
+
+        // Anonymous class; a named class in the global namespace still has one.
+        if ($oldFqcn === null) {
             return null;
         }
 
-        if (! $node->extends instanceof Name) {
+        if (! $this->suffixRenameMap->claim($oldFqcn, $newShortName, $this->getFile()->getFilePath())) {
             return null;
         }
 
-        $className = $node->name->toString();
-        $parentClassName = $this->getName($node->extends);
+        $node->name = new Identifier($newShortName);
+
+        return $node;
+    }
+
+    /**
+     * The new short name for a resource class, or null if this rule does not claim it.
+     */
+    private function newShortNameFor(Class_ $class): ?string
+    {
+        if ($class->isAbstract()) {
+            return null;
+        }
+
+        if (! $class->name instanceof Identifier) {
+            return null;
+        }
+
+        if (! $class->extends instanceof Name) {
+            return null;
+        }
+
+        $className = $class->name->toString();
+        $parentClassName = $class->extends->toString();
 
         // ResourceCollection extends JsonResource — check the more specific type first.
         if ($this->isSubclassOf($parentClassName, self::RESOURCE_COLLECTION)) {
-            return $this->refactorResourceCollection($node, $className);
+            return $this->resourceCollectionName($className);
         }
 
         if ($this->isSubclassOf($parentClassName, self::JSON_RESOURCE)) {
-            return $this->refactorJsonResource($node, $className);
+            return $this->jsonResourceName($className);
         }
 
         return null;
     }
 
-    private function refactorResourceCollection(Class_ $node, string $className): ?Class_
+    private function resourceCollectionName(string $className): ?string
     {
         if (str_ends_with($className, 'ResourceCollection')) {
             return null;
@@ -132,12 +178,10 @@ CODE_SAMPLE,
             $baseName = substr($baseName, 0, -8);
         }
 
-        $node->name = new Identifier($baseName . 'ResourceCollection');
-
-        return $node;
+        return $baseName . 'ResourceCollection';
     }
 
-    private function refactorJsonResource(Class_ $node, string $className): ?Class_
+    private function jsonResourceName(string $className): ?string
     {
         if (str_ends_with($className, 'Resource')) {
             return null;
@@ -156,8 +200,6 @@ CODE_SAMPLE,
             }
         }
 
-        $node->name = new Identifier($className . 'Resource');
-
-        return $node;
+        return $className . 'Resource';
     }
 }

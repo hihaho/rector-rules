@@ -44,3 +44,33 @@ parameters:
         -
             identifier: ternary.condNotBoolean
             reportUnmatched: false
+
+        # ManifestCacheMetaExtension is @deprecated (Rector 2.6 retired the interface it
+        # implements) but is public API, so it keeps a deprecation cycle instead of being
+        # removed outright — and its test has to keep exercising it until then.
+        -
+            identifier: method.deprecatedClass
+            path: tests/Caching/ManifestCacheMetaExtensionTest.php
+        -
+            identifier: new.deprecatedClass
+            path: tests/Caching/ManifestCacheMetaExtensionTest.php
+
+        # RelatedConfigInterface is Rector's only hook for a rule to pull in the extra
+        # services it depends on. Its @internal tag is aimed at Rector's own DI wiring,
+        # but a third-party rule package is exactly the caller it exists for, and there
+        # is no public equivalent. See config/related/rename-propagation.php.
+        -
+            identifier: class.implementsInternalInterface
+            paths:
+                - src/Rector/NamingClasses/AbstractAddSuffixRector.php
+                - src/Rector/NamingClasses/AddResourceSuffixRector.php
+
+        # Option::PATHS is how a rule learns which paths the consumer configured — the
+        # suffix rules need it to build their rename map before traversal starts.
+        # Rector exposes no public accessor for it.
+        -
+            identifier: classConstant.internal
+            paths:
+                - src/Rector/NamingClasses/Support/SuffixRenameMap.php
+                - tests/Rector/NamingClasses/RenamePropagation/AbstractRenamePropagationTestCase.php
+                - tests/Rector/NamingClasses/Support/SuffixRenameMapTest.php
