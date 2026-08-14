@@ -17,11 +17,28 @@ jobs:
         with:
           ref: ${{ github.event.release.target_commitish }}
 
+      # The release body opens with a `<!-- verified-sha: … -->` pin that the pre-release
+      # gate reads. GitHub hides it when rendering the release page, but this changelog
+      # action copies the body as raw Markdown, so without stripping it the marker lands
+      # in CHANGELOG.md verbatim. Read through `env:` rather than interpolating the body
+      # straight into the script, so its contents can never be executed.
+      - name: Strip internal markers from the release notes
+        id: notes
+        env:
+          RELEASE_BODY: ${{ github.event.release.body }}
+        run: |
+          {
+            echo 'body<<HIHAHO_RELEASE_NOTES_EOF'
+            printf '%s' "$RELEASE_BODY" | perl -0pe 's/<!--.*?-->\n?//gs'
+            echo
+            echo 'HIHAHO_RELEASE_NOTES_EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Update Changelog
         uses: stefanzweifel/changelog-updater-action@a938690fad7edf25368f37e43a1ed1b34303eb36 # v1.12.0
         with:
           latest-version: ${{ github.event.release.tag_name }}
-          release-notes: ${{ github.event.release.body }}
+          release-notes: ${{ steps.notes.outputs.body }}
 
       - name: Commit updated CHANGELOG
         uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7.2.0

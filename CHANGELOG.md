@@ -4,7 +4,6 @@ All notable changes to `hihaho/rector-rules` will be documented in this file.
 
 ## 0.17.0 - 2026-08-14
 
-<!-- verified-sha: 3fe53682262b84439246ef1a4383f3ea425501b2 -->
 ### Breaking
 
 #### The suffix rules now rename files
@@ -93,7 +92,6 @@ being present on disk, the destination being free, and the class being alone in 
 
 ## 0.16.1 - 2026-07-01
 
-<!-- verified-sha: 5649125c50834f30e56df150d4d0ee8c1976bb06 -->
 ### Fixed
 
 - **`RemoveUnnecessaryNullsafeOperatorRector` now keeps fluent chains multi-line.**
@@ -110,7 +108,6 @@ being present on disk, the destination being free, and the class being alone in 
 
 ## 0.16.0 - 2026-06-29
 
-<!-- verified-sha: ec8ac8158db3b1000abcbb4d21262cd6335bf7a7 -->
 ### Changed
 
 - `RouteGroupArrayToMethodsRector` — generated fluent chains now emit each step on its own line. Previously the rule produced a single-line chain (`Route::middleware('web')->prefix('admin')->name('admin.')->group(...)`); it now produces one method per line, consistent with standard Laravel fluent-chain style.
@@ -123,7 +120,6 @@ being present on disk, the destination being free, and the class being alone in 
 
 ## 0.15.1 - 2026-06-23
 
-<!-- verified-sha: c03a969a1f6fa20f9ba96091c3cacea67262224e -->
 ### 0.15.1
 
 #### Fixed
@@ -139,7 +135,6 @@ being present on disk, the destination being free, and the class being alone in 
 
 ## 0.15.0 - 2026-06-23
 
-<!-- verified-sha: 1bce1042a0e18fe5d8798e451cdfbb66d3f1bde4 -->
 ### 0.15.0
 
 Makes the opt-in `TestFieldStringToConstantRector` **self-resolving**: it now derives
@@ -196,7 +191,6 @@ lines of configuration.
 
 ## 0.14.0 - 2026-06-20
 
-<!-- verified-sha: b095db81c2663e9a6fc76fd76e6842ee4634e6a2 -->
 Retargets the opt-in `TestFieldStringToConstantRector` (added in 0.13.0) to its
 correct shape, from production adoption feedback: constants come from the
 endpoint's **FormRequest**, not the model, and the rewrite is **bidirectional**,
@@ -245,7 +239,6 @@ configured.
 
 ## 0.13.0 - 2026-06-19
 
-<!-- verified-sha: a9af58b7e5d712596069f1199136142b4c0fcc9e -->
 ### Added
 
 - **`TestFieldStringToConstantRector` (opt-in, not in any set).** Replaces a
@@ -298,7 +291,6 @@ configured.
 
 ## 0.12.1 - 2026-06-15
 
-<!-- verified-sha: 849fbb39795ce3ef98be41b0978990a2155c0bb7 -->
 A patch release sourced from production dogfood: a usability fix to the
 `exclude_calls` knob added in 0.12.0, plus documentation that clarifies how to
 name flag arguments on receivers Rector cannot resolve on its own.
@@ -337,7 +329,6 @@ name flag arguments on receivers Rector cannot resolve on its own.
 
 ## 0.12.0 - 2026-06-15
 
-<!-- verified-sha: cc590cff9f50e1b1dd7b1103e5158377096bee5f -->
 `RemoveDefaultValuedArgumentRector` gains an opt-out for calls whose return value is
 serialized in an argument-count-sensitive way.
 
@@ -394,7 +385,6 @@ serialized in an argument-count-sensitive way.
 
 ## 0.11.2 - 2026-06-15
 
-<!-- verified-sha: d81d730b6f018fd018139da5afb9ae6ce5da3096 -->
 A readability fix for `RemoveDefaultValuedArgumentRector`, from real-world adoption
 feedback.
 
@@ -435,7 +425,6 @@ feedback.
 
 ## 0.11.1 - 2026-06-14
 
-<!-- verified-sha: 2e9a7a829d62c1b566410a30b2c7acfd59c12a69 -->
 A per-node performance pass on the routing and migration rules. No rule
 behaviour changes — output is identical; this purely removes redundant
 work the rules did on every AST node.
@@ -467,7 +456,6 @@ the same code as before.
 
 ## 0.11.0 - 2026-06-14
 
-<!-- verified-sha: b2c0be83ec6e1806eb41c0292c2f7cab21c36a3f -->
 A new `CODE_QUALITY` rule that drops redundant default-valued arguments, plus an
 opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading positionals.
 
@@ -538,7 +526,6 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
 
 ## 0.10.0 - 2026-06-14
 
-<!-- verified-sha: d46da662db36e5c514dcaee5ae7318a00b8c5a5f -->
 A new `CODE_QUALITY` rule turns Laravel's array-setter `config()` call into the
 explicit `config()->set()` form.
 
@@ -603,7 +590,6 @@ explicit `config()->set()` form.
 
 ## 0.9.4 - 2026-06-14
 
-<!-- verified-sha: 05b561a3b1c34a238d44b616be2fab68ff720065 -->
 `MiddlewareStringToClassRector` now reaches two more places string middleware
 references live.
 
@@ -643,7 +629,6 @@ references live.
 
 ## 0.9.3 - 2026-06-14
 
-<!-- verified-sha: fae7f1aa3587ed2c9b0873b6d338e1288d0372e9 -->
 Removes a Rector 2.4.5 deprecation warning, and closes a behaviour-change footgun
 in `MiddlewareStringToClassRector`'s default surfaced by real-world adoption.
 
@@ -718,7 +703,6 @@ in `MiddlewareStringToClassRector`'s default surfaced by real-world adoption.
 
 ## 0.9.2 - 2026-06-14
 
-<!-- verified-sha: 93dd29e3fa82563d94d776819c59faaafc57d534 -->
 `NamedArgumentFromManifestRector` now validates its manifest on load, and a
 cache-key collision on an unreadable manifest is fixed.
 
@@ -759,7 +743,6 @@ cache-key collision on an unreadable manifest is fixed.
 
 ## 0.9.1 - 2026-06-14
 
-<!-- verified-sha: f9c49c37824fed3f5a4c178fb93148068e5f107e -->
 Method-name matching across five rules is now case-insensitive, the way PHP
 itself treats method names.
 
@@ -797,7 +780,6 @@ Behaviour is unchanged for the lowercase spellings every existing fixture uses.
 
 ## 0.9.0 - 2026-06-14
 
-<!-- verified-sha: cb2e8c017108aec9d1a3419e0c0871df048fc870 -->
 A new opt-in routing rule converts magic-string middleware references to
 Laravel's class-based fluent form.
 
@@ -872,7 +854,6 @@ Laravel's class-based fluent form.
 
 ## 0.8.0 - 2026-06-14
 
-<!-- verified-sha: a4c3b3288368c55bba29b9d13deed58c7f732124 -->
 A new **manifest-bridge** rule closes the one gap
 `FirstPartyFlagArgumentToNamedRector` cannot reach: call sites whose receiver
 type only resolves under a PHPStan extension such as larastan.
@@ -951,7 +932,6 @@ type only resolves under a PHPStan extension such as larastan.
 
 ## 0.7.0 - 2026-06-13
 
-<!-- verified-sha: 9755a1ebc7d91cb64a899688f5f79eaea7b503ce -->
 `FirstPartyFlagArgumentToNamedRector` gains an opt-in **cascade** mode for the
 call shape it previously left alone: a bare flag that is not the last argument.
 
@@ -1012,7 +992,6 @@ call shape it previously left alone: a bare flag that is not the last argument.
 
 ## 0.6.0 - 2026-06-13
 
-<!-- verified-sha: e68df4906eb10d8608bc1adb1c629178591aa1f9 -->
 `FirstPartyFlagArgumentToNamedRector` reaches more call sites. It previously
 named only the single last positional bool/null flag of a first-party method or
 static call; flags in deeper positions, on nullable receivers, and on
@@ -1050,7 +1029,6 @@ constructor calls slipped through unnamed. It now resolves all three.
 
 ## 0.5.0 - 2026-06-12
 
-<!-- verified-sha: bbeb4ebe6a862c9e285bb68f892dbca543ae2d39 -->
 `RelationNameToClassConstantRector` now reaches nested relations. Previously it
 only matched a single-level relation string against the receiver model's own
 constants; nested paths were left untouched because no single constant spans
@@ -1092,7 +1070,6 @@ relation points to.
 
 ## 0.4.2 - 2026-06-09
 
-<!-- verified-sha: d68af21fa6651ab6d485cde805dc23f020eb6d20 -->
 ### Changed
 
 - **`CollectedByAttributeRector`** now converts non-`final` models on **Laravel
@@ -1114,7 +1091,6 @@ relation points to.
 
 ## 0.4.1 - 2026-06-09
 
-<!-- verified-sha: 88b8f85705df0500a9452ec4921948b7c1af0de3 -->
 Correctness fixes for three rules introduced in 0.3.0/0.4.0, surfaced by
 real-world adoption running the set against a production codebase: a hard crash
 in the flag-argument namers and a silent collection-resolution change in
@@ -1148,7 +1124,6 @@ in the flag-argument namers and a silent collection-resolution change in
 
 ## 0.4.0 - 2026-06-09
 
-<!-- verified-sha: b69e8af46f8eee6dbdcbb9ac277a951e5f049d29 -->
 Three new rules — two Laravel 11+ attribute migrations and a test-assertion
 simplification — plus a correctness fix to the nested eager-loading rule so it
 fires through fluent query-builder chains it previously skipped.
@@ -1194,7 +1169,6 @@ fires through fluent query-builder chains it previously skipped.
 
 ## 0.3.0 - 2026-06-09
 
-<!-- verified-sha: 87114eb6914ec5ab5cbba43c30280d9dd55b5fae -->
 ### Added
 
 - **`NativeFunctionFlagArgumentToNamedRector`** (`CodeQuality` set) — names the opaque trailing bool/null flag argument of well-known native functions, so `in_array($needle, $haystack, true)` becomes `in_array($needle, $haystack, strict: true)`. Ships a curated default map (`in_array`/`array_search` → `strict`, `json_decode` → `associative`) that consumers extend or override via `function_flag_arguments`.
@@ -1206,7 +1180,6 @@ Both fire only on a bare `true`/`false`/`null` literal in the final argument pos
 
 ## 0.2.1 - 2026-06-08
 
-<!-- verified-sha: 592b7bbfb26d4e645ac0c06672f99bad5cd8288e -->
 A performance pass over the whole rule set and an output-formatting refinement for the nested eager-loading rule. No new rules, no configuration changes, and no change to which code the rules rewrite.
 
 ### Changed
@@ -1221,7 +1194,6 @@ A performance pass over the whole rule set and an output-formatting refinement f
 
 ## 0.2.0 - 2026-06-08
 
-<!-- verified-sha: 60cb1deb008175323a6903ea2e2336b3e254b84c -->
 Five new Rector rules across three sets, a cross-platform fix for the migration and routing rules, and a tightened supported-Laravel range.
 
 ### Added
