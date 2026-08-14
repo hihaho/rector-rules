@@ -35,6 +35,30 @@ final class NotificationRenamePropagationTest extends AbstractRenamePropagationT
         );
     }
 
+    public function test_rewrites_a_see_tag_that_is_the_only_reference(): void
+    {
+        $this->processCorpus();
+
+        $reference = $this->corpusContents('Docs/OrderShippedReference.php');
+
+        // Fully qualified, because the tag only resolved through an import — the tag now
+        // stands on its own rather than depending on one.
+        $this->assertStringContainsString('{@see \\App\\Notifications\\OrderShippedNotification}', $reference);
+        $this->assertStringContainsString('@see \\App\\Notifications\\OrderShippedNotification', $reference);
+        $this->assertStringNotContainsString('{@see OrderShipped}', $reference);
+    }
+
+    public function test_does_not_leave_a_dangling_import_behind_a_see_tag(): void
+    {
+        $this->processCorpus();
+
+        $reference = $this->corpusContents('Docs/OrderShippedReference.php');
+
+        // The old import names a class that no longer exists; nothing in a normal
+        // quality gate would report it.
+        $this->assertStringNotContainsString('use App\\Notifications\\OrderShipped;', $reference);
+    }
+
     public function test_renames_the_declaration_and_its_file(): void
     {
         $this->processCorpus();
@@ -109,6 +133,25 @@ final class NotificationRenamePropagationTest extends AbstractRenamePropagationT
 
                         $name = OrderShipped::class;
                     }
+                }
+
+                PHP,
+            // Imports OrderShipped and mentions it ONLY from a docblock tag — the shape
+            // where a stale tag also leaves the import pointing at a class that is gone.
+            'Docs/OrderShippedReference.php' => <<<'PHP'
+                <?php
+
+                namespace App\Docs;
+
+                use App\Notifications\OrderShipped;
+
+                /**
+                 * Delivered the same way {@see OrderShipped} is.
+                 *
+                 * @see OrderShipped
+                 */
+                class OrderShippedReference
+                {
                 }
 
                 PHP,

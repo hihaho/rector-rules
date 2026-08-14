@@ -413,7 +413,7 @@ Enforces class naming suffixes based on the parent class.
 **These rules move files.** Renaming a class breaks PSR-4 unless the file is renamed with it, and it breaks every reference unless those are rewritten too, so all four rules do the whole job:
 
 1. The declaration is renamed.
-2. Every reference — `new`, `::class`, type hints, docblocks, imports — is rewritten. The rules register their renames with Rector's rename collector and pull in `RenameClassRector` automatically, so `->withRules([AddNotificationSuffixRector::class])` on its own is enough.
+2. Every reference is rewritten — `new`, `::class`, type hints, imports, docblock type tags (`@param`, `@return`, `@var`) and the free-text documentation tags (`@see`, `@link`, `@uses`, including inline `{@see …}`). The rules register their renames with Rector's rename collector and pull in `RenameClassRector` automatically, so `->withRules([AddNotificationSuffixRector::class])` on its own is enough.
 3. The declaring file is renamed to match, once the run has written its changes.
 
 To make that work regardless of the order Rector happens to process files in — and regardless of how many parallel workers it spreads them over — the rules scan every configured path once, up front, before traversal begins. On a 2,000-file corpus that costs roughly 250 ms per worker process; the four rules share the scan, so adding more of them is nearly free.
@@ -421,6 +421,8 @@ To make that work regardless of the order Rector happens to process files in —
 A few consequences worth knowing:
 
 - **`--dry-run` never renames a file.** The diff shows the class rename; the filesystem is left alone.
+- **Run Pint after Rector.** New imports land at the position of the old one rather than re-sorted, so a formatter pass follows naturally. Worth knowing if you run Rector as a CI dry-run gate without one — the diff will show ordering churn.
+- **Budget a prose sweep.** Class names mentioned in ordinary comments, Markdown or fixture strings are not touched, and should not be — but they do go stale. Grep for the old names once the rename lands.
 - **Enable `withImportNames(removeUnusedImports: true)`** for clean output. Without it, Rector emits fully-qualified references and leaves the now-unused `use` behind — valid PHP, but ugly.
 - **Collisions are skipped, not forced.** If the destination class already exists, or two classes would converge on one name, both are left alone.
 - **Files holding more than one class are not renamed**, nor are files whose name never matched the class in the first place. The class rename still happens.

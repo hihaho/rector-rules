@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Hihaho\RectorRules\Rector\NamingClasses\RenameDocBlockSeeTagRector;
 use Hihaho\RectorRules\Rector\NamingClasses\Support\SuffixRenameMap;
 use Rector\Config\RectorConfig;
 use Rector\Renaming\Rector\Name\RenameClassRector;
@@ -26,4 +27,9 @@ return static function (RectorConfig $rectorConfig): void {
     $rectorConfig->singleton(SuffixRenameMap::class);
 
     $rectorConfig->rule(RenameClassRector::class);
+
+    // `RenameClassRector` only reaches type positions in a docblock. `@see`, `@link` and
+    // `@uses` are free text, so they need their own pass or they keep naming a class that
+    // no longer exists — along with the `use` import that only they were keeping alive.
+    $rectorConfig->rule(RenameDocBlockSeeTagRector::class);
 };
