@@ -788,3 +788,21 @@ use and only re-resolves under a PHPUnit runner it recognises. Under Pest an ear
 test class can populate that cache first, and nothing public clears it — so the skip
 unit test verifies the skip is live and marks itself skipped if it is not, rather than
 failing intermittently.
+
+### R14. CI caught a floor incompatibility the local run could not
+
+The skip guard first used `Skipper::matchSkip()`, which exists in the installed Rector
+(2.6.2) but **not** in the `rector/rector` floor this package declares (`^2.4.1`).
+Locally green; the `prefer-lowest` CI leg failed with
+`Call to undefined method Rector\Skipper\Skipper\Skipper::matchSkip()` — 15 failures.
+
+Switched to `shouldSkipElementAndFilePath()`, which is present in 2.4.1 and covers both
+the global path skip and the rule-scoped one. Verified against the floor's source before
+re-pushing, along with every other Rector API this change touches:
+`RelatedConfigInterface`, `ResettableInterface`, `Skipper::shouldSkipFilePath()`,
+`RenamedClassesDataCollector::addOldToNewClasses()`, `Option::PATHS`,
+`SimpleParameterProvider` and `AbstractRector::getFile()` all exist at 2.4.1.
+
+This is the `provideMinPhpVersion()` lesson from the authoring guideline generalised:
+**anything resolved from `vendor/rector/rector` can be newer than the declared floor.**
+Check the floor's source, not the installed copy.
