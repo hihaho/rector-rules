@@ -2,6 +2,95 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.17.0 - 2026-08-14
+
+<!-- verified-sha: 3fe53682262b84439246ef1a4383f3ea425501b2 -->
+### Breaking
+
+#### The suffix rules now rename files
+
+`AddNotificationSuffixRector`, `AddCommandSuffixRector`, `AddMailSuffixRector` and
+`AddResourceSuffixRector` renamed the class declaration and stopped there. Every
+reference kept pointing at the old name, and the file kept its old name — so the class
+stopped matching its PSR-4 path. Running any of them on an autoloaded directory left a
+tree that did not autoload. Worse, classes discovered by path rather than by reference —
+Artisan commands, Livewire components, Filament resources — simply disappeared, with
+nothing in a quality gate to report it.
+
+All four rules now do the whole job: the declaration is renamed, every reference is
+rewritten (`new`, `::class`, type hints, docblocks, imports), and the declaring file is
+renamed to match.
+
+Nothing in your `rector.php` has to change — but the diff these rules produce now
+contains file renames. Run `--dry-run` first. See [UPGRADING.md](UPGRADING.md) for the
+migration notes.
+
+### Added
+
+- Reference rewriting is handled by `RenameClassRector`, which the suffix rules now
+  register themselves. `->withRules([AddNotificationSuffixRector::class])` is enough; no
+  extra configuration.
+- Renames are refused rather than forced when the destination name is already taken — by
+  a class, interface, trait or enum, compared case-insensitively — when two classes would
+  converge on one name, when two rules claim one class for different names, or when the
+  target directory is not writable. Files holding more than one class are left where they
+  are, as are files whose name never matched the class.
+- Declarations under a `withSkip()` path are excluded from the rename map entirely, so
+  their references are not rewritten either.
+- `--dry-run` reports the rename and never touches the filesystem.
+
+### Fixed
+
+- Dropped `rector/type-perfect`. Its services now collide with the copy bundled in
+  `tomasvotruba/type-coverage` 2.3, which prevented PHPStan from building its container
+  at all.
+
+### Deprecated
+
+- `Hihaho\RectorRules\Caching\ManifestCacheMetaExtension`. Rector 2.6 retired
+  `CacheMetaExtensionInterface` ("no longer applied"), so the class is a no-op. It will
+  be removed in the next major. Let Rector manage its own cache, or clear the cache
+  directory in CI.
+
+### Internal
+
+To keep the result independent of the order Rector happens to process files in — and of
+how many parallel workers it spreads them over — the rules scan the configured paths once
+before traversal begins, rather than registering each rename as they meet it. Rector walks
+files in name order and never revisits an earlier one, and each worker holds its own
+rename collector, so a map built during traversal only ever reaches files that sort after
+the declaration in the same worker.
+
+On a 2,000-file corpus the scan costs roughly 250 ms per worker process; the four rules
+share it, so enabling more than one is nearly free.
+
+Rector has no file-move API, so the file rename runs once every file has been written. It
+is guarded on the basename matching the old class name, the new declaration actually
+being present on disk, the destination being free, and the class being alone in its file.
+
+### Known limitations
+
+- Give Rector its paths through `withPaths()` in `rector.php`. Paths supplied only as
+  command-line arguments are not visible early enough for the pre-scan, and the rules fall
+  back to registering each rename as they meet it — still correct for the class, the file
+  and later-processed references, but a reference in an earlier-processed file can be
+  missed.
+- A reference spelled in a different case than the declaration (`new ORDERSHIPPED()`) is
+  not rewritten; Rector matches class names exactly.
+- Enable `withImportNames(removeUnusedImports: true)` for clean output. Without it,
+  rewritten references are fully qualified and the now-unused `use` is left behind.
+
+### What's Changed
+
+* ci: refresh the Rector and PHPStan result caches instead of freezing them by @SanderMuller in https://github.com/hihaho/rector-rules/pull/15
+* ci: bump the actions group across 1 directory with 3 updates by @dependabot[bot] in https://github.com/hihaho/rector-rules/pull/14
+
+### New Contributors
+
+* @SanderMuller made their first contribution in https://github.com/hihaho/rector-rules/pull/15
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.16.1...0.17.0
+
 ## 0.16.1 - 2026-07-01
 
 <!-- verified-sha: 5649125c50834f30e56df150d4d0ee8c1976bb06 -->
@@ -69,6 +158,7 @@ lines of configuration.
       TestFieldStringToConstantRector::INTERNAL_MIDDLEWARE => [\App\Http\Middleware\Authenticate::class],
       TestFieldStringToConstantRector::FIRST_PARTY_PREFIX => 'App\\',
   ])
+  
   
   
   
@@ -268,6 +358,7 @@ serialized in an argument-count-sensitive way.
   
   
   
+  
   ```
   Dropping the all-default `1` (or `60, 1`) there is value-equivalent but changes the
   serialized string, and the parser can't see that coupling. `exclude_calls` lets a
@@ -279,6 +370,7 @@ serialized in an argument-count-sensitive way.
           \Illuminate\Routing\Middleware\ThrottleRequests::class => ['with'],
       ],
   ])
+  
   
   
   
@@ -317,6 +409,7 @@ feedback.
   ```diff
   -$query->has('posts', '=', 1);   // 0.11.1 dropped the 1 →
   +$query->has('posts', '=');      // ...leaving the comparison operator without its operand
+  
   
   
   
@@ -398,6 +491,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   
   
   
+  
   ```
   By default it drops an already-named default argument (order-independent) or a
   trailing positional default (iteratively), and it fires on any callee — those drops
@@ -421,6 +515,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   ```diff
   -$store->paginate(1, perPage: 50);
   +$store->paginate(page: 1, perPage: 50);
+  
   
   
   
@@ -466,11 +561,13 @@ explicit `config()->set()` form.
   
   
   
+  
   ```
   into the explicit setter form:
   
   ```php
   config()->set('queue.default', 'sync');
+  
   
   
   
@@ -572,6 +669,7 @@ in `MiddlewareStringToClassRector`'s default surfaced by real-world adoption.
           'auth', 'auth.basic', 'can', 'guest', 'password.confirm', 'signed', 'verified',
       ],
   ])
+  
   
   
   
@@ -736,6 +834,7 @@ Laravel's class-based fluent form.
   
   
   
+  
   ```
   It is **not in any set** and reachable by FQN only — Laravel doesn't document
   this form as a recommended convention, so adopting it is a deliberate choice.
@@ -793,6 +892,7 @@ type only resolves under a PHPStan extension such as larastan.
   ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
       NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
   ])
+  
   
   
   
@@ -870,6 +970,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   
   
@@ -1178,11 +1279,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -1243,6 +1346,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -1383,6 +1487,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -1390,6 +1495,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
