@@ -2,6 +2,65 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.18.0 - 2026-08-14
+
+### Fixed
+
+#### `@see`, `@link` and `@uses` now follow a rename
+
+0.17.0 made the suffix rules rename declarations, references, imports and the declaring
+file together. One class of reference was still left behind.
+
+Rector's docblock renamer only visits type positions — `@param`, `@return`, `@var` — so
+`@see`, `@link`, `@uses` and their inline `{@see …}` forms kept naming a class that no
+longer existed, in every form: short, fully qualified, and with a `::member` suffix.
+
+Worse, when a class was referenced **only** from such a tag, its `use` import was neither
+rewritten nor removed. `RenameClassRector` only rewrites an import it also sees used
+somewhere in the AST, and a docblock-only mention gives it nothing to see — so the import
+was left naming a class that no longer exists. Valid PHP, since imports resolve lazily,
+and reported as **zero errors** by PHPStan at level max with strict rules and 100% type
+coverage. The same silent shape as the command-discovery loss 0.17.0 fixed.
+
+Both are now handled. No configuration changes; the pass is registered alongside the
+suffix rules.
+
+### Added
+
+Three deliberate refusals, so the rewrite cannot make things worse:
+
+- An **explicitly aliased** reference (`use App\Old as Legacy;` → `{@see Legacy}`) is left
+  alone. The alias survives the import rewrite, so the tag is already correct.
+- A short name matching **two** renamed classes is never guessed at.
+- **Type tags are never touched** here — Rector's own renamer owns those.
+
+A short reference that only resolved through an import is rewritten fully qualified, so
+the tag stops depending on an import that may later be dropped as unused. One resolved
+inside the file's own namespace stays short.
+
+### Internal
+
+The import is rewritten too, but only once the old short name has gone from the rest of
+the file. Doing it eagerly pulls the import out from under Rector's docblock renamer
+mid-run, which then cannot resolve short names in type tags — caught by an existing
+`@var` test. Rector's per-file fixed-point loop supplies the later pass in which the
+rewrite is safe.
+
+### Known limitations
+
+Unchanged from 0.17.0 — configure paths via `withPaths()`, references spelled in a
+different case than the declaration are not rewritten, and `withImportNames(removeUnusedImports: true)`
+gives the cleanest output.
+
+Class names mentioned in ordinary prose — comments, Markdown, fixture strings — are not
+touched, and should not be. Budget a grep for the old names once a rename lands.
+
+### What's Changed
+
+* ci: bump actions/checkout from 7.0.0 to 7.0.1 in the actions group by @dependabot[bot] in https://github.com/hihaho/rector-rules/pull/16
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.17.0...0.18.0
+
 ## 0.17.0 - 2026-08-14
 
 ### Breaking
@@ -153,6 +212,7 @@ lines of configuration.
       TestFieldStringToConstantRector::INTERNAL_MIDDLEWARE => [\App\Http\Middleware\Authenticate::class],
       TestFieldStringToConstantRector::FIRST_PARTY_PREFIX => 'App\\',
   ])
+  
   
   
   
@@ -350,6 +410,7 @@ serialized in an argument-count-sensitive way.
   
   
   
+  
   ```
   Dropping the all-default `1` (or `60, 1`) there is value-equivalent but changes the
   serialized string, and the parser can't see that coupling. `exclude_calls` lets a
@@ -361,6 +422,7 @@ serialized in an argument-count-sensitive way.
           \Illuminate\Routing\Middleware\ThrottleRequests::class => ['with'],
       ],
   ])
+  
   
   
   
@@ -399,6 +461,7 @@ feedback.
   ```diff
   -$query->has('posts', '=', 1);   // 0.11.1 dropped the 1 →
   +$query->has('posts', '=');      // ...leaving the comparison operator without its operand
+  
   
   
   
@@ -480,6 +543,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   
   
   
+  
   ```
   By default it drops an already-named default argument (order-independent) or a
   trailing positional default (iteratively), and it fires on any callee — those drops
@@ -503,6 +567,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   ```diff
   -$store->paginate(1, perPage: 50);
   +$store->paginate(page: 1, perPage: 50);
+  
   
   
   
@@ -549,11 +614,13 @@ explicit `config()->set()` form.
   
   
   
+  
   ```
   into the explicit setter form:
   
   ```php
   config()->set('queue.default', 'sync');
+  
   
   
   
@@ -654,6 +721,7 @@ in `MiddlewareStringToClassRector`'s default surfaced by real-world adoption.
           'auth', 'auth.basic', 'can', 'guest', 'password.confirm', 'signed', 'verified',
       ],
   ])
+  
   
   
   
@@ -817,6 +885,7 @@ Laravel's class-based fluent form.
   
   
   
+  
   ```
   It is **not in any set** and reachable by FQN only — Laravel doesn't document
   this form as a recommended convention, so adopting it is a deliberate choice.
@@ -873,6 +942,7 @@ type only resolves under a PHPStan extension such as larastan.
   ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
       NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
   ])
+  
   
   
   
@@ -950,6 +1020,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   
   
@@ -1252,11 +1323,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -1318,6 +1391,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -1460,6 +1534,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -1467,6 +1542,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
