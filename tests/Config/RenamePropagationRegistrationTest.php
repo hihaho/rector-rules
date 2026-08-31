@@ -13,21 +13,34 @@ use Rector\Renaming\Rector\Name\RenameClassRector;
 use Rector\Testing\PHPUnit\AbstractLazyTestCase;
 
 /**
- * The suffix rules rename declarations; `RenameClassRector` and
- * `RenameDocBlockSeeTagRector` are what rewrite the references those renames invalidate.
- *
- * That wiring used to ride along on `RelatedConfigInterface::getConfigFile()`, which
- * Rector removed in 2.6.5 — silently taking the propagation with it. It now lives in
- * `config/config.php`, reached both by `extra.rector.includes` and by an explicit import
- * in the naming set. These tests pin both entry points so it cannot go missing again.
+ * The suffix rules rename declarations; `RenameClassRector` and `RenameDocBlockSeeTagRector`
+ * rewrite the references those renames invalidate. That wiring used to ride along on
+ * `RelatedConfigInterface::getConfigFile()`, which Rector 2.6.5 removed — silently taking
+ * the propagation with it. These tests pin both of its replacement entry points.
  */
 final class RenamePropagationRegistrationTest extends AbstractLazyTestCase
 {
+    /** @var array<mixed> */
+    private array $registeredRectorRules = [];
+
     protected function setUp(): void
     {
         parent::setUp();
 
+        // Rector records registrations in process-wide static state, so this test both
+        // clears it to read back only its own config file and restores it afterwards.
+        $this->registeredRectorRules = SimpleParameterProvider::provideArrayParameter(
+            Option::REGISTERED_RECTOR_RULES,
+        );
+
         SimpleParameterProvider::setParameter(Option::REGISTERED_RECTOR_RULES, []);
+    }
+
+    protected function tearDown(): void
+    {
+        SimpleParameterProvider::setParameter(Option::REGISTERED_RECTOR_RULES, $this->registeredRectorRules);
+
+        parent::tearDown();
     }
 
     public function test_package_config_registers_the_reference_rewriters(): void
@@ -53,6 +66,23 @@ final class RenamePropagationRegistrationTest extends AbstractLazyTestCase
 
         $this->assertContains(RenameClassRector::class, $registeredRules);
         $this->assertContains(RenameDocBlockSeeTagRector::class, $registeredRules);
+    }
+
+    /**
+     * A consumer on `rector/extension-installer` gets the config auto-included *and*
+     * imported again by the set. Registering a rule twice would run it twice on every
+     * node and list it twice in the report.
+     */
+    public function test_loading_the_config_through_both_entry_points_registers_each_rule_once(): void
+    {
+        $rectorConfig = new RectorConfig();
+        $rectorConfig->import(__DIR__ . '/../../config/config.php');
+        $rectorConfig->import(__DIR__ . '/../../config/sets/naming.php');
+
+        $registeredRules = SimpleParameterProvider::provideArrayParameter(Option::REGISTERED_RECTOR_RULES);
+
+        $this->assertCount(1, array_keys($registeredRules, RenameClassRector::class, true));
+        $this->assertCount(1, array_keys($registeredRules, RenameDocBlockSeeTagRector::class, true));
     }
 
     public function test_composer_declares_the_package_config_as_an_auto_included_extension_config(): void

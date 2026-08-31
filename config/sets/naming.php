@@ -9,9 +9,8 @@ use Hihaho\RectorRules\Rector\NamingClasses\AddResourceSuffixRector;
 use Rector\Config\RectorConfig;
 
 return static function (RectorConfig $rectorConfig): void {
-    // Rename propagation for the suffix rules below. Also auto-included via
-    // `extra.rector.includes`, but only when `rector/extension-installer` is present;
-    // importing it here makes the set self-sufficient. Both paths are idempotent.
+    // Rename propagation. Auto-included too, but only where `rector/extension-installer`
+    // is allowed; importing it here makes the set self-sufficient.
     $rectorConfig->import(__DIR__ . '/../config.php');
 
     $rectorConfig->rules([
