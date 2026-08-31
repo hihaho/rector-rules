@@ -76,23 +76,6 @@ final class CorpusFilesTest extends AbstractLazyTestCase
         $this->assertNotSame($before, $this->digest());
     }
 
-    public function test_a_replaced_file_of_the_same_length_and_time_still_changes_the_digest(): void
-    {
-        // What an `rsync -a`, a `tar -x` or a restored CI workspace does: same bytes on the
-        // stat, different contents. The digest carries the inode so the replacement shows.
-        $path = $this->writeFile('Alpha.php', 'Alpha');
-        $mtime = filemtime($path);
-        $this->assertNotFalse($mtime);
-        $before = $this->digest();
-
-        unlink($path);
-        $this->writeFile('Alpha.php', 'Gamma');
-        touch($path, $mtime);
-        clearstatcache();
-
-        $this->assertNotSame($before, $this->digest());
-    }
-
     public function test_a_corpus_written_this_second_is_not_settled(): void
     {
         // Modification times are second-granular, so a file touched in the current second

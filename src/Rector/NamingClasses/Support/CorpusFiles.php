@@ -66,7 +66,7 @@ final class CorpusFiles
      * `SplFileInfo` is already holding the stat at that point, so the digest costs one
      * pass over the corpus rather than two.
      *
-     * @var array<string, array{mtime: int, size: int, inode: int}>
+     * @var array<string, array{mtime: int, ctime: int, size: int}>
      */
     private array $statByFile = [];
 
@@ -224,12 +224,15 @@ final class CorpusFiles
         foreach ($this->in($paths) as $filePath) {
             $stat = $this->statByFile[$filePath] ?? null;
 
-            // The inode is in here because size and mtime alone survive an `rsync -a`,
-            // a `tar -x` or a restored CI workspace — all of which replace file contents
-            // while preserving both. A restore allocates new inodes, so the digest moves.
+            // Change time as well as modification time: an `rsync -a`, a `tar -x` or a
+            // restored CI workspace replaces a file's contents while preserving mtime and
+            // size, and a write always moves ctime. It is second-granular like mtime, so it
+            // narrows that window rather than closing it — a replacement landing in the
+            // same second as the original write is still invisible here. `isSettled()` is
+            // what keeps such a corpus from being cached in the first place.
             $parts[] = $stat === null
                 ? $filePath . '|missing'
-                : $filePath . '|' . $stat['mtime'] . '|' . $stat['size'] . '|' . $stat['inode'];
+                : $filePath . '|' . $stat['mtime'] . '|' . $stat['ctime'] . '|' . $stat['size'];
         }
 
         return $this->fingerprintByPathSet[$pathSetKey] = hash('xxh128', implode("\n", $parts));
@@ -240,8 +243,8 @@ final class CorpusFiles
         try {
             $this->statByFile[$fileInfo->getPathname()] = [
                 'mtime' => $fileInfo->getMTime(),
+                'ctime' => $fileInfo->getCTime(),
                 'size' => $fileInfo->getSize(),
-                'inode' => $fileInfo->getInode(),
             ];
         } catch (RuntimeException) {
             // Vanished between the listing and the stat; the digest records it as missing.
