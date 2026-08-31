@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\NamingClasses\Support;
 
-use FilesystemIterator;
 use InvalidArgumentException;
 use PhpParser\Node;
 use PhpParser\Node\Identifier;
@@ -23,9 +22,6 @@ use Rector\Configuration\RenamedClassesDataCollector;
 use Rector\Contract\DependencyInjection\ResettableInterface;
 use Rector\Renaming\Rector\Name\RenameClassRector;
 use Rector\Skipper\Skipper\Skipper;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use SplFileInfo;
 use Throwable;
 
 /**
@@ -44,16 +40,6 @@ use Throwable;
  */
 final class SuffixRenameMap implements ResettableInterface
 {
-    /**
-     * Every suffix the rules in this package rename *to*. The corpus walk uses the union
-     * to decide which files it can skip without parsing, so a rule whose suffix is not
-     * listed would silently lose collision safety — `register()` throws rather than let
-     * that happen. Adding a suffix rule means adding its suffix here.
-     *
-     * @var list<string>
-     */
-    private const array DESTINATION_SUFFIXES = ['Command', 'Mail', 'Notification', 'Resource'];
-
     /**
      * Scan keys already folded into the collector, so N rules sharing this service
      * each scan once. Keyed by caller-supplied key plus the resolved path list.
@@ -85,32 +71,6 @@ final class SuffixRenameMap implements ResettableInterface
      */
     private array $declined = [];
 
-    /**
-     * Files the corpus walk proved cannot contribute to any suffix rule, so no rule
-     * re-reads them. Keyed apart from `scanByFile` because a filtered file is not parsed
-     * and must not answer an exact question about what it declares.
-     *
-     * @var array<string, true>
-     */
-    private array $filteredOutByFile = [];
-
-    /**
-     * One-slot read cache. The walk reads a file to decide whether to parse it and then
-     * parses the same file, so this turns two reads into one without holding the whole
-     * corpus in memory.
-     */
-    /**
-     * Corpus file list per resolved path set. Every registering rule walks the same
-     * directories, and a recursive walk of a large tree is not free.
-     *
-     * @var array<string, list<string>>
-     */
-    private array $filePathsByPathSet = [];
-
-    private ?string $lastReadPath = null;
-
-    private ?string $lastReadContents = null;
-
     private bool $shutdownRegistered = false;
 
     private ?Parser $parser = null;
@@ -124,10 +84,14 @@ final class SuffixRenameMap implements ResettableInterface
      */
     private array $scanByFile = [];
 
+    private readonly CorpusFiles $corpusFiles;
+
     public function __construct(
         private readonly RenamedClassesDataCollector $renamedClassesDataCollector,
         private readonly Skipper $skipper,
-    ) {}
+    ) {
+        $this->corpusFiles = new CorpusFiles();
+    }
 
     public function reset(): void
     {
@@ -136,10 +100,7 @@ final class SuffixRenameMap implements ResettableInterface
         $this->renames = [];
         $this->declined = [];
         $this->scanByFile = [];
-        $this->filteredOutByFile = [];
-        $this->filePathsByPathSet = [];
-        $this->lastReadPath = null;
-        $this->lastReadContents = null;
+        $this->corpusFiles->reset();
     }
 
     /**
@@ -230,18 +191,18 @@ final class SuffixRenameMap implements ResettableInterface
      *                                                           for a class this rule claims, or null to leave it alone.
      * @param  list<string>  $destinationSuffixes  Substrings every name this rule renames *to*
      *                                             contains. Must be listed in
-     *                                             `DESTINATION_SUFFIXES`.
+     *                                             `CorpusFiles::DESTINATION_SUFFIXES`.
      */
     public function register(string $key, callable $resolveNewShortName, array $destinationSuffixes): void
     {
         foreach ($destinationSuffixes as $destinationSuffix) {
-            if (! in_array($destinationSuffix, self::DESTINATION_SUFFIXES, true)) {
+            if (! in_array($destinationSuffix, CorpusFiles::DESTINATION_SUFFIXES, true)) {
                 throw new InvalidArgumentException(sprintf(
                     '%s renames classes to names containing "%s", which is missing from %s::DESTINATION_SUFFIXES. '
                     . 'Add it there, or the corpus scan will skip files that could collide with those names.',
                     $key,
                     $destinationSuffix,
-                    self::class,
+                    CorpusFiles::class,
                 ));
             }
         }
@@ -259,7 +220,7 @@ final class SuffixRenameMap implements ResettableInterface
         $candidates = [];
         $declaredFqcns = [];
 
-        foreach ($this->phpFilesIn($paths) as $filePath) {
+        foreach ($this->corpusFiles->in($paths) as $filePath) {
             // A file the consumer skipped is never processed, so its declaration would
             // stay put while references to it got rewritten — a broken tree. Both a
             // global skip and one scoped to this rule count.
@@ -270,7 +231,7 @@ final class SuffixRenameMap implements ResettableInterface
                 continue;
             }
 
-            if (! $this->mayContribute($filePath)) {
+            if (! isset($this->scanByFile[$filePath]) && ! $this->corpusFiles->mayContribute($filePath)) {
                 continue;
             }
 
@@ -469,51 +430,6 @@ final class SuffixRenameMap implements ResettableInterface
     }
 
     /**
-     * @param  list<string>  $paths
-     * @return list<string>
-     */
-    private function phpFilesIn(array $paths): array
-    {
-        $pathSetKey = implode('|', $paths);
-
-        if (isset($this->filePathsByPathSet[$pathSetKey])) {
-            return $this->filePathsByPathSet[$pathSetKey];
-        }
-
-        $filePaths = [];
-
-        foreach ($paths as $path) {
-            if (is_file($path)) {
-                if (pathinfo($path, PATHINFO_EXTENSION) === 'php') {
-                    $filePaths[] = $path;
-                }
-
-                continue;
-            }
-
-            if (! is_dir($path)) {
-                continue;
-            }
-
-            $iterator = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS),
-            );
-
-            foreach ($iterator as $fileInfo) {
-                if ($fileInfo instanceof SplFileInfo && $fileInfo->getExtension() === 'php') {
-                    $filePaths[] = $fileInfo->getPathname();
-                }
-            }
-        }
-
-        $filePaths = array_values(array_unique($filePaths));
-
-        sort($filePaths);
-
-        return $this->filePathsByPathSet[$pathSetKey] = $filePaths;
-    }
-
-    /**
      * Whether this file already declares the given class, which makes renaming another
      * class in it to that name a duplicate declaration.
      */
@@ -608,8 +524,7 @@ final class SuffixRenameMap implements ResettableInterface
     {
         // This path exists to see the file as Rector has just written it, so it must not
         // answer from the read cache.
-        $this->lastReadPath = null;
-        $this->lastReadContents = null;
+        $this->corpusFiles->forgetLastRead();
 
         $classes = [];
 
@@ -620,69 +535,6 @@ final class SuffixRenameMap implements ResettableInterface
         }
 
         return $classes;
-    }
-
-    private function contentsOf(string $filePath): ?string
-    {
-        if ($this->lastReadPath === $filePath) {
-            return $this->lastReadContents;
-        }
-
-        $contents = @file_get_contents($filePath);
-
-        $this->lastReadPath = $filePath;
-        $this->lastReadContents = $contents === false ? null : $contents;
-
-        return $this->lastReadContents;
-    }
-
-    /**
-     * Whether the file can change the outcome of the scan, decided from its bytes rather
-     * than by parsing it — parsing is by far the most expensive thing the walk does.
-     *
-     * The walk takes two things from a file: rename candidates, and class-like names a
-     * rename could collide with. A candidate must extend something, so a file with no
-     * `extends` holds none. A collision is only ever looked up under a name a rule renames
-     * *to*, and all of those contain one of `DESTINATION_SUFFIXES` — a class-like name is
-     * spelled literally in source and cannot be assembled at runtime, so a file that never
-     * spells one cannot declare a colliding name.
-     *
-     * Both tests are deliberately over-permissive: `extends` in a comment, or a suffix
-     * inside an unrelated word, costs one needless parse. Neither can be over-restrictive,
-     * which is what would drop a rename or wave a collision through. The verdict is
-     * memoised, so the corpus is read once no matter how many rules register.
-     */
-    private function mayContribute(string $filePath): bool
-    {
-        if (isset($this->scanByFile[$filePath])) {
-            return true;
-        }
-
-        if (isset($this->filteredOutByFile[$filePath])) {
-            return false;
-        }
-
-        $contents = $this->contentsOf($filePath);
-
-        if ($contents === null) {
-            $this->filteredOutByFile[$filePath] = true;
-
-            return false;
-        }
-
-        if (stripos($contents, 'extends') !== false) {
-            return true;
-        }
-
-        foreach (self::DESTINATION_SUFFIXES as $destinationSuffix) {
-            if (stripos($contents, $destinationSuffix) !== false) {
-                return true;
-            }
-        }
-
-        $this->filteredOutByFile[$filePath] = true;
-
-        return false;
     }
 
     /**
@@ -708,8 +560,7 @@ final class SuffixRenameMap implements ResettableInterface
             return [];
         }
 
-        $declarationCollector = new class extends NodeVisitorAbstract
-        {
+        $declarationCollector = new class extends NodeVisitorAbstract {
             /** @var list<ClassLike> */
             public array $classLikes = [];
 
@@ -737,7 +588,7 @@ final class SuffixRenameMap implements ResettableInterface
      */
     private function parseStatements(string $filePath): array
     {
-        $contents = $this->contentsOf($filePath);
+        $contents = $this->corpusFiles->contentsOf($filePath);
 
         if ($contents === null) {
             return [];

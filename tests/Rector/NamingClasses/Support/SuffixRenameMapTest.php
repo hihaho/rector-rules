@@ -138,6 +138,7 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
             $this->makeMapWith($renamedClassesDataCollector)->register(
                 'skip-test',
                 static fn (Class_ $class): string => 'OrderShippedNotification',
+                ['Notification'],
             );
 
             $this->assertSame([], $renamedClassesDataCollector->getOldToNewClasses());
