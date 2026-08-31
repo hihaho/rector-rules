@@ -3,6 +3,32 @@
 Migration notes for breaking changes, newest first. Patch and minor releases
 without a breaking change are not listed here — see the `CHANGELOG.md`.
 
+## 0.20.0
+
+### A file whose only extra class is anonymous is now renamed
+
+The suffix rules leave a file alone when it declares more than one class — renaming it
+would break PSR-4 for the classes that were not renamed. That count used to include
+anonymous classes inside method bodies:
+
+```php
+class OrderShipped extends Notification
+{
+    public function toMail($notifiable)
+    {
+        return new class {};   // used to block the file rename
+    }
+}
+```
+
+An anonymous class has no name, is never a rename candidate, and is not a declaration
+PSR-4 can see, so it no longer blocks the rename. A file like the one above now gets
+renamed to `OrderShippedNotification.php` along with its class, where before the class
+was renamed and the file was left behind.
+
+If you were relying on an anonymous class to keep a file where it is, use `withSkip()`
+on that path instead.
+
 ## 0.19.0
 
 ### Rename propagation is wired through the package config, not `RelatedConfigInterface`

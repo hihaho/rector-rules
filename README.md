@@ -425,7 +425,7 @@ A few consequences worth knowing:
 - **Budget a prose sweep.** Class names mentioned in ordinary comments, Markdown or fixture strings are not touched, and should not be — but they do go stale. Grep for the old names once the rename lands.
 - **Enable `withImportNames(removeUnusedImports: true)`** for clean output. Without it, Rector emits fully-qualified references and leaves the now-unused `use` behind — valid PHP, but ugly.
 - **Collisions are skipped, not forced.** If the destination class already exists, or two classes would converge on one name, both are left alone.
-- **Files holding more than one class are not renamed**, nor are files whose name never matched the class in the first place. The class rename still happens.
+- **Files holding more than one class are not renamed**, nor are files whose name never matched the class in the first place. The class rename still happens. An anonymous class inside a method body does not count as a second class — it is not a declaration PSR-4 can see.
 - **Path-discovered classes** — Artisan commands, Livewire components, Filament resources — keep working, because the file name is kept in sync with the class.
 - **Skipped paths are respected.** A declaration under a `withSkip()` path is left out of the rename map entirely, so its references are not rewritten either.
 - **Configure paths in `rector.php` via `withPaths()`.** When paths are given *only* as command-line arguments, Rector does not expose them early enough for the pre-scan, and the rules fall back to registering each rename as they meet it — which still renames the class, the file and any reference in a file processed later, but can miss a reference in a file processed earlier.

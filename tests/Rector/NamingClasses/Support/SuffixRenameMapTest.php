@@ -215,6 +215,61 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
         }
     }
 
+    public function test_an_anonymous_class_in_a_method_body_does_not_block_the_file_rename(): void
+    {
+        // The "more than one class in this file" guard exists for PSR-4: renaming the file
+        // would strand the classes that were not renamed. An anonymous class has no name
+        // and no PSR-4 path, so it is not one of those.
+        $path = $this->directory . '/OrderShipped.php';
+
+        $withAnonymousClass = static fn (string $className): string => <<<PHP
+            <?php
+
+            namespace App\Notifications;
+
+            class {$className}
+            {
+                public function via(): object
+                {
+                    return new class {};
+                }
+            }
+
+            PHP;
+
+        file_put_contents($path, $withAnonymousClass('OrderShipped'));
+
+        $originalPaths = SimpleParameterProvider::provideArrayParameter(Option::PATHS);
+
+        SimpleParameterProvider::setParameter(Option::PATHS, [$this->directory]);
+
+        try {
+            $map = $this->makeMap();
+
+            $map->register(
+                'anonymous-class-test',
+                static fn (Class_ $class): string => 'OrderShippedNotification',
+                ['Notification'],
+            );
+
+            // Stand in for Rector having written the rename to disk.
+            file_put_contents($path, $withAnonymousClass('OrderShippedNotification'));
+
+            $map->flushFileRenames();
+
+            $this->assertFileExists($this->directory . '/OrderShippedNotification.php');
+            $this->assertFileDoesNotExist($path);
+        } finally {
+            SimpleParameterProvider::setParameter(Option::PATHS, $originalPaths);
+
+            $stragglers = glob($this->directory . '/*');
+
+            foreach ($stragglers === false ? [] : $stragglers as $straggler) {
+                unlink($straggler);
+            }
+        }
+    }
+
     private function makeMap(): SuffixRenameMap
     {
         return $this->makeMapWith(new RenamedClassesDataCollector());
