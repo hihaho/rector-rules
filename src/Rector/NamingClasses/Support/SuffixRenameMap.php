@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\NamingClasses\Support;
 
+use Composer\InstalledVersions;
 use InvalidArgumentException;
 use PhpParser\Node;
 use PhpParser\Node\Identifier;
@@ -85,6 +86,12 @@ final class SuffixRenameMap implements ResettableInterface
     private array $scanByFile = [];
 
     private readonly CorpusFiles $corpusFiles;
+
+    /**
+     * Built on first use: Rector sets the cache directory while loading configuration,
+     * which can land after this service is constructed.
+     */
+    private ?ScanCache $scanCache = null;
 
     public function __construct(
         private readonly RenamedClassesDataCollector $renamedClassesDataCollector,
@@ -209,6 +216,33 @@ final class SuffixRenameMap implements ResettableInterface
 
         $this->scanned[$scanKey] = true;
 
+        $cacheKey = $this->cacheKeyFor($key, $paths);
+
+        $decisions = $cacheKey === null || $this->cacheWasCleared()
+            ? null
+            : $this->scanCache()->load($cacheKey);
+
+        if ($decisions === null) {
+            $decisions = $this->decide($key, $resolveNewShortName, $paths, $destinationSuffixes);
+
+            if ($cacheKey !== null) {
+                $this->scanCache()->store($cacheKey, $decisions);
+            }
+        }
+
+        $this->apply($decisions);
+    }
+
+    /**
+     * Walks the corpus and works out which classes this rule may rename.
+     *
+     * @param  callable(Class_): ?string  $resolveNewShortName
+     * @param  list<string>  $paths
+     * @param  list<string>  $destinationSuffixes
+     * @return array{accepted: list<array{oldFqcn: string, newFqcn: string, newShortName: string, oldShortName: string, path: string, isOnlyClassInFile: bool}>, declined: list<string>}
+     */
+    private function decide(string $key, callable $resolveNewShortName, array $paths, array $destinationSuffixes): array
+    {
         $candidates = [];
         $declaredFqcns = [];
 
@@ -271,7 +305,7 @@ final class SuffixRenameMap implements ResettableInterface
             }
         }
 
-        $this->applyCandidates($candidates, $declaredFqcns);
+        return $this->decideCandidates($candidates, $declaredFqcns);
     }
 
     /**
@@ -297,10 +331,14 @@ final class SuffixRenameMap implements ResettableInterface
     }
 
     /**
+     * Turns the walk's candidates into decisions. Nothing here touches the filesystem or
+     * this object's state, so the result is exactly what a cached run replays.
+     *
      * @param  list<array{oldFqcn: string, newFqcn: string, newShortName: string, oldShortName: string, path: string, isOnlyClassInFile: bool}>  $candidates
      * @param  array<string, true>  $declaredFqcns
+     * @return array{accepted: list<array{oldFqcn: string, newFqcn: string, newShortName: string, oldShortName: string, path: string, isOnlyClassInFile: bool}>, declined: list<string>}
      */
-    private function applyCandidates(array $candidates, array $declaredFqcns): void
+    private function decideCandidates(array $candidates, array $declaredFqcns): array
     {
         $destinationCounts = [];
 
@@ -309,36 +347,56 @@ final class SuffixRenameMap implements ResettableInterface
             ++$destinationCounts[$this->collisionKey($candidate['newFqcn'])];
         }
 
-        $map = [];
+        $accepted = [];
+        $declined = [];
 
         foreach ($candidates as $candidate) {
             // Two classes converging on one name, or a destination that already exists:
             // renaming either would silently merge two types. Leave both alone.
             if ($destinationCounts[$this->collisionKey($candidate['newFqcn'])] > 1) {
-                $this->declined[$candidate['oldFqcn']] = true;
+                $declined[] = $candidate['oldFqcn'];
 
                 continue;
             }
 
             if (isset($declaredFqcns[$this->collisionKey($candidate['newFqcn'])])) {
-                $this->declined[$candidate['oldFqcn']] = true;
+                $declined[] = $candidate['oldFqcn'];
 
                 continue;
             }
 
+            $accepted[] = $candidate;
+        }
+
+        return ['accepted' => $accepted, 'declined' => $declined];
+    }
+
+    /**
+     * Applies decisions — freshly walked or replayed from the cache — to this run.
+     *
+     * @param  array{accepted: list<array{oldFqcn: string, newFqcn: string, newShortName: string, oldShortName: string, path: string, isOnlyClassInFile: bool}>, declined: list<string>}  $decisions
+     */
+    private function apply(array $decisions): void
+    {
+        foreach ($decisions['declined'] as $oldFqcn) {
+            $this->declined[$oldFqcn] = true;
+        }
+
+        foreach ($decisions['accepted'] as $candidate) {
             $this->renames[$candidate['oldFqcn']] = $candidate['newFqcn'];
 
             $this->scheduleFileRename($candidate);
+        }
 
-            // `scheduleFileRename()` drops a rename whose file it could not move — an
-            // unwritable directory, say. Telling the collector about it anyway would
-            // rewrite every reference to a class whose declaration keeps its old name,
-            // which is the broken tree these rules exist to prevent.
-            if (($this->renames[$candidate['oldFqcn']] ?? null) !== $candidate['newFqcn']) {
-                continue;
+        $map = [];
+
+        foreach ($decisions['accepted'] as $candidate) {
+            // `scheduleFileRename()` drops a rename whose file it could not move. Handing
+            // that one to the collector anyway would rewrite every reference to a class
+            // whose declaration keeps its old name.
+            if (($this->renames[$candidate['oldFqcn']] ?? null) === $candidate['newFqcn']) {
+                $map[$candidate['oldFqcn']] = $candidate['newFqcn'];
             }
-
-            $map[$candidate['oldFqcn']] = $candidate['newFqcn'];
         }
 
         if ($map === []) {
@@ -346,6 +404,74 @@ final class SuffixRenameMap implements ResettableInterface
         }
 
         $this->renamedClassesDataCollector->addOldToNewClasses($map);
+    }
+
+    private function scanCache(): ScanCache
+    {
+        $cacheDirectory = SimpleParameterProvider::provideStringParameter(
+            Option::CACHE_DIR,
+            sys_get_temp_dir() . '/rector_cached_files',
+        );
+
+        return $this->scanCache ??= new ScanCache($cacheDirectory . '/hihaho-suffix-scan');
+    }
+
+    /**
+     * Everything that can change what the walk decides. A key that cannot be built — an
+     * unserialisable skip list, or a package version this process cannot identify — means
+     * no caching for this run rather than a cache that might be stale.
+     *
+     * @param  list<string>  $paths
+     */
+    private function cacheKeyFor(string $key, array $paths): ?string
+    {
+        $packageVersion = $this->packageVersion();
+
+        if ($packageVersion === null) {
+            return null;
+        }
+
+        try {
+            return json_encode([
+                'package' => $packageVersion,
+                'rule' => $key,
+                'paths' => $paths,
+                'skip' => SimpleParameterProvider::provideArrayParameter(Option::SKIP),
+                'suffixes' => $this->corpusFiles->destinationSuffixes(),
+                'corpus' => $this->corpusFiles->fingerprintOf($paths),
+            ], JSON_THROW_ON_ERROR);
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * The installed version of this package, so an upgrade that changes what the scan
+     * decides cannot be answered from an entry the old code wrote.
+     */
+    private function packageVersion(): ?string
+    {
+        if (! class_exists(InstalledVersions::class)) {
+            return null;
+        }
+
+        try {
+            return InstalledVersions::getVersion('hihaho/rector-rules')
+                . '@' . (InstalledVersions::getReference('hihaho/rector-rules') ?? '');
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Rector's `--clear-cache` never reaches the parameter provider, so read the flag from
+     * the command line. A false positive only costs a scan.
+     */
+    private function cacheWasCleared(): bool
+    {
+        $argv = $_SERVER['argv'] ?? [];
+
+        return is_array($argv) && in_array('--clear-cache', $argv, true);
     }
 
     /**

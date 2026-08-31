@@ -7,6 +7,7 @@ namespace Hihaho\RectorRules\Rector\NamingClasses\Support;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use RuntimeException;
 use SplFileInfo;
 
 /**
@@ -53,6 +54,23 @@ final class CorpusFiles
     private array $filePathsByPathSet = [];
 
     /**
+     * Corpus digest per path set. Every registering rule asks for the same one, and it
+     * costs a `stat()` per file to build.
+     *
+     * @var array<string, string>
+     */
+    private array $fingerprintByPathSet = [];
+
+    /**
+     * Size and modification time per file, captured during the walk that lists them —
+     * `SplFileInfo` is already holding the stat at that point, so the digest costs one
+     * pass over the corpus rather than two.
+     *
+     * @var array<string, array{mtime: int, size: int}>
+     */
+    private array $statByFile = [];
+
+    /**
      * Files proved unable to contribute to any suffix rule, so no later rule re-reads them.
      *
      * @var array<string, true>
@@ -72,6 +90,8 @@ final class CorpusFiles
     {
         $this->destinationSuffixes = self::DEFAULT_DESTINATION_SUFFIXES;
         $this->filePathsByPathSet = [];
+        $this->fingerprintByPathSet = [];
+        $this->statByFile = [];
         $this->filteredOut = [];
         $this->lastReadPath = null;
         $this->lastReadContents = null;
@@ -120,6 +140,7 @@ final class CorpusFiles
             if (is_file($path)) {
                 if (pathinfo($path, PATHINFO_EXTENSION) === 'php') {
                     $filePaths[] = $path;
+                    $this->rememberStat(new SplFileInfo($path));
                 }
 
                 continue;
@@ -136,6 +157,7 @@ final class CorpusFiles
             foreach ($iterator as $fileInfo) {
                 if ($fileInfo instanceof SplFileInfo && $fileInfo->getExtension() === 'php') {
                     $filePaths[] = $fileInfo->getPathname();
+                    $this->rememberStat($fileInfo);
                 }
             }
         }
@@ -151,6 +173,54 @@ final class CorpusFiles
      * @param  bool  $fresh  Bypass the cache. Required by callers that must see a file as
      *                       Rector has just written it, rather than as the scan read it.
      */
+    /**
+     * A digest of the corpus as it is on disk right now — every file the walk would visit,
+     * with its size and modification time. Two runs that produce the same digest see the
+     * same declarations, which is what makes a cached scan safe to reuse.
+     *
+     * @param  list<string>  $paths
+     */
+    public function fingerprintOf(array $paths): string
+    {
+        $pathSetKey = implode('|', $paths);
+
+        if (isset($this->fingerprintByPathSet[$pathSetKey])) {
+            return $this->fingerprintByPathSet[$pathSetKey];
+        }
+
+        $parts = [];
+
+        foreach ($this->in($paths) as $filePath) {
+            $stat = $this->statByFile[$filePath] ?? null;
+
+            $parts[] = $stat === null
+                ? $filePath . '|missing'
+                : $filePath . '|' . $stat['mtime'] . '|' . $stat['size'];
+        }
+
+        return $this->fingerprintByPathSet[$pathSetKey] = hash('xxh128', implode("\n", $parts));
+    }
+
+    private function rememberStat(SplFileInfo $fileInfo): void
+    {
+        try {
+            $this->statByFile[$fileInfo->getPathname()] = [
+                'mtime' => $fileInfo->getMTime(),
+                'size' => $fileInfo->getSize(),
+            ];
+        } catch (RuntimeException) {
+            // Vanished between the listing and the stat; the digest records it as missing.
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function destinationSuffixes(): array
+    {
+        return $this->destinationSuffixes;
+    }
+
     public function contentsOf(string $filePath, bool $fresh = false): ?string
     {
         if (! $fresh && $this->lastReadPath === $filePath) {
