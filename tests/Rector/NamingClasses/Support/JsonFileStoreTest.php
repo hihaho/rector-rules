@@ -47,6 +47,10 @@ final class JsonFileStoreTest extends AbstractLazyTestCase
 
     public function test_creates_its_directory_privately(): void
     {
+        if ($this->isWindows()) {
+            self::markTestSkipped('POSIX directory modes do not apply on Windows.');
+        }
+
         // The default cache root is a shared, predictable path in the system temp dir.
         $store = new JsonFileStore($this->directory);
         $store->write('a-key', []);
@@ -115,6 +119,10 @@ final class JsonFileStoreTest extends AbstractLazyTestCase
 
     public function test_a_directory_it_cannot_create_is_silent(): void
     {
+        if ($this->isWindows()) {
+            self::markTestSkipped('A read-only directory mode does not stop writes on Windows.');
+        }
+
         $unwritable = $this->directory . '/nested';
 
         mkdir($this->directory, 0o555, true);

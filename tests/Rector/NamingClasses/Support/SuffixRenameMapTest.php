@@ -458,8 +458,7 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
         $this->assertIsArray($stored);
 
         // Neighbour.php now claims to declare the name the rename wants.
-        $neighbourPath = $this->directory . '/Neighbour.php';
-        $this->assertArrayHasKey($neighbourPath, $stored);
+        $neighbourPath = $this->storedKeyFor($stored, 'Neighbour.php');
         $this->assertIsArray($stored[$neighbourPath]);
         $stored[$neighbourPath]['names'] = ['App\\Notifications\\OrderShippedNotification'];
         file_put_contents($declarationsPath, (string) json_encode($stored));
@@ -522,7 +521,10 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
 
         $stored = json_decode((string) file_get_contents($this->declarationsEntryPath()), true);
         $this->assertIsArray($stored);
-        $this->assertArrayNotHasKey($goingAway, $stored);
+
+        foreach (array_keys($stored) as $storedPath) {
+            $this->assertNotSame('GoingAway.php', basename((string) $storedPath));
+        }
     }
 
     public function test_the_per_file_entry_stores_syntax_and_never_a_candidate_verdict(): void
@@ -543,7 +545,7 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
         $stored = json_decode((string) file_get_contents($this->declarationsEntryPath()), true);
         $this->assertIsArray($stored);
 
-        $entry = $stored[$this->directory . '/OrderShipped.php'] ?? null;
+        $entry = $stored[$this->storedKeyFor($stored, 'OrderShipped.php')] ?? null;
         $this->assertIsArray($entry);
         $this->assertSame(['digest', 'names', 'classes'], array_keys($entry));
         $this->assertIsArray($entry['classes']);
@@ -586,6 +588,23 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
             chmod($unreadable, 0o644);
             clearstatcache(true, $unreadable);
         }
+    }
+
+    /**
+     * The index is keyed by the paths the directory walk reports, which on Windows are not
+     * spelled the way the test wrote them.
+     *
+     * @param  array<mixed>  $stored
+     */
+    private function storedKeyFor(array $stored, string $fileName): string
+    {
+        foreach (array_keys($stored) as $storedPath) {
+            if (basename((string) $storedPath) === $fileName) {
+                return (string) $storedPath;
+            }
+        }
+
+        self::fail(sprintf('%s is not in the stored index', $fileName));
     }
 
     /**

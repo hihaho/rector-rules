@@ -50,10 +50,10 @@ final class DeclarationIndexTest extends AbstractLazyTestCase
 
     public function test_parses_a_file_once_and_then_reuses_it(): void
     {
-        $path = $this->writeSettledFile('Alpha.php');
+        $this->writeSettledFile('Alpha.php');
 
         $corpusFiles = new CorpusFiles();
-        $corpusFiles->in([$this->directory]);
+        $path = $this->corpusPath($corpusFiles, 'Alpha.php');
 
         $index = $this->makeIndex($corpusFiles);
         $index->load('a-key');
@@ -73,10 +73,10 @@ final class DeclarationIndexTest extends AbstractLazyTestCase
 
     public function test_re_parses_a_file_whose_digest_moved(): void
     {
-        $path = $this->writeSettledFile('Alpha.php');
+        $this->writeSettledFile('Alpha.php');
 
         $corpusFiles = new CorpusFiles();
-        $corpusFiles->in([$this->directory]);
+        $path = $this->corpusPath($corpusFiles, 'Alpha.php');
 
         $index = $this->makeIndex($corpusFiles);
         $index->load('a-key');
@@ -96,7 +96,7 @@ final class DeclarationIndexTest extends AbstractLazyTestCase
         clearstatcache();
 
         $movedCorpusFiles = new CorpusFiles();
-        $movedCorpusFiles->in([$this->directory]);
+        $this->corpusPath($movedCorpusFiles, 'Alpha.php');
 
         $movedIndex = $this->makeIndex($movedCorpusFiles);
         $movedIndex->load('a-key');
@@ -107,10 +107,10 @@ final class DeclarationIndexTest extends AbstractLazyTestCase
 
     public function test_a_stored_entry_is_reused_by_a_later_run(): void
     {
-        $path = $this->writeSettledFile('Alpha.php');
+        $this->writeSettledFile('Alpha.php');
 
         $first = new CorpusFiles();
-        $first->in([$this->directory]);
+        $path = $this->corpusPath($first, 'Alpha.php');
 
         $index = $this->makeIndex($first);
         $index->load('a-key');
@@ -141,12 +141,11 @@ final class DeclarationIndexTest extends AbstractLazyTestCase
     public function test_a_file_written_this_second_is_not_stored(): void
     {
         // Its digest could still be matched by a later write in the same second.
-        $path = $this->directory . '/Fresh.php';
-        file_put_contents($path, "<?php\n");
+        file_put_contents($this->directory . '/Fresh.php', "<?php\n");
         clearstatcache();
 
         $corpusFiles = new CorpusFiles();
-        $corpusFiles->in([$this->directory]);
+        $path = $this->corpusPath($corpusFiles, 'Fresh.php');
 
         $index = $this->makeIndex($corpusFiles);
         $index->load('a-key');
@@ -158,11 +157,12 @@ final class DeclarationIndexTest extends AbstractLazyTestCase
 
     public function test_a_file_no_longer_in_the_corpus_is_dropped(): void
     {
-        $kept = $this->writeSettledFile('Kept.php');
-        $removed = $this->writeSettledFile('Removed.php');
+        $this->writeSettledFile('Kept.php');
+        $this->writeSettledFile('Removed.php');
 
         $corpusFiles = new CorpusFiles();
-        $corpusFiles->in([$this->directory]);
+        $kept = $this->corpusPath($corpusFiles, 'Kept.php');
+        $removed = $this->corpusPath($corpusFiles, 'Removed.php');
 
         $index = $this->makeIndex($corpusFiles);
         $index->load('a-key');
@@ -184,10 +184,10 @@ final class DeclarationIndexTest extends AbstractLazyTestCase
 
     public function test_without_a_key_nothing_is_written(): void
     {
-        $path = $this->writeSettledFile('Alpha.php');
+        $this->writeSettledFile('Alpha.php');
 
         $corpusFiles = new CorpusFiles();
-        $corpusFiles->in([$this->directory]);
+        $path = $this->corpusPath($corpusFiles, 'Alpha.php');
 
         $index = $this->makeIndex($corpusFiles);
         $index->load(null);
@@ -202,10 +202,10 @@ final class DeclarationIndexTest extends AbstractLazyTestCase
 
     public function test_reset_forgets_the_run(): void
     {
-        $path = $this->writeSettledFile('Alpha.php');
+        $this->writeSettledFile('Alpha.php');
 
         $corpusFiles = new CorpusFiles();
-        $corpusFiles->in([$this->directory]);
+        $path = $this->corpusPath($corpusFiles, 'Alpha.php');
 
         $index = $this->makeIndex($corpusFiles);
         $index->load('a-key');
@@ -230,10 +230,10 @@ final class DeclarationIndexTest extends AbstractLazyTestCase
         // A failed read moves neither size nor timestamps, so an empty entry written from
         // one would be reused for every later run — silently taking the file out of
         // collision detection instead of costing a single retry.
-        $path = $this->writeSettledFile('Unreadable.php');
+        $this->writeSettledFile('Unreadable.php');
 
         $corpusFiles = new CorpusFiles();
-        $corpusFiles->in([$this->directory]);
+        $path = $this->corpusPath($corpusFiles, 'Unreadable.php');
 
         $index = $this->makeIndex($corpusFiles);
         $index->load('a-key');
@@ -250,10 +250,10 @@ final class DeclarationIndexTest extends AbstractLazyTestCase
 
     public function test_a_failed_read_does_not_evict_a_good_entry(): void
     {
-        $path = $this->writeSettledFile('Alpha.php');
+        $this->writeSettledFile('Alpha.php');
 
         $corpusFiles = new CorpusFiles();
-        $corpusFiles->in([$this->directory]);
+        $path = $this->corpusPath($corpusFiles, 'Alpha.php');
 
         $index = $this->makeIndex($corpusFiles);
         $index->load('a-key');
@@ -292,5 +292,20 @@ final class DeclarationIndexTest extends AbstractLazyTestCase
         clearstatcache();
 
         return $path;
+    }
+
+    /**
+     * The walk reports paths the way the directory iterator spells them, which on Windows
+     * is not how the test wrote them. Everything keyed by path has to use its spelling.
+     */
+    private function corpusPath(CorpusFiles $corpusFiles, string $fileName): string
+    {
+        foreach ($corpusFiles->in([$this->directory]) as $filePath) {
+            if (basename($filePath) === $fileName) {
+                return $filePath;
+            }
+        }
+
+        self::fail(sprintf('%s is not in the corpus', $fileName));
     }
 }
