@@ -12,8 +12,9 @@ use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\Class_;
 use PhpParser\Node\Stmt\ClassLike;
 use PhpParser\NodeTraverser;
-use PhpParser\NodeVisitor\FindingVisitor;
+use PhpParser\NodeVisitor;
 use PhpParser\NodeVisitor\NameResolver;
+use PhpParser\NodeVisitorAbstract;
 use PhpParser\Parser;
 use PhpParser\ParserFactory;
 use Rector\Configuration\Option;
@@ -500,24 +501,16 @@ final class SuffixRenameMap implements ResettableInterface
             return $this->scanByFile[$filePath];
         }
 
-        $findingVisitor = new FindingVisitor(static fn (Node $node): bool => $node instanceof ClassLike);
-
-        (new NodeTraverser($findingVisitor))->traverse($this->parseStatements($filePath));
-
         $names = [];
         $classes = [];
 
-        foreach ($findingVisitor->getFoundNodes() as $foundNode) {
-            if (! $foundNode instanceof ClassLike) {
-                continue;
+        foreach ($this->declarationsIn($filePath) as $classLike) {
+            if ($classLike->namespacedName instanceof Name) {
+                $names[] = $classLike->namespacedName->toString();
             }
 
-            if ($foundNode->namespacedName instanceof Name) {
-                $names[] = $foundNode->namespacedName->toString();
-            }
-
-            if ($foundNode instanceof Class_) {
-                $classes[] = $foundNode;
+            if ($classLike instanceof Class_) {
+                $classes[] = $classLike;
             }
         }
 
@@ -550,17 +543,60 @@ final class SuffixRenameMap implements ResettableInterface
     {
         $classes = [];
 
-        $findingVisitor = new FindingVisitor(static fn (Node $node): bool => $node instanceof Class_);
-
-        (new NodeTraverser($findingVisitor))->traverse($this->parseStatements($filePath));
-
-        foreach ($findingVisitor->getFoundNodes() as $foundNode) {
-            if ($foundNode instanceof Class_) {
-                $classes[] = $foundNode;
+        foreach ($this->declarationsIn($filePath) as $classLike) {
+            if ($classLike instanceof Class_) {
+                $classes[] = $classLike;
             }
         }
 
         return $classes;
+    }
+
+    /**
+     * Every named class-like the file declares, with names resolved.
+     *
+     * Name resolution and the search run in one traversal, and that traversal stops at a
+     * class body: nothing inside one declares a class-like the scan cares about, and
+     * resolving the names in method bodies is the bulk of the work in a corpus walk.
+     * `NameResolver` has already set `namespacedName` and resolved `extends` by the time
+     * the body is skipped.
+     *
+     * An anonymous class in a method body is therefore no longer counted. It never was a
+     * rename candidate — it has no name — and it is not a declaration PSR-4 cares about,
+     * so it no longer blocks the file rename either.
+     *
+     * @return list<ClassLike>
+     */
+    private function declarationsIn(string $filePath): array
+    {
+        $statements = $this->parseStatements($filePath);
+
+        if ($statements === []) {
+            return [];
+        }
+
+        $declarationCollector = new class extends NodeVisitorAbstract
+        {
+            /** @var list<ClassLike> */
+            public array $classLikes = [];
+
+            public function enterNode(Node $node): ?int
+            {
+                if (! $node instanceof ClassLike) {
+                    return null;
+                }
+
+                if ($node->namespacedName instanceof Name) {
+                    $this->classLikes[] = $node;
+                }
+
+                return NodeVisitor::DONT_TRAVERSE_CHILDREN;
+            }
+        };
+
+        (new NodeTraverser(new NameResolver(), $declarationCollector))->traverse($statements);
+
+        return $declarationCollector->classLikes;
     }
 
     /**
@@ -585,7 +621,7 @@ final class SuffixRenameMap implements ResettableInterface
             return [];
         }
 
-        return array_values((new NodeTraverser(new NameResolver()))->traverse($statements));
+        return array_values($statements);
     }
 
     private function parser(): Parser
