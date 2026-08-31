@@ -99,6 +99,14 @@ final class SuffixRenameMap implements ResettableInterface
      * parses the same file, so this turns two reads into one without holding the whole
      * corpus in memory.
      */
+    /**
+     * Corpus file list per resolved path set. Every registering rule walks the same
+     * directories, and a recursive walk of a large tree is not free.
+     *
+     * @var array<string, list<string>>
+     */
+    private array $filePathsByPathSet = [];
+
     private ?string $lastReadPath = null;
 
     private ?string $lastReadContents = null;
@@ -129,6 +137,7 @@ final class SuffixRenameMap implements ResettableInterface
         $this->declined = [];
         $this->scanByFile = [];
         $this->filteredOutByFile = [];
+        $this->filePathsByPathSet = [];
         $this->lastReadPath = null;
         $this->lastReadContents = null;
     }
@@ -465,6 +474,12 @@ final class SuffixRenameMap implements ResettableInterface
      */
     private function phpFilesIn(array $paths): array
     {
+        $pathSetKey = implode('|', $paths);
+
+        if (isset($this->filePathsByPathSet[$pathSetKey])) {
+            return $this->filePathsByPathSet[$pathSetKey];
+        }
+
         $filePaths = [];
 
         foreach ($paths as $path) {
@@ -495,7 +510,7 @@ final class SuffixRenameMap implements ResettableInterface
 
         sort($filePaths);
 
-        return $filePaths;
+        return $this->filePathsByPathSet[$pathSetKey] = $filePaths;
     }
 
     /**
