@@ -26,6 +26,11 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
     {
         parent::setUp();
 
+        // Creating the container imports Rector's own config/config.php, which calls
+        // paths([]). Any test configuring Option::PATHS has to do it after that, so force
+        // the container into existence here rather than on the first make() in a test.
+        self::getContainer();
+
         $this->directory = sys_get_temp_dir() . '/hihaho-suffix-rename-map-' . bin2hex(random_bytes(6));
 
         mkdir($this->directory, 0o777, true);
@@ -267,6 +272,59 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
             foreach ($stragglers === false ? [] : $stragglers as $straggler) {
                 unlink($straggler);
             }
+        }
+    }
+
+    public function test_does_not_rewrite_references_to_a_class_whose_file_it_cannot_move(): void
+    {
+        // The scan refuses a rename it cannot finish, because half of it — the class
+        // renamed, the file left behind — is the broken tree these rules exist to prevent.
+        // The refusal has to reach the rename collector too, or every reference gets
+        // rewritten to a name the declaration never took.
+        $this->writeClass('OrderShipped.php', 'OrderShipped');
+
+        $originalPaths = SimpleParameterProvider::provideArrayParameter(Option::PATHS);
+
+        SimpleParameterProvider::setParameter(Option::PATHS, [$this->directory]);
+        chmod($this->directory, 0o555);
+        clearstatcache(true, $this->directory);
+
+        try {
+            if (is_writable($this->directory)) {
+                self::markTestSkipped('Running as a user that can write to a read-only directory.');
+            }
+
+            $renamedClassesDataCollector = new RenamedClassesDataCollector();
+
+            $this->makeMapWith($renamedClassesDataCollector)->register(
+                'unwritable-test',
+                static fn (Class_ $class): string => 'OrderShippedNotification',
+                ['Notification'],
+            );
+
+            $this->assertSame([], $renamedClassesDataCollector->getOldToNewClasses());
+
+            // Prove the setup was live rather than inert: the same corpus in a writable
+            // directory does register the rename.
+            chmod($this->directory, 0o777);
+            clearstatcache(true, $this->directory);
+
+            $writableCollector = new RenamedClassesDataCollector();
+
+            $this->makeMapWith($writableCollector)->register(
+                'writable-control',
+                static fn (Class_ $class): string => 'OrderShippedNotification',
+                ['Notification'],
+            );
+
+            $this->assertSame(
+                ['App\\Notifications\\OrderShipped' => 'App\\Notifications\\OrderShippedNotification'],
+                $writableCollector->getOldToNewClasses(),
+            );
+        } finally {
+            chmod($this->directory, 0o777);
+            clearstatcache(true, $this->directory);
+            SimpleParameterProvider::setParameter(Option::PATHS, $originalPaths);
         }
     }
 

@@ -326,10 +326,19 @@ final class SuffixRenameMap implements ResettableInterface
                 continue;
             }
 
-            $map[$candidate['oldFqcn']] = $candidate['newFqcn'];
             $this->renames[$candidate['oldFqcn']] = $candidate['newFqcn'];
 
             $this->scheduleFileRename($candidate);
+
+            // `scheduleFileRename()` drops a rename whose file it could not move — an
+            // unwritable directory, say. Telling the collector about it anyway would
+            // rewrite every reference to a class whose declaration keeps its old name,
+            // which is the broken tree these rules exist to prevent.
+            if (($this->renames[$candidate['oldFqcn']] ?? null) !== $candidate['newFqcn']) {
+                continue;
+            }
+
+            $map[$candidate['oldFqcn']] = $candidate['newFqcn'];
         }
 
         if ($map === []) {
