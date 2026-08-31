@@ -28,7 +28,11 @@ Within a single process, a scan that costs 328 ms cold answers in 16.5 ms warm.
 
 **The trade:** the cache key includes a digest of every corpus file's size and modification time, which costs a `stat` per file. A cold scan in a single process is therefore about 20% slower than in 0.20.0. Every other shape — any parallel run, any repeat run — is faster.
 
-The entry is keyed on the installed package version, the resolved paths, the skip configuration, the destination substrings the registered rules declared, and that corpus digest. A changed file invalidates it on its own; `--clear-cache` bypasses it. Every failure mode is a miss rather than a wrong answer: an unreadable, truncated, foreign or malformed entry is discarded and the corpus is scanned.
+**What the entry is keyed on.** The corpus digest alone is not enough: whether a class is a rename candidate is answered by reflection over its parent, so the answer moves when the installed packages move — a `composer update` that changes a framework base class — or when this package's own rules change, and neither touches a corpus file. Both are in the key, alongside the resolved paths, the skip configuration and the destination substrings the registered rules declared. `--clear-cache` bypasses the cache; every failure mode is a miss rather than a wrong answer, so an unreadable, truncated, foreign or malformed entry is discarded and the corpus is scanned.
+
+**Two limits worth knowing.** Modification and change times are second-granular, so a corpus whose files were written in the current second is not cached at all, rather than cached against a digest an equal-length edit could slip past. And a class that a corpus class extends, living outside both the configured paths and `vendor/`, is invisible to every digest — put it under `withPaths()` so changes to it are seen.
+
+The cache directory is created `0700` and per-user, because it sits at a predictable path in the system temp dir and an entry is trusted enough to drive renames across a codebase.
 
 **What this does not change:** the scan still runs while the container is built, before Rector knows what it was asked to process, so a cold run targeting a single file still walks the whole corpus once. Narrowing that needs the target set at construction time, which Rector does not expose — `Option::SOURCE` never reaches the parameter provider, and `AbstractRector::beforeTraverse()` is `final`. #17 stays open for it.
 
