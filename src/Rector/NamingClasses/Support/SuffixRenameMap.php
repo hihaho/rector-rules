@@ -231,6 +231,10 @@ final class SuffixRenameMap implements ResettableInterface
                 continue;
             }
 
+            // A file already parsed for an earlier rule is free to reuse, and re-testing it
+            // would only re-read it. Otherwise ask whether it is worth parsing at all —
+            // that test is sound only because collisions below are looked up under
+            // destination names; see `CorpusFiles::mayContribute()`.
             if (! isset($this->scanByFile[$filePath]) && ! $this->corpusFiles->mayContribute($filePath)) {
                 continue;
             }
@@ -241,7 +245,10 @@ final class SuffixRenameMap implements ResettableInterface
                 $declaredFqcns[$this->collisionKey($declaredFqcn)] = true;
             }
 
-            foreach ($this->classesIn($filePath) as $class) {
+            $classes = $this->classesIn($filePath);
+            $isOnlyClassInFile = count($classes) === 1;
+
+            foreach ($classes as $class) {
                 $oldFqcn = $this->fqcnOf($class);
 
                 if ($oldFqcn === null) {
@@ -256,18 +263,45 @@ final class SuffixRenameMap implements ResettableInterface
                     continue;
                 }
 
+                // The declared suffixes are what let the walk above skip files without
+                // parsing them. A name that contains none of them is a name the skipped
+                // files were never checked against, so honour the declaration or stop.
+                $this->assertDeclaredDestination($key, $newShortName, $destinationSuffixes);
+
                 $candidates[] = [
                     'oldFqcn' => $oldFqcn,
                     'newFqcn' => $this->replaceShortName($oldFqcn, $newShortName),
                     'newShortName' => $newShortName,
                     'oldShortName' => $this->shortNameOf($oldFqcn),
                     'path' => $filePath,
-                    'isOnlyClassInFile' => count($this->classesIn($filePath)) === 1,
+                    'isOnlyClassInFile' => $isOnlyClassInFile,
                 ];
             }
         }
 
         $this->applyCandidates($candidates, $declaredFqcns);
+    }
+
+    /**
+     * @param  list<string>  $destinationSuffixes
+     */
+    private function assertDeclaredDestination(string $key, string $newShortName, array $destinationSuffixes): void
+    {
+        foreach ($destinationSuffixes as $destinationSuffix) {
+            if (stripos($newShortName, $destinationSuffix) !== false) {
+                return;
+            }
+        }
+
+        throw new InvalidArgumentException(sprintf(
+            '%s renamed a class to "%s", which contains none of the destination substrings it '
+            . 'declared (%s). The corpus scan skips files on those substrings, so it never '
+            . 'checked whether "%s" was already taken.',
+            $key,
+            $newShortName,
+            implode(', ', $destinationSuffixes),
+            $newShortName,
+        ));
     }
 
     /**
@@ -450,7 +484,9 @@ final class SuffixRenameMap implements ResettableInterface
      */
     private function declaresShortName(string $filePath, string $shortName): bool
     {
-        foreach ($this->parseClasses($filePath) as $class) {
+        // Fresh from disk, not from the scan's memo: this runs after Rector has written
+        // the file, and the answer is about what is on disk now.
+        foreach ($this->declarationsIn($filePath, fresh: true) as $class) {
             if ($class->name instanceof Identifier && strcasecmp($class->name->toString(), $shortName) === 0) {
                 return true;
             }
@@ -490,9 +526,17 @@ final class SuffixRenameMap implements ResettableInterface
                 $names[] = $classLike->namespacedName->toString();
             }
 
-            if ($classLike instanceof Class_) {
-                $classes[] = $classLike;
+            if (! $classLike instanceof Class_) {
+                continue;
             }
+
+            // The node is kept for the whole run so every rule can ask its own question of
+            // it, but only its name, parent and modifiers are ever read. Dropping the body
+            // here is most of what the memo would otherwise hold — measured at a third of
+            // it even on classes with a single short method.
+            $classLike->stmts = [];
+
+            $classes[] = $classLike;
         }
 
         return $this->scanByFile[$filePath] = ['names' => $names, 'classes' => $classes];
@@ -515,29 +559,6 @@ final class SuffixRenameMap implements ResettableInterface
     }
 
     /**
-     * Parses the file fresh from disk — no memo, so a caller running after Rector has
-     * written its changes sees them.
-     *
-     * @return list<Class_>
-     */
-    private function parseClasses(string $filePath): array
-    {
-        // This path exists to see the file as Rector has just written it, so it must not
-        // answer from the read cache.
-        $this->corpusFiles->forgetLastRead();
-
-        $classes = [];
-
-        foreach ($this->declarationsIn($filePath) as $classLike) {
-            if ($classLike instanceof Class_) {
-                $classes[] = $classLike;
-            }
-        }
-
-        return $classes;
-    }
-
-    /**
      * Every named class-like the file declares, with names resolved.
      *
      * Name resolution and the search run in one traversal, and that traversal stops at a
@@ -550,11 +571,13 @@ final class SuffixRenameMap implements ResettableInterface
      * rename candidate — it has no name — and it is not a declaration PSR-4 cares about,
      * so it no longer blocks the file rename either.
      *
+     * @param  bool  $fresh  Read the file from disk rather than from the scan's cache.
+     *
      * @return list<ClassLike>
      */
-    private function declarationsIn(string $filePath): array
+    private function declarationsIn(string $filePath, bool $fresh = false): array
     {
-        $statements = $this->parseStatements($filePath);
+        $statements = $this->parseStatements($filePath, $fresh);
 
         if ($statements === []) {
             return [];
@@ -586,9 +609,9 @@ final class SuffixRenameMap implements ResettableInterface
     /**
      * @return list<Node>
      */
-    private function parseStatements(string $filePath): array
+    private function parseStatements(string $filePath, bool $fresh = false): array
     {
-        $contents = $this->corpusFiles->contentsOf($filePath);
+        $contents = $this->corpusFiles->contentsOf($filePath, $fresh);
 
         if ($contents === null) {
             return [];

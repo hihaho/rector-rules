@@ -29,6 +29,10 @@ final class CorpusFiles
      * here would silently lose collision safety — `SuffixRenameMap::register()` throws
      * rather than let that happen. Adding a suffix rule means adding its suffix here.
      *
+     * Keep them narrow. Every file whose bytes contain one of these is parsed, so a
+     * common word here (`Collection`, say) quietly puts the whole corpus back through the
+     * parser.
+     *
      * @var list<string>
      */
     public const array DESTINATION_SUFFIXES = ['Command', 'Mail', 'Notification', 'Resource'];
@@ -60,7 +64,8 @@ final class CorpusFiles
     {
         $this->filePathsByPathSet = [];
         $this->filteredOut = [];
-        $this->forgetLastRead();
+        $this->lastReadPath = null;
+        $this->lastReadContents = null;
     }
 
     /**
@@ -110,9 +115,13 @@ final class CorpusFiles
         return $this->filePathsByPathSet[$pathSetKey] = $filePaths;
     }
 
-    public function contentsOf(string $filePath): ?string
+    /**
+     * @param  bool  $fresh  Bypass the cache. Required by callers that must see a file as
+     *                       Rector has just written it, rather than as the scan read it.
+     */
+    public function contentsOf(string $filePath, bool $fresh = false): ?string
     {
-        if ($this->lastReadPath === $filePath) {
+        if (! $fresh && $this->lastReadPath === $filePath) {
             return $this->lastReadContents;
         }
 
@@ -122,16 +131,6 @@ final class CorpusFiles
         $this->lastReadContents = $contents === false ? null : $contents;
 
         return $this->lastReadContents;
-    }
-
-    /**
-     * Drops the read cache, so the next read comes from disk. Used by the callers that
-     * must see a file as Rector has just written it.
-     */
-    public function forgetLastRead(): void
-    {
-        $this->lastReadPath = null;
-        $this->lastReadContents = null;
     }
 
     /**
