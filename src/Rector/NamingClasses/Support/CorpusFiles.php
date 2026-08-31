@@ -66,7 +66,7 @@ final class CorpusFiles
      * `SplFileInfo` is already holding the stat at that point, so the digest costs one
      * pass over the corpus rather than two.
      *
-     * @var array<string, array{mtime: int, size: int}>
+     * @var array<string, array{mtime: int, size: int, inode: int}>
      */
     private array $statByFile = [];
 
@@ -174,9 +174,40 @@ final class CorpusFiles
      *                       Rector has just written it, rather than as the scan read it.
      */
     /**
-     * A digest of the corpus as it is on disk right now — every file the walk would visit,
-     * with its size and modification time. Two runs that produce the same digest see the
-     * same declarations, which is what makes a cached scan safe to reuse.
+     * Whether the corpus is settled enough for a digest of it to be trustworthy.
+     *
+     * Modification times have one-second granularity, so an edit that lands in the same
+     * second the digest was taken — and does not change the file's length — produces an
+     * identical digest. Storing a result under such a digest is how a later run gets a
+     * stale answer that looks valid. Refusing to store while any file's mtime falls in the
+     * current second closes that window: by the time a digest is stored, every file in it
+     * has an mtime strictly in the past, so any subsequent edit must move it.
+     *
+     * @param  list<string>  $paths
+     */
+    public function isSettled(array $paths): bool
+    {
+        $currentSecond = time();
+
+        foreach ($this->in($paths) as $filePath) {
+            $stat = $this->statByFile[$filePath] ?? null;
+
+            if ($stat === null || $stat['mtime'] >= $currentSecond) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * A digest of the corpus as it was when its files were listed — every file the walk
+     * would visit, with its size and modification time. Two runs that produce the same
+     * digest see the same declarations, which is what makes a cached scan safe to reuse,
+     * provided `isSettled()` held when it was stored.
+     *
+     * Memoised per path set alongside the listing, so it describes the corpus as of the
+     * walk rather than as of the call.
      *
      * @param  list<string>  $paths
      */
@@ -193,9 +224,12 @@ final class CorpusFiles
         foreach ($this->in($paths) as $filePath) {
             $stat = $this->statByFile[$filePath] ?? null;
 
+            // The inode is in here because size and mtime alone survive an `rsync -a`,
+            // a `tar -x` or a restored CI workspace — all of which replace file contents
+            // while preserving both. A restore allocates new inodes, so the digest moves.
             $parts[] = $stat === null
                 ? $filePath . '|missing'
-                : $filePath . '|' . $stat['mtime'] . '|' . $stat['size'];
+                : $filePath . '|' . $stat['mtime'] . '|' . $stat['size'] . '|' . $stat['inode'];
         }
 
         return $this->fingerprintByPathSet[$pathSetKey] = hash('xxh128', implode("\n", $parts));
@@ -207,6 +241,7 @@ final class CorpusFiles
             $this->statByFile[$fileInfo->getPathname()] = [
                 'mtime' => $fileInfo->getMTime(),
                 'size' => $fileInfo->getSize(),
+                'inode' => $fileInfo->getInode(),
             ];
         } catch (RuntimeException) {
             // Vanished between the listing and the stat; the digest records it as missing.

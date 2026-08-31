@@ -22,6 +22,10 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
 {
     private string $directory = '';
 
+    private string $cacheDirectory = '';
+
+    private string $originalCacheDirectory = '';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -34,6 +38,14 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
         $this->directory = sys_get_temp_dir() . '/hihaho-suffix-rename-map-' . bin2hex(random_bytes(6));
 
         mkdir($this->directory, 0o777, true);
+
+        // The scan caches its decisions under Rector's cache directory, which defaults to a
+        // machine-global path shared with real runs. Point it somewhere disposable so tests
+        // neither read each other's entries nor leave any behind.
+        $this->originalCacheDirectory = SimpleParameterProvider::provideStringParameter(Option::CACHE_DIR, '');
+        $this->cacheDirectory = $this->directory . '-cache';
+
+        SimpleParameterProvider::setParameter(Option::CACHE_DIR, $this->cacheDirectory);
     }
 
     protected function tearDown(): void
@@ -45,6 +57,24 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
         }
 
         rmdir($this->directory);
+
+        $cacheEntries = glob($this->cacheDirectory . '/hihaho-suffix-scan*/*');
+
+        foreach ($cacheEntries === false ? [] : $cacheEntries as $cacheEntry) {
+            unlink($cacheEntry);
+        }
+
+        $cacheSubdirectories = glob($this->cacheDirectory . '/hihaho-suffix-scan*', GLOB_ONLYDIR);
+
+        foreach ($cacheSubdirectories === false ? [] : $cacheSubdirectories as $cacheSubdirectory) {
+            rmdir($cacheSubdirectory);
+        }
+
+        if (is_dir($this->cacheDirectory)) {
+            rmdir($this->cacheDirectory);
+        }
+
+        SimpleParameterProvider::setParameter(Option::CACHE_DIR, $this->originalCacheDirectory);
     }
 
     public function test_renames_the_file_once_the_new_class_name_is_on_disk(): void
@@ -328,6 +358,72 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
         }
     }
 
+    public function test_a_cached_decision_is_replayed_on_an_unchanged_corpus(): void
+    {
+        $this->writeSettledClass('OrderShipped.php', 'OrderShipped');
+
+        SimpleParameterProvider::setParameter(Option::PATHS, [$this->directory]);
+
+        $resolver = static fn (Class_ $class): string => 'OrderShippedNotification';
+
+        $this->makeMap()->register('replay-test', $resolver, ['Notification']);
+
+        $entries = glob($this->cacheDirectory . '/hihaho-suffix-scan*/*.json');
+
+        $this->assertNotFalse($entries);
+        $this->assertNotSame([], $entries, 'nothing was cached, so there is no replay to test');
+
+        // Rewriting the stored decision is the only way to tell a replay apart from a
+        // second walk, which would produce the original name.
+        $stored = (string) file_get_contents($entries[0]);
+        file_put_contents($entries[0], str_replace('OrderShippedNotification', 'TamperedNotification', $stored));
+
+        $collector = new RenamedClassesDataCollector();
+
+        $this->makeMapWith($collector)->register('replay-test', $resolver, ['Notification']);
+
+        $this->assertSame(
+            ['App\\Notifications\\OrderShipped' => 'App\\Notifications\\TamperedNotification'],
+            $collector->getOldToNewClasses(),
+        );
+    }
+
+    public function test_a_replayed_decision_still_refuses_a_file_it_cannot_move(): void
+    {
+        // The guard lives on the replay path as well as the fresh one. `chmod` moves ctime,
+        // not mtime, so the corpus digest is unchanged and the second run is a real hit.
+        $this->writeSettledClass('OrderShipped.php', 'OrderShipped');
+
+        SimpleParameterProvider::setParameter(Option::PATHS, [$this->directory]);
+
+        $resolver = static fn (Class_ $class): string => 'OrderShippedNotification';
+
+        $this->makeMap()->register('replay-unwritable-test', $resolver, ['Notification']);
+
+        $entries = glob($this->cacheDirectory . '/hihaho-suffix-scan*/*.json');
+
+        $this->assertNotFalse($entries);
+        $this->assertNotSame([], $entries, 'nothing was cached, so there is no replay to test');
+
+        chmod($this->directory, 0o555);
+        clearstatcache(true, $this->directory);
+
+        try {
+            if (is_writable($this->directory)) {
+                self::markTestSkipped('Running as a user that can write to a read-only directory.');
+            }
+
+            $collector = new RenamedClassesDataCollector();
+
+            $this->makeMapWith($collector)->register('replay-unwritable-test', $resolver, ['Notification']);
+
+            $this->assertSame([], $collector->getOldToNewClasses());
+        } finally {
+            chmod($this->directory, 0o777);
+            clearstatcache(true, $this->directory);
+        }
+    }
+
     private function makeMap(): SuffixRenameMap
     {
         return $this->makeMapWith(new RenamedClassesDataCollector());
@@ -336,6 +432,20 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
     private function makeMapWith(RenamedClassesDataCollector $renamedClassesDataCollector): SuffixRenameMap
     {
         return new SuffixRenameMap($renamedClassesDataCollector, $this->make(Skipper::class));
+    }
+
+    /**
+     * A corpus file the scan is willing to cache: its mtime has to be strictly in the past,
+     * or `CorpusFiles::isSettled()` refuses to store a digest of it.
+     */
+    private function writeSettledClass(string $fileName, string $className): string
+    {
+        $path = $this->writeClass($fileName, $className);
+
+        touch($path, time() - 5);
+        clearstatcache(true, $path);
+
+        return $path;
     }
 
     private function writeClass(string $fileName, string $className): string

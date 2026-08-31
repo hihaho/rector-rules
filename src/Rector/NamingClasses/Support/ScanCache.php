@@ -66,7 +66,10 @@ final readonly class ScanCache
      */
     public function store(string $cacheKey, array $decisions): void
     {
-        if (! is_dir($this->directory) && ! @mkdir($this->directory, 0o777, true) && ! is_dir($this->directory)) {
+        // 0700, not the default 0777: the directory usually lands under a predictable
+        // path in the system temp dir, and an entry is trusted enough to drive renames
+        // across a codebase. Another user on the host must not be able to plant one.
+        if (! is_dir($this->directory) && ! @mkdir($this->directory, 0o700, true) && ! is_dir($this->directory)) {
             return;
         }
 

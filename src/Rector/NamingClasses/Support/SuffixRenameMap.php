@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Hihaho\RectorRules\Rector\NamingClasses\Support;
 
 use Composer\InstalledVersions;
+use FilesystemIterator;
 use InvalidArgumentException;
 use PhpParser\Node;
 use PhpParser\Node\Identifier;
@@ -23,6 +24,9 @@ use Rector\Configuration\RenamedClassesDataCollector;
 use Rector\Contract\DependencyInjection\ResettableInterface;
 use Rector\Renaming\Rector\Name\RenameClassRector;
 use Rector\Skipper\Skipper\Skipper;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use SplFileInfo;
 use Throwable;
 
 /**
@@ -225,7 +229,9 @@ final class SuffixRenameMap implements ResettableInterface
         if ($decisions === null) {
             $decisions = $this->decide($key, $resolveNewShortName, $paths, $destinationSuffixes);
 
-            if ($cacheKey !== null) {
+            // Storing a digest of a corpus that is still being written would let a later
+            // same-second, same-length edit hide behind it.
+            if ($cacheKey !== null && $this->corpusFiles->isSettled($paths)) {
                 $this->scanCache()->store($cacheKey, $decisions);
             }
         }
@@ -413,13 +419,27 @@ final class SuffixRenameMap implements ResettableInterface
             sys_get_temp_dir() . '/rector_cached_files',
         );
 
-        return $this->scanCache ??= new ScanCache($cacheDirectory . '/hihaho-suffix-scan');
+        // Per-user directory: the default cache root is a shared, predictable path in the
+        // system temp dir, and entries are trusted enough to drive renames.
+        $userSuffix = function_exists('posix_geteuid') ? '-' . posix_geteuid() : '';
+
+        return $this->scanCache ??= new ScanCache($cacheDirectory . '/hihaho-suffix-scan' . $userSuffix);
     }
 
     /**
      * Everything that can change what the walk decides. A key that cannot be built — an
      * unserialisable skip list, or a package version this process cannot identify — means
      * no caching for this run rather than a cache that might be stale.
+     *
+     * The corpus digest is not enough on its own. Whether a class is a rename candidate is
+     * answered by reflection over the parent class, so the answer moves when the installed
+     * packages move (a `composer update` that changes a framework base class) or when this
+     * package's own rules change, neither of which touches a corpus file. Both are keyed.
+     *
+     * What remains unkeyed: a class outside the configured paths that a corpus class
+     * extends, in a project that also keeps it out of `vendor/`. Such a class is invisible
+     * to both digests, so a change to it can be answered from a stale entry — put it under
+     * `withPaths()` to make it visible.
      *
      * @param  list<string>  $paths
      */
@@ -434,6 +454,8 @@ final class SuffixRenameMap implements ResettableInterface
         try {
             return json_encode([
                 'package' => $packageVersion,
+                'rules' => $this->ruleSourceDigest(),
+                'installed' => $this->installedPackagesDigest(),
                 'rule' => $key,
                 'paths' => $paths,
                 'skip' => SimpleParameterProvider::provideArrayParameter(Option::SKIP),
@@ -442,6 +464,54 @@ final class SuffixRenameMap implements ResettableInterface
             ], JSON_THROW_ON_ERROR);
         } catch (Throwable) {
             return null;
+        }
+    }
+
+    /**
+     * A digest of this package's own rule sources.
+     *
+     * `InstalledVersions` freezes its reference at install time, so on a `dev-*` or path
+     * install — this package's own suite, or a consumer developing against a checkout —
+     * the version alone never moves when the scan's logic changes.
+     */
+    private function ruleSourceDigest(): string
+    {
+        $parts = [];
+
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator(__DIR__ . '/../../..', FilesystemIterator::SKIP_DOTS),
+        );
+
+        foreach ($iterator as $fileInfo) {
+            if (! $fileInfo instanceof SplFileInfo || $fileInfo->getExtension() !== 'php') {
+                continue;
+            }
+
+            $parts[] = $fileInfo->getPathname() . '|' . $fileInfo->getMTime() . '|' . $fileInfo->getSize();
+        }
+
+        sort($parts);
+
+        return hash('xxh128', implode("\n", $parts));
+    }
+
+    /**
+     * A digest of every installed package's version and reference.
+     *
+     * The candidate test resolves a class's parent through PHPStan's reflection, so a
+     * `composer update` that moves a framework base class changes the scan's answer without
+     * touching a single corpus file.
+     */
+    private function installedPackagesDigest(): string
+    {
+        if (! class_exists(InstalledVersions::class)) {
+            return 'unknown';
+        }
+
+        try {
+            return hash('xxh128', serialize(InstalledVersions::getAllRawData()));
+        } catch (Throwable) {
+            return 'unknown';
         }
     }
 
