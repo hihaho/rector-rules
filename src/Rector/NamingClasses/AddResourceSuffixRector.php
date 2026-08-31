@@ -13,7 +13,6 @@ use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\Class_;
 use PHPStan\Reflection\ReflectionProvider;
-use Rector\Contract\DependencyInjection\RelatedConfigInterface;
 use Rector\Rector\AbstractRector;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
@@ -21,7 +20,7 @@ use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 /**
  * @see \Hihaho\RectorRules\Tests\Rector\NamingClasses\AddResourceSuffixRector\AddResourceSuffixRectorTest
  */
-final class AddResourceSuffixRector extends AbstractRector implements RelatedConfigInterface
+final class AddResourceSuffixRector extends AbstractRector
 {
     use ChecksClassHierarchy;
 
@@ -56,15 +55,6 @@ final class AddResourceSuffixRector extends AbstractRector implements RelatedCon
             self::class,
             fn (Class_ $class): ?string => $this->newShortNameFor($class),
         );
-    }
-
-    /**
-     * Registers `RenameClassRector`, which rewrites the references this rule's renames
-     * invalidate. See `config/related/rename-propagation.php`.
-     */
-    public static function getConfigFile(): string
-    {
-        return __DIR__ . '/../../../config/related/rename-propagation.php';
     }
 
     public function getRuleDefinition(): RuleDefinition

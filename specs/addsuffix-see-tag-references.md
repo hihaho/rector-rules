@@ -225,7 +225,7 @@ immediately unless the node is an `IdentifierTypeNode` — a *type* position. `@
 friends are parsed as opaque text, so no configuration of Rector's docblock renamer can
 reach them. Hence a dedicated pass: `RenameDocBlockSeeTagRector` reads the same rename
 collector the suffix rules populate, and `DocBlockSeeTagRenamer` does the text rewrite.
-The rule is registered from `config/related/rename-propagation.php` alongside
+The rule is registered from the package's `config/config.php` alongside
 `RenameClassRector`, so it needs no consumer configuration and is not part of any set.
 
 ### F3. The dangling import does **not** resolve on its own

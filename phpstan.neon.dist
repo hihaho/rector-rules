@@ -55,22 +55,15 @@ parameters:
             identifier: new.deprecatedClass
             path: tests/Caching/ManifestCacheMetaExtensionTest.php
 
-        # RelatedConfigInterface is Rector's only hook for a rule to pull in the extra
-        # services it depends on. Its @internal tag is aimed at Rector's own DI wiring,
-        # but a third-party rule package is exactly the caller it exists for, and there
-        # is no public equivalent. See config/related/rename-propagation.php.
-        -
-            identifier: class.implementsInternalInterface
-            paths:
-                - src/Rector/NamingClasses/AbstractAddSuffixRector.php
-                - src/Rector/NamingClasses/AddResourceSuffixRector.php
-
         # Option::PATHS is how a rule learns which paths the consumer configured — the
         # suffix rules need it to build their rename map before traversal starts.
-        # Rector exposes no public accessor for it.
+        # Option::REGISTERED_RECTOR_RULES is likewise the only place a registration test
+        # can read back what a config file registered. Rector exposes no public accessor
+        # for either.
         -
             identifier: classConstant.internal
             paths:
                 - src/Rector/NamingClasses/Support/SuffixRenameMap.php
+                - tests/Config/RenamePropagationRegistrationTest.php
                 - tests/Rector/NamingClasses/RenamePropagation/AbstractRenamePropagationTestCase.php
                 - tests/Rector/NamingClasses/Support/SuffixRenameMapTest.php

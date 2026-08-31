@@ -635,13 +635,14 @@ Three further defects it found in the spec, all fixed above or below:
 | File | Role |
 |---|---|
 | `src/Rector/NamingClasses/Support/SuffixRenameMap.php` | The pre-scan. Builds the map, decides collisions, schedules and flushes file renames. `@internal`, `ResettableInterface`. |
-| `config/related/rename-propagation.php` | Binds `SuffixRenameMap` as a singleton and registers `RenameClassRector`. |
+| `config/config.php` | Binds `SuffixRenameMap` as a singleton and registers `RenameClassRector`. (Was `config/related/rename-propagation.php` until Rector 2.6.5 removed `RelatedConfigInterface`.) |
 | `src/Rector/NamingClasses/AbstractAddSuffixRector.php` | Pre-scan in the constructor; `refactor()` now asks the map for permission before renaming. |
 | `src/Rector/NamingClasses/AddResourceSuffixRector.php` | Same, with its own naming logic extracted to `newShortNameFor()`. |
 | `tests/…/RenamePropagation/`, `tests/…/ResourceRenamePropagation/` | Multi-file integration tests driving `ApplicationFileProcessor::processFiles()`. |
 | `tests/…/Support/SuffixRenameMapTest.php` | Unit coverage for the file-rename guards, incl. the dry-run shape. |
 
-**`RelatedConfigInterface` is how the coupling is hidden.** Registering a rule that
+**`RelatedConfigInterface` was how the coupling was hidden** (removed in Rector 2.6.5;
+see the note under Q5 for what replaced it). Registering a rule that
 implements it makes Rector import that rule's config file
 (`RectorConfig.php:209`). So `->withRules([AddNotificationSuffixRector::class])`
 alone pulls in `RenameClassRector` and the shared singleton. No set-contract change
@@ -680,8 +681,9 @@ scan, not four.
 **Two PHPStan ignores were added**, both narrowly scoped by identifier and path in
 `phpstan.neon.dist`, because the feature is unbuildable without them:
 
-- `class.implementsInternalInterface` — `RelatedConfigInterface` is tagged `@internal`
-  but is Rector's only hook for a rule to pull in its own services.
+- `class.implementsInternalInterface` — `RelatedConfigInterface` was tagged `@internal`
+  but was Rector's only hook for a rule to pull in its own services. (Ignore dropped
+  once the interface was removed upstream.)
 - `classConstant.internal` — `Option::PATHS` is the only way a rule can learn which
   paths the consumer configured.
 

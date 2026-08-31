@@ -11,10 +11,9 @@ use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\Class_;
 use PHPStan\Reflection\ReflectionProvider;
-use Rector\Contract\DependencyInjection\RelatedConfigInterface;
 use Rector\Rector\AbstractRector;
 
-abstract class AbstractAddSuffixRector extends AbstractRector implements RelatedConfigInterface
+abstract class AbstractAddSuffixRector extends AbstractRector
 {
     use ChecksClassHierarchy;
 
@@ -28,15 +27,6 @@ abstract class AbstractAddSuffixRector extends AbstractRector implements Related
             static::class,
             fn (Class_ $class): ?string => $this->newShortNameFor($class),
         );
-    }
-
-    /**
-     * Registers `RenameClassRector`, which rewrites the references this rule's renames
-     * invalidate. See `config/related/rename-propagation.php`.
-     */
-    public static function getConfigFile(): string
-    {
-        return __DIR__ . '/../../../config/related/rename-propagation.php';
     }
 
     abstract protected function baseClass(): string;

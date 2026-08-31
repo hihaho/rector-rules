@@ -36,7 +36,7 @@ use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
  * Registered automatically alongside the suffix rules; it reads whatever renames they put
  * in Rector's rename collector, so it needs no configuration.
  *
- * @internal not part of this package's public API; activated via config/related/rename-propagation.php
+ * @internal not part of this package's public API; registered from config/config.php
  *
  * @see \Hihaho\RectorRules\Tests\Rector\NamingClasses\Support\DocBlockSeeTagRenamerTest
  */
