@@ -3,6 +3,33 @@
 Migration notes for breaking changes, newest first. Patch and minor releases
 without a breaking change are not listed here — see the `CHANGELOG.md`.
 
+## 0.19.0
+
+### Rename propagation is wired through the package config, not `RelatedConfigInterface`
+
+Rector 2.6.5 removed `Rector\Contract\DependencyInjection\RelatedConfigInterface`, which
+the suffix rules implemented. On that version every run that loaded them died with
+`Interface "Rector\Contract\DependencyInjection\RelatedConfigInterface" not found`.
+
+The interface was also how the rules pulled in the rule that rewrites references
+(`RenameClassRector`) and the `@see`/`@link`/`@uses` pass. That wiring now lives in the
+package's own `config/config.php`, which reaches you in one of two ways:
+
+- **`HihahoSetList::NAMING` imports it.** Nothing to change — this is the recommended path.
+- **`->withRules([AddNotificationSuffixRector::class])`** relies on Rector auto-including
+  the config through `extra.rector.includes`, which needs the optional
+  `rector/extension-installer` Composer plugin to be allowed:
+
+  ```bash
+  composer config --no-plugins allow-plugins.rector/extension-installer true
+  composer require --dev rector/extension-installer
+  ```
+
+If neither applies, the rule now aborts the run with a message naming the fix, rather
+than renaming declarations and leaving every reference pointing at a class that no longer
+exists. On `rector/rector` below 2.6.5 that combination used to work through the removed
+interface, so this is the one behaviour change in the release.
+
 ## 0.17.0
 
 ### The suffix rules now rename files
