@@ -191,21 +191,13 @@ final class SuffixRenameMap implements ResettableInterface
      *                                                           for a class this rule claims, or null to leave it alone.
      * @param  list<string>  $destinationSuffixes  Substrings every name this rule renames *to*
      *                                             contains. Must be listed in
-     *                                             `CorpusFiles::DESTINATION_SUFFIXES`.
+     *                                             The filter is widened to cover them.
      */
     public function register(string $key, callable $resolveNewShortName, array $destinationSuffixes): void
     {
-        foreach ($destinationSuffixes as $destinationSuffix) {
-            if (! in_array($destinationSuffix, CorpusFiles::DESTINATION_SUFFIXES, true)) {
-                throw new InvalidArgumentException(sprintf(
-                    '%s renames classes to names containing "%s", which is missing from %s::DESTINATION_SUFFIXES. '
-                    . 'Add it there, or the corpus scan will skip files that could collide with those names.',
-                    $key,
-                    $destinationSuffix,
-                    CorpusFiles::class,
-                ));
-            }
-        }
+        // Anything a rule renames to has to be something the corpus walk tests for, or the
+        // files it skips were never checked for a collision with that name.
+        $this->corpusFiles->widenTo($destinationSuffixes);
 
         $paths = $this->scanPaths();
 

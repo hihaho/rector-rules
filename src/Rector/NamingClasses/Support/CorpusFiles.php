@@ -24,18 +24,26 @@ use SplFileInfo;
 final class CorpusFiles
 {
     /**
-     * Every suffix the rules in this package rename *to*. The walk uses the union to
-     * decide which files it can skip without parsing, so a rule whose suffix is missing
-     * here would silently lose collision safety — `SuffixRenameMap::register()` throws
-     * rather than let that happen. Adding a suffix rule means adding its suffix here.
+     * What the rules in this package rename *to*. Seeding the filter with all four up
+     * front means the four built-in rules never widen it between their registrations,
+     * which is what keeps the corpus down to one read and one parse per file.
      *
-     * Keep them narrow. Every file whose bytes contain one of these is parsed, so a
-     * common word here (`Collection`, say) quietly puts the whole corpus back through the
-     * parser.
+     * It is a seed, not a closed list: `widenTo()` accepts anything a rule declares,
+     * including a suffix from a rule outside this package. Keep the seed narrow, though —
+     * every file whose bytes contain one of these is parsed, so a common word here
+     * (`Collection`, say) quietly puts the whole corpus back through the parser.
      *
      * @var list<string>
      */
-    public const array DESTINATION_SUFFIXES = ['Command', 'Mail', 'Notification', 'Resource'];
+    public const array DEFAULT_DESTINATION_SUFFIXES = ['Command', 'Mail', 'Notification', 'Resource'];
+
+    /**
+     * The substrings the filter currently tests for — the seed plus whatever registering
+     * rules have added.
+     *
+     * @var list<string>
+     */
+    private array $destinationSuffixes = self::DEFAULT_DESTINATION_SUFFIXES;
 
     /**
      * File list per resolved path set. Every registering rule walks the same directories.
@@ -62,10 +70,34 @@ final class CorpusFiles
 
     public function reset(): void
     {
+        $this->destinationSuffixes = self::DEFAULT_DESTINATION_SUFFIXES;
         $this->filePathsByPathSet = [];
         $this->filteredOut = [];
         $this->lastReadPath = null;
         $this->lastReadContents = null;
+    }
+
+    /**
+     * Teaches the filter about a rule's destination substrings, so a file that spells one
+     * of them is parsed rather than skipped.
+     *
+     * A rule outside this package can rename to anything, so this has to accept anything.
+     * Widening invalidates the skip verdicts already recorded: they were reached without
+     * testing the new substrings, and a file skipped then may well declare a name that
+     * collides with what the new rule is about to produce.
+     *
+     * @param  list<string>  $destinationSuffixes
+     */
+    public function widenTo(array $destinationSuffixes): void
+    {
+        $unknown = array_values(array_diff($destinationSuffixes, $this->destinationSuffixes));
+
+        if ($unknown === []) {
+            return;
+        }
+
+        $this->destinationSuffixes = [...$this->destinationSuffixes, ...$unknown];
+        $this->filteredOut = [];
     }
 
     /**
@@ -140,7 +172,8 @@ final class CorpusFiles
      * The walk takes two things from a file: rename candidates, and class-like names a
      * rename could collide with. A candidate must extend something, so a file with no
      * `extends` holds none. A collision is only ever looked up under a name a rule renames
-     * *to*, and all of those contain one of `DESTINATION_SUFFIXES` — a class-like name is
+     * *to*, and all of those contain one of the substrings registered via `widenTo()` — a
+     * class-like name is
      * spelled literally in source and cannot be assembled at runtime, so a file that never
      * spells one cannot declare a colliding name.
      *
@@ -166,7 +199,7 @@ final class CorpusFiles
             return true;
         }
 
-        foreach (self::DESTINATION_SUFFIXES as $destinationSuffix) {
+        foreach ($this->destinationSuffixes as $destinationSuffix) {
             if (stripos($contents, $destinationSuffix) !== false) {
                 return true;
             }

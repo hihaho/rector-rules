@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Tests\Rector\NamingClasses\Support;
 
-use Hihaho\RectorRules\Rector\NamingClasses\Support\CorpusFiles;
 use Hihaho\RectorRules\Rector\NamingClasses\Support\SuffixRenameMap;
 use InvalidArgumentException;
 use PhpParser\Node\Stmt\Class_;
@@ -165,18 +164,33 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
         $this->assertTrue($map->claim('App\Notifications\OrderShipped', 'OrderShippedNotification', $path));
     }
 
-    public function test_a_rule_cannot_register_a_destination_suffix_the_scan_does_not_know(): void
+    public function test_a_rule_outside_this_package_can_bring_its_own_destination_suffix(): void
     {
-        // The scan skips files without parsing them by looking for these substrings, so an
-        // undeclared one means the skipped files were never checked for that collision.
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage(CorpusFiles::class . '::DESTINATION_SUFFIXES');
+        // `AbstractAddSuffixRector` is extensible, so a consumer's own suffix rule must
+        // work. The scan skips files by looking for destination substrings, so registering
+        // widens what it looks for rather than rejecting the unknown one.
+        $this->writeClass('OrderShipped.php', 'OrderShipped');
 
-        $this->makeMap()->register(
-            'undeclared-suffix-test',
-            static fn (Class_ $class): ?string => null,
-            ['Listener'],
-        );
+        $originalPaths = SimpleParameterProvider::provideArrayParameter(Option::PATHS);
+
+        SimpleParameterProvider::setParameter(Option::PATHS, [$this->directory]);
+
+        try {
+            $renamedClassesDataCollector = new RenamedClassesDataCollector();
+
+            $this->makeMapWith($renamedClassesDataCollector)->register(
+                'consumer-suffix-test',
+                static fn (Class_ $class): string => 'OrderShippedListener',
+                ['Listener'],
+            );
+
+            $this->assertSame(
+                ['App\Notifications\OrderShipped' => 'App\Notifications\OrderShippedListener'],
+                $renamedClassesDataCollector->getOldToNewClasses(),
+            );
+        } finally {
+            SimpleParameterProvider::setParameter(Option::PATHS, $originalPaths);
+        }
     }
 
     public function test_a_rule_cannot_rename_to_a_name_outside_the_suffixes_it_declared(): void
