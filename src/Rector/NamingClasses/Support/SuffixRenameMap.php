@@ -79,18 +79,13 @@ final class SuffixRenameMap implements ResettableInterface
     private ?Parser $parser = null;
 
     /**
-     * Parsed classes per file, so a corpus file is read and parsed at most once.
+     * The scan's view of a corpus file: every class-like name it declares, and the class
+     * nodes among them. Both come out of one parse — collecting them separately meant
+     * reading and parsing every file in the corpus twice.
      *
-     * @var array<string, list<Class_>>
+     * @var array<string, array{names: list<string>, classes: list<Class_>}>
      */
-    private array $classesByFile = [];
-
-    /**
-     * Class-like names declared per file, memoised alongside the parsed classes.
-     *
-     * @var array<string, list<string>>
-     */
-    private array $declaredNamesByFile = [];
+    private array $scanByFile = [];
 
     public function __construct(
         private readonly RenamedClassesDataCollector $renamedClassesDataCollector,
@@ -103,8 +98,7 @@ final class SuffixRenameMap implements ResettableInterface
         $this->pendingFileRenames = [];
         $this->renames = [];
         $this->declined = [];
-        $this->classesByFile = [];
-        $this->declaredNamesByFile = [];
+        $this->scanByFile = [];
     }
 
     /**
@@ -490,25 +484,44 @@ final class SuffixRenameMap implements ResettableInterface
      */
     private function declaredNamesIn(string $filePath): array
     {
-        if (isset($this->declaredNamesByFile[$filePath])) {
-            return $this->declaredNamesByFile[$filePath];
-        }
+        return $this->scanFile($filePath)['names'];
+    }
 
-        $statements = $this->parseStatements($filePath);
+    /**
+     * One read, one parse and one traversal per corpus file, memoised. `Class_` is a
+     * `ClassLike`, so the class nodes fall out of the same walk that collects the
+     * declared names.
+     *
+     * @return array{names: list<string>, classes: list<Class_>}
+     */
+    private function scanFile(string $filePath): array
+    {
+        if (isset($this->scanByFile[$filePath])) {
+            return $this->scanByFile[$filePath];
+        }
 
         $findingVisitor = new FindingVisitor(static fn (Node $node): bool => $node instanceof ClassLike);
 
-        (new NodeTraverser($findingVisitor))->traverse($statements);
+        (new NodeTraverser($findingVisitor))->traverse($this->parseStatements($filePath));
 
         $names = [];
+        $classes = [];
 
         foreach ($findingVisitor->getFoundNodes() as $foundNode) {
-            if ($foundNode instanceof ClassLike && $foundNode->namespacedName instanceof Name) {
+            if (! $foundNode instanceof ClassLike) {
+                continue;
+            }
+
+            if ($foundNode->namespacedName instanceof Name) {
                 $names[] = $foundNode->namespacedName->toString();
+            }
+
+            if ($foundNode instanceof Class_) {
+                $classes[] = $foundNode;
             }
         }
 
-        return $this->declaredNamesByFile[$filePath] = $names;
+        return $this->scanByFile[$filePath] = ['names' => $names, 'classes' => $classes];
     }
 
     /**
@@ -524,11 +537,7 @@ final class SuffixRenameMap implements ResettableInterface
      */
     private function classesIn(string $filePath): array
     {
-        if (isset($this->classesByFile[$filePath])) {
-            return $this->classesByFile[$filePath];
-        }
-
-        return $this->classesByFile[$filePath] = $this->parseClasses($filePath);
+        return $this->scanFile($filePath)['classes'];
     }
 
     /**
