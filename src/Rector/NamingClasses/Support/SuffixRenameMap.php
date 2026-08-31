@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Hihaho\RectorRules\Rector\NamingClasses\Support;
 
 use FilesystemIterator;
+use InvalidArgumentException;
 use PhpParser\Node;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
@@ -19,6 +20,7 @@ use Rector\Configuration\Option;
 use Rector\Configuration\Parameter\SimpleParameterProvider;
 use Rector\Configuration\RenamedClassesDataCollector;
 use Rector\Contract\DependencyInjection\ResettableInterface;
+use Rector\Renaming\Rector\Name\RenameClassRector;
 use Rector\Skipper\Skipper\Skipper;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -152,6 +154,36 @@ final class SuffixRenameMap implements ResettableInterface
         ]);
 
         return true;
+    }
+
+    /**
+     * Fail the run when the rule that rewrites references is missing.
+     *
+     * A suffix rule only records renames; `RenameClassRector` applies them to every
+     * reference. It is registered by this package's `config/config.php`, which reaches a
+     * consumer either through `extra.rector.includes` (needs the `rector/extension-installer`
+     * Composer plugin to be allowed) or through `HihahoSetList::NAMING`. A consumer with
+     * the plugin disallowed who registers a suffix rule directly gets neither — and
+     * renaming declarations while leaving every reference behind breaks their code
+     * silently. Refuse to run instead.
+     */
+    public function assertReferenceRewritingIsRegistered(string $rectorClass): void
+    {
+        $registeredRules = SimpleParameterProvider::provideArrayParameter(Option::REGISTERED_RECTOR_RULES);
+
+        if (in_array(RenameClassRector::class, $registeredRules, true)) {
+            return;
+        }
+
+        throw new InvalidArgumentException(sprintf(
+            '%s renames classes, but %s is not registered, so references to a renamed class '
+            . 'would be left pointing at a name that no longer exists. Register the rule through '
+            . '`HihahoSetList::NAMING`, or import `config/config.php` from hihaho/rector-rules in '
+            . 'your rector.php, or allow the `rector/extension-installer` Composer plugin so it is '
+            . 'imported automatically.',
+            $rectorClass,
+            RenameClassRector::class,
+        ));
     }
 
     /**

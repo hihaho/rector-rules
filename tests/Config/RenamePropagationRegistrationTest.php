@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Tests\Config;
 
+use Hihaho\RectorRules\Rector\NamingClasses\AddNotificationSuffixRector;
 use Hihaho\RectorRules\Rector\NamingClasses\RenameDocBlockSeeTagRector;
 use Hihaho\RectorRules\Rector\NamingClasses\Support\SuffixRenameMap;
+use InvalidArgumentException;
 use Rector\Config\RectorConfig;
 use Rector\Configuration\Option;
 use Rector\Configuration\Parameter\SimpleParameterProvider;
+use Rector\Configuration\RenamedClassesDataCollector;
 use Rector\Renaming\Rector\Name\RenameClassRector;
+use Rector\Skipper\Skipper\Skipper;
 use Rector\Testing\PHPUnit\AbstractLazyTestCase;
 
 /**
@@ -83,6 +87,31 @@ final class RenamePropagationRegistrationTest extends AbstractLazyTestCase
 
         $this->assertCount(1, array_keys($registeredRules, RenameClassRector::class, true));
         $this->assertCount(1, array_keys($registeredRules, RenameDocBlockSeeTagRector::class, true));
+    }
+
+    /**
+     * The auto-include needs a Composer plugin the consumer may not allow. Without it, a
+     * suffix rule registered directly would rename declarations and orphan every
+     * reference — so the rule refuses to run rather than doing half the job.
+     */
+    public function test_a_suffix_rule_refuses_to_run_when_the_reference_rewriter_is_missing(): void
+    {
+        $suffixRenameMap = new SuffixRenameMap(new RenamedClassesDataCollector(), $this->make(Skipper::class));
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage(RenameClassRector::class . ' is not registered');
+
+        $suffixRenameMap->assertReferenceRewritingIsRegistered(AddNotificationSuffixRector::class);
+    }
+
+    public function test_a_suffix_rule_runs_once_the_reference_rewriter_is_registered(): void
+    {
+        SimpleParameterProvider::setParameter(Option::REGISTERED_RECTOR_RULES, [RenameClassRector::class]);
+
+        $suffixRenameMap = new SuffixRenameMap(new RenamedClassesDataCollector(), $this->make(Skipper::class));
+        $suffixRenameMap->assertReferenceRewritingIsRegistered(AddNotificationSuffixRector::class);
+
+        $this->expectNotToPerformAssertions();
     }
 
     public function test_composer_declares_the_package_config_as_an_auto_included_extension_config(): void

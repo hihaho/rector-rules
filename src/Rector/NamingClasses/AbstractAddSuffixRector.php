@@ -21,6 +21,8 @@ abstract class AbstractAddSuffixRector extends AbstractRector
         protected readonly ReflectionProvider $reflectionProvider,
         private readonly SuffixRenameMap $suffixRenameMap,
     ) {
+        $this->suffixRenameMap->assertReferenceRewritingIsRegistered(static::class);
+
         // Runs while the container is built — before Rector traverses its first file —
         // so the rename map is complete for every file in the run, whatever the order.
         $this->suffixRenameMap->register(
