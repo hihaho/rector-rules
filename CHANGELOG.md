@@ -2,6 +2,42 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.20.0 - 2026-08-31
+
+### Performance
+
+**The suffix rules' corpus pre-scan is roughly 3.5× faster and uses 43% less memory.** Reported in [#17](https://github.com/hihaho/rector-rules/issues/17): `AddCommandSuffixRector`, `AddMailSuffixRector`, `AddNotificationSuffixRector` and `AddResourceSuffixRector` build their rename map by scanning every file under `withPaths()`, and the scan runs while the container is built — so it happens on every process, including a run targeting a single file, and again in every parallel worker.
+
+Measured over a synthetic 3000-file corpus, one container build's worth of scanning:
+
+| | before | after |
+|---|---|---|
+| scan | 932 ms | ~280 ms |
+| peak memory | 188 MB | 68 MB |
+
+End to end through the `rector` binary on the same corpus, a one-file run went from 2.60 s to 1.70 s.
+
+What changed:
+
+- **Every file was being read and parsed twice**, once to collect the class-like names a rename could collide with and once to collect the classes themselves. Both now come out of one parse.
+- Name resolution and the search for declarations run in **one traversal that stops at class bodies**. Resolving every name inside every method body was most of the traversal cost, and none of it was used.
+- Files that can hold **neither a rename candidate nor a colliding name** are no longer parsed at all. A candidate has to extend something, and a colliding name has to spell one of the suffixes the rules rename to — both are decided from the file's bytes, behind a single read.
+- The corpus **directory listing is resolved once** instead of once per rule.
+- Retained class nodes **drop their method bodies**. Only the name, parent and modifiers are read after the scan.
+
+The remaining cost is one read and one parse per file that survives the filter. Each parallel worker still runs its own scan; sharing one scan across workers is not part of this release.
+
+### Changed
+
+- **A file whose only other class is anonymous is now renamed.** The rules leave a file alone when it declares more than one class, because renaming it would break PSR-4 for the classes that were not renamed. That count used to include anonymous classes inside method bodies, which have no name and no PSR-4 path. See `UPGRADING.md`.
+- A suffix rule that renames to a name outside the destination substrings it declared now fails loudly instead of silently skipping the collision check for that name. This is reachable only from a custom rule extending `AbstractAddSuffixRector`.
+
+### Internal
+
+`SuffixRenameMap::register()` takes the rule's destination substrings, and the filesystem side of the scan moved to a new `CorpusFiles`. Both are `@internal`; a rule extending `AbstractAddSuffixRector` needs no changes, and its own suffix widens the scan's filter automatically.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.19.0...0.20.0
+
 ## 0.19.0 - 2026-08-31
 
 ### Fixed
@@ -10,6 +46,7 @@ All notable changes to `hihaho/rector-rules` will be documented in this file.
 
 ```
 [ERROR] Interface "Rector\Contract\DependencyInjection\RelatedConfigInterface" not found
+
 
 ```
 That interface was also how the rules pulled in their rename-propagation wiring — the `SuffixRenameMap` singleton, `RenameClassRector`, and `RenameDocBlockSeeTagRector`. Removing the `implements` on its own would have left the rules renaming declarations while every reference and every `@see`/`@link`/`@uses` tag kept pointing at a class that no longer exists.
@@ -38,6 +75,7 @@ Update and re-run:
 ```bash
 composer update hihaho/rector-rules
 vendor/bin/rector process --dry-run
+
 
 ```
 If you pinned `rector/rector` to `>=2.6.2 <2.6.5` to work around the fatal, drop the pin.
@@ -263,6 +301,7 @@ lines of configuration.
   
   
   
+  
   ```
   The rule's purpose is unchanged — it aligns a test's request-payload field-name array
   keys with their endpoint's FormRequest constants, bidirectionally by endpoint (internal →
@@ -457,6 +496,7 @@ serialized in an argument-count-sensitive way.
   
   
   
+  
   ```
   Dropping the all-default `1` (or `60, 1`) there is value-equivalent but changes the
   serialized string, and the parser can't see that coupling. `exclude_calls` lets a
@@ -468,6 +508,7 @@ serialized in an argument-count-sensitive way.
           \Illuminate\Routing\Middleware\ThrottleRequests::class => ['with'],
       ],
   ])
+  
   
   
   
@@ -508,6 +549,7 @@ feedback.
   ```diff
   -$query->has('posts', '=', 1);   // 0.11.1 dropped the 1 →
   +$query->has('posts', '=');      // ...leaving the comparison operator without its operand
+  
   
   
   
@@ -593,6 +635,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   
   
   
+  
   ```
   By default it drops an already-named default argument (order-independent) or a
   trailing positional default (iteratively), and it fires on any callee — those drops
@@ -616,6 +659,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   ```diff
   -$store->paginate(1, perPage: 50);
   +$store->paginate(page: 1, perPage: 50);
+  
   
   
   
@@ -666,11 +710,13 @@ explicit `config()->set()` form.
   
   
   
+  
   ```
   into the explicit setter form:
   
   ```php
   config()->set('queue.default', 'sync');
+  
   
   
   
@@ -773,6 +819,7 @@ in `MiddlewareStringToClassRector`'s default surfaced by real-world adoption.
           'auth', 'auth.basic', 'can', 'guest', 'password.confirm', 'signed', 'verified',
       ],
   ])
+  
   
   
   
@@ -940,6 +987,7 @@ Laravel's class-based fluent form.
   
   
   
+  
   ```
   It is **not in any set** and reachable by FQN only — Laravel doesn't document
   this form as a recommended convention, so adopting it is a deliberate choice.
@@ -996,6 +1044,7 @@ type only resolves under a PHPStan extension such as larastan.
   ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
       NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
   ])
+  
   
   
   
@@ -1075,6 +1124,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   
   
@@ -1381,11 +1431,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -1449,6 +1501,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -1595,6 +1648,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -1602,6 +1656,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
