@@ -41,7 +41,6 @@
     "prefer-stable": true,
     "require": {
         "php": "^8.3",
-        "rector/extension-installer": "^0.11.2||^1.0",
         "rector/rector": "^2.4.1",
         "symplify/rule-doc-generator-contracts": "^11.2"
     },
@@ -55,6 +54,7 @@
         "orchestra/testbench": "^10.11||^11.0",
         "pestphp/pest": "^4.4",
         "pestphp/pest-plugin-arch": "^4.0",
+        "rector/extension-installer": "^0.11.2||^1.0",
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan": "^2.1",
         "phpstan/phpstan-deprecation-rules": "^2.0",
@@ -69,7 +69,8 @@
         "tomasvotruba/type-coverage": "^2.0"
     },
     "suggest": {
-        "illuminate/support": "Used by AssertDatabaseTableToModelClassRector to resolve table names; always present in the Laravel projects this package targets"
+        "illuminate/support": "Used by AssertDatabaseTableToModelClassRector to resolve table names; always present in the Laravel projects this package targets",
+        "rector/extension-installer": "Auto-imports this package's config/config.php, so the suffix rules propagate renames when registered directly via withRules() instead of through HihahoSetList::NAMING"
     },
     "scripts": {
         "format": "vendor/bin/pint",

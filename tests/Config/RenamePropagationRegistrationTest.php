@@ -136,9 +136,16 @@ final class RenamePropagationRegistrationTest extends AbstractLazyTestCase
         $this->assertIsArray($includes);
         $this->assertContains('config/config.php', $includes);
 
-        // The auto-include only happens when the installer plugin generates its config.
+        // The auto-include only happens when the installer plugin generates its config,
+        // but requiring the plugin would hard-fail `composer install --no-interaction` for
+        // any consumer whose `allow-plugins` map does not already list it. Suggested, never
+        // required — HihahoSetList::NAMING imports the config without it.
+        $suggest = $composer['suggest'] ?? null;
+        $this->assertIsArray($suggest);
+        $this->assertArrayHasKey('rector/extension-installer', $suggest);
+
         $require = $composer['require'] ?? null;
         $this->assertIsArray($require);
-        $this->assertArrayHasKey('rector/extension-installer', $require);
+        $this->assertArrayNotHasKey('rector/extension-installer', $require);
     }
 }
