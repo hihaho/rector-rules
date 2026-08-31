@@ -420,7 +420,7 @@ To make that work regardless of the order Rector happens to process files in —
 
 A few consequences worth knowing:
 
-- **The pre-scan result is cached** under Rector's cache directory, keyed on the size and modification time of every file it looked at. Rector's parallel workers each build their own container, so without it every worker repeats the whole scan; with it they reuse the one the main process did, and an unchanged tree reuses it across runs too. A changed file invalidates it on its own — `--clear-cache` also bypasses it.
+- **The pre-scan result is cached** under Rector's cache directory. Rector's parallel workers each build their own container, so without it every worker repeats the whole scan; with it they reuse the one the main process did, and an unchanged tree reuses it across runs. Underneath that, what each file declares is cached per file, so editing one file re-parses that file rather than the corpus — the scan costs a `stat` per unchanged file. `--clear-cache` bypasses both.
 - **`--dry-run` never renames a file.** The diff shows the class rename; the filesystem is left alone.
 - **Run Pint after Rector.** New imports land at the position of the old one rather than re-sorted, so a formatter pass follows naturally. Worth knowing if you run Rector as a CI dry-run gate without one — the diff will show ordering churn.
 - **Budget a prose sweep.** Class names mentioned in ordinary comments, Markdown or fixture strings are not touched, and should not be — but they do go stale. Grep for the old names once the rename lands.

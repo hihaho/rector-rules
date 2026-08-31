@@ -63,6 +63,7 @@ parameters:
         -
             identifier: classConstant.internal
             paths:
+                - src/Rector/NamingClasses/Support/ScanCacheKeys.php
                 - src/Rector/NamingClasses/Support/SuffixRenameMap.php
                 - tests/Config/RenamePropagationRegistrationTest.php
                 - tests/Rector/NamingClasses/RenamePropagation/AbstractRenamePropagationTestCase.php

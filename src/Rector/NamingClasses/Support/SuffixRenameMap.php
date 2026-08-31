@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\NamingClasses\Support;
 
-use Composer\InstalledVersions;
-use FilesystemIterator;
 use InvalidArgumentException;
 use PhpParser\Node;
 use PhpParser\Node\Identifier;
@@ -24,9 +22,6 @@ use Rector\Configuration\RenamedClassesDataCollector;
 use Rector\Contract\DependencyInjection\ResettableInterface;
 use Rector\Renaming\Rector\Name\RenameClassRector;
 use Rector\Skipper\Skipper\Skipper;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use SplFileInfo;
 use Throwable;
 
 /**
@@ -97,11 +92,18 @@ final class SuffixRenameMap implements ResettableInterface
      */
     private ?ScanCache $scanCache = null;
 
+    private ?JsonFileStore $jsonFileStore = null;
+
+    private ?DeclarationIndex $declarationIndex = null;
+
+    private readonly ScanCacheKeys $scanCacheKeys;
+
     public function __construct(
         private readonly RenamedClassesDataCollector $renamedClassesDataCollector,
         private readonly Skipper $skipper,
     ) {
         $this->corpusFiles = new CorpusFiles();
+        $this->scanCacheKeys = new ScanCacheKeys($this->corpusFiles, (new PackageFingerprint())->resolve());
     }
 
     public function reset(): void
@@ -111,6 +113,7 @@ final class SuffixRenameMap implements ResettableInterface
         $this->renames = [];
         $this->declined = [];
         $this->scanByFile = [];
+        $this->declarationIndex()->reset();
         $this->corpusFiles->reset();
     }
 
@@ -198,7 +201,7 @@ final class SuffixRenameMap implements ResettableInterface
      * the resolver claims.
      *
      * @param  string  $key  Identifies the calling rule, so two rules don't share a scan.
-     * @param  callable(Class_): ?string  $resolveNewShortName  Returns the new short name
+     * @param  callable(ClassDeclaration): ?string  $resolveNewShortName  Returns the new short name
      *                                                           for a class this rule claims, or null to leave it alone.
      * @param  list<string>  $destinationSuffixes  Substrings every name this rule renames *to*
      *                                             contains. Must be listed in
@@ -220,9 +223,9 @@ final class SuffixRenameMap implements ResettableInterface
 
         $this->scanned[$scanKey] = true;
 
-        $cacheKey = $this->cacheKeyFor($key, $paths);
+        $cacheKey = $this->scanCacheKeys->cacheKeyFor($key, $paths);
 
-        $decisions = $cacheKey === null || $this->cacheWasCleared()
+        $decisions = $cacheKey === null || $this->scanCacheKeys->cacheWasCleared()
             ? null
             : $this->scanCache()->load($cacheKey);
 
@@ -242,7 +245,7 @@ final class SuffixRenameMap implements ResettableInterface
     /**
      * Walks the corpus and works out which classes this rule may rename.
      *
-     * @param  callable(Class_): ?string  $resolveNewShortName
+     * @param  callable(ClassDeclaration): ?string  $resolveNewShortName
      * @param  list<string>  $paths
      * @param  list<string>  $destinationSuffixes
      * @return array{accepted: list<array{oldFqcn: string, newFqcn: string, newShortName: string, oldShortName: string, path: string, isOnlyClassInFile: bool}>, declined: list<string>}
@@ -251,6 +254,8 @@ final class SuffixRenameMap implements ResettableInterface
     {
         $candidates = [];
         $declaredFqcns = [];
+
+        $this->declarationIndex()->load($this->scanCacheKeys->declarationCacheKeyFor($paths));
 
         foreach ($this->corpusFiles->in($paths) as $filePath) {
             // A file the consumer skipped is never processed, so its declaration would
@@ -263,29 +268,18 @@ final class SuffixRenameMap implements ResettableInterface
                 continue;
             }
 
-            // A file already parsed for an earlier rule is free to reuse, and re-testing it
-            // would only re-read it. Otherwise ask whether it is worth parsing at all —
-            // that test is sound only because collisions below are looked up under
-            // destination names; see `CorpusFiles::mayContribute()`.
-            if (! isset($this->scanByFile[$filePath]) && ! $this->corpusFiles->mayContribute($filePath)) {
-                continue;
-            }
+            $entry = $this->declarationIndex()->forFile($filePath, $this->parseDeclarations(...));
 
             // Interfaces, traits and enums share the class namespace, so a rename onto
             // one of them is just as fatal as onto a class.
-            foreach ($this->declaredNamesIn($filePath) as $declaredFqcn) {
+            foreach ($entry['names'] as $declaredFqcn) {
                 $declaredFqcns[$this->collisionKey($declaredFqcn)] = true;
             }
 
-            $classes = $this->classesIn($filePath);
-            $isOnlyClassInFile = count($classes) === 1;
+            $isOnlyClassInFile = count($entry['classes']) === 1;
 
-            foreach ($classes as $class) {
-                $oldFqcn = $this->fqcnOf($class);
-
-                if ($oldFqcn === null) {
-                    continue;
-                }
+            foreach ($entry['classes'] as $class) {
+                $oldFqcn = $class->fqcn;
 
                 $declaredFqcns[$this->collisionKey($oldFqcn)] = true;
 
@@ -311,6 +305,8 @@ final class SuffixRenameMap implements ResettableInterface
             }
         }
 
+        $this->declarationIndex()->store($this->corpusFiles->in($paths));
+
         return $this->decideCandidates($candidates, $declaredFqcns);
     }
 
@@ -335,6 +331,62 @@ final class SuffixRenameMap implements ResettableInterface
             $newShortName,
         ));
     }
+
+    private function declarationIndex(): DeclarationIndex
+    {
+        return $this->declarationIndex ??= new DeclarationIndex(
+            new DeclarationCache($this->jsonFileStore()),
+            $this->corpusFiles,
+        );
+    }
+
+    /**
+     * The syntax the index caches for a file: the class-like names it declares and the
+     * classes among them. A file that can hold neither a candidate nor a colliding name is
+     * not parsed, and that empty result is remembered like any other.
+     *
+     * Null when the file could not be read. That is emphatically not the same answer as
+     * "this file declares nothing": caching an empty result for a file a transient failure
+     * hid would drop it out of collision detection for every later run, because a failed
+     * read moves neither its size nor its timestamps.
+     *
+     * @return array{names: list<string>, classes: list<ClassDeclaration>}|null
+     */
+    private function parseDeclarations(string $filePath): ?array
+    {
+        if ($this->corpusFiles->contentsOf($filePath) === null) {
+            return null;
+        }
+
+        $names = [];
+        $classes = [];
+
+        if (! $this->corpusFiles->mayContribute($filePath)) {
+            return ['names' => $names, 'classes' => $classes];
+        }
+
+        foreach ($this->declarationsIn($filePath) as $classLike) {
+            if ($classLike->namespacedName instanceof Name) {
+                $names[] = $classLike->namespacedName->toString();
+            }
+
+            if (! $classLike instanceof Class_) {
+                continue;
+            }
+
+            $declaration = ClassDeclaration::fromNode($classLike);
+
+            if ($declaration instanceof ClassDeclaration) {
+                $classes[] = $declaration;
+            }
+        }
+
+        return ['names' => $names, 'classes' => $classes];
+    }
+
+    /**
+     * @param  list<string>  $paths
+     */
 
     /**
      * Turns the walk's candidates into decisions. Nothing here touches the filesystem or
@@ -414,6 +466,11 @@ final class SuffixRenameMap implements ResettableInterface
 
     private function scanCache(): ScanCache
     {
+        return $this->scanCache ??= new ScanCache($this->jsonFileStore());
+    }
+
+    private function jsonFileStore(): JsonFileStore
+    {
         $cacheDirectory = SimpleParameterProvider::provideStringParameter(
             Option::CACHE_DIR,
             sys_get_temp_dir() . '/rector_cached_files',
@@ -423,125 +480,7 @@ final class SuffixRenameMap implements ResettableInterface
         // system temp dir, and entries are trusted enough to drive renames.
         $userSuffix = function_exists('posix_geteuid') ? '-' . posix_geteuid() : '';
 
-        return $this->scanCache ??= new ScanCache($cacheDirectory . '/hihaho-suffix-scan' . $userSuffix);
-    }
-
-    /**
-     * Everything that can change what the walk decides. A key that cannot be built — an
-     * unserialisable skip list, or a package version this process cannot identify — means
-     * no caching for this run rather than a cache that might be stale.
-     *
-     * The corpus digest is not enough on its own. Whether a class is a rename candidate is
-     * answered by reflection over the parent class, so the answer moves when the installed
-     * packages move (a `composer update` that changes a framework base class) or when this
-     * package's own rules change, neither of which touches a corpus file. Both are keyed.
-     *
-     * What remains unkeyed: a class outside the configured paths that a corpus class
-     * extends, in a project that also keeps it out of `vendor/`. Such a class is invisible
-     * to both digests, so a change to it can be answered from a stale entry — put it under
-     * `withPaths()` to make it visible.
-     *
-     * @param  list<string>  $paths
-     */
-    private function cacheKeyFor(string $key, array $paths): ?string
-    {
-        $packageVersion = $this->packageVersion();
-
-        if ($packageVersion === null) {
-            return null;
-        }
-
-        try {
-            return json_encode([
-                'package' => $packageVersion,
-                'rules' => $this->ruleSourceDigest(),
-                'installed' => $this->installedPackagesDigest(),
-                'rule' => $key,
-                'paths' => $paths,
-                'skip' => SimpleParameterProvider::provideArrayParameter(Option::SKIP),
-                'suffixes' => $this->corpusFiles->destinationSuffixes(),
-                'corpus' => $this->corpusFiles->fingerprintOf($paths),
-            ], JSON_THROW_ON_ERROR);
-        } catch (Throwable) {
-            return null;
-        }
-    }
-
-    /**
-     * A digest of this package's own rule sources.
-     *
-     * `InstalledVersions` freezes its reference at install time, so on a `dev-*` or path
-     * install — this package's own suite, or a consumer developing against a checkout —
-     * the version alone never moves when the scan's logic changes.
-     */
-    private function ruleSourceDigest(): string
-    {
-        $parts = [];
-
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator(__DIR__ . '/../../..', FilesystemIterator::SKIP_DOTS),
-        );
-
-        foreach ($iterator as $fileInfo) {
-            if (! $fileInfo instanceof SplFileInfo || $fileInfo->getExtension() !== 'php') {
-                continue;
-            }
-
-            $parts[] = $fileInfo->getPathname() . '|' . $fileInfo->getMTime() . '|' . $fileInfo->getSize();
-        }
-
-        sort($parts);
-
-        return hash('xxh128', implode("\n", $parts));
-    }
-
-    /**
-     * A digest of every installed package's version and reference.
-     *
-     * The candidate test resolves a class's parent through PHPStan's reflection, so a
-     * `composer update` that moves a framework base class changes the scan's answer without
-     * touching a single corpus file.
-     */
-    private function installedPackagesDigest(): string
-    {
-        if (! class_exists(InstalledVersions::class)) {
-            return 'unknown';
-        }
-
-        try {
-            return hash('xxh128', serialize(InstalledVersions::getAllRawData()));
-        } catch (Throwable) {
-            return 'unknown';
-        }
-    }
-
-    /**
-     * The installed version of this package, so an upgrade that changes what the scan
-     * decides cannot be answered from an entry the old code wrote.
-     */
-    private function packageVersion(): ?string
-    {
-        if (! class_exists(InstalledVersions::class)) {
-            return null;
-        }
-
-        try {
-            return InstalledVersions::getVersion('hihaho/rector-rules')
-                . '@' . (InstalledVersions::getReference('hihaho/rector-rules') ?? '');
-        } catch (Throwable) {
-            return null;
-        }
-    }
-
-    /**
-     * Rector's `--clear-cache` never reaches the parameter provider, so read the flag from
-     * the command line. A false positive only costs a scan.
-     */
-    private function cacheWasCleared(): bool
-    {
-        $argv = $_SERVER['argv'] ?? [];
-
-        return is_array($argv) && in_array('--clear-cache', $argv, true);
+        return $this->jsonFileStore ??= new JsonFileStore($cacheDirectory . '/hihaho-suffix-scan' . $userSuffix);
     }
 
     /**
@@ -831,23 +770,6 @@ final class SuffixRenameMap implements ResettableInterface
     private function parser(): Parser
     {
         return $this->parser ??= (new ParserFactory())->createForNewestSupportedVersion();
-    }
-
-    /**
-     * Null for an anonymous class — a *named* class in the global namespace does get a
-     * `namespacedName`, so the guard belongs here rather than on the namespace.
-     */
-    private function fqcnOf(Class_ $class): ?string
-    {
-        if (! $class->name instanceof Identifier) {
-            return null;
-        }
-
-        if (! $class->namespacedName instanceof Name) {
-            return null;
-        }
-
-        return $class->namespacedName->toString();
     }
 
     private function shortNameOf(string $fqcn): string

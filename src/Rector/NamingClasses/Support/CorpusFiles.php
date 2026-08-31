@@ -170,9 +170,39 @@ final class CorpusFiles
     }
 
     /**
-     * @param  bool  $fresh  Bypass the cache. Required by callers that must see a file as
-     *                       Rector has just written it, rather than as the scan read it.
+     * A single file's stat digest — the per-file half of `fingerprintOf()`, used to decide
+     * whether a cached parse of it can be reused.
+     *
+     * Null when the file was not seen by the walk, which the caller must treat as "parse it".
      */
+    public function digestOf(string $filePath): ?string
+    {
+        $stat = $this->statByFile[$filePath] ?? null;
+
+        if ($stat === null) {
+            return null;
+        }
+
+        return $stat['mtime'] . '|' . $stat['ctime'] . '|' . $stat['size'];
+    }
+
+    /**
+     * Whether this file's modification time is far enough in the past to digest — see
+     * `isSettled()` for why the current second is excluded.
+     *
+     * Modification time alone is the right gate even though the digest also carries change
+     * time. A write moves both, so a stored entry always has an mtime strictly older than
+     * the second it was stored in, and any later write must move mtime past it. Change time
+     * is in the digest to catch what leaves mtime alone, such as a restored file; it is not
+     * a useful gate, because it is `now` for a file that was only just touched.
+     */
+    public function isFileSettled(string $filePath): bool
+    {
+        $stat = $this->statByFile[$filePath] ?? null;
+
+        return $stat !== null && $stat['mtime'] < time();
+    }
+
     /**
      * Whether the corpus is settled enough for a digest of it to be trustworthy.
      *

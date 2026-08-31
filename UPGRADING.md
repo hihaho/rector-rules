@@ -3,6 +3,48 @@
 Migration notes for breaking changes, newest first. Patch and minor releases
 without a breaking change are not listed here — see the `CHANGELOG.md`.
 
+## 0.22.0
+
+### `newShortNameFor()` takes a `ClassDeclaration`, not a `Class_`
+
+Only affects a rule that **extends `AbstractAddSuffixRector` and overrides
+`newShortNameFor()`**. Implementing `baseClass()` and `suffix()` is unaffected.
+
+The corpus scan now caches what each file declares and re-parses only the files whose
+timestamps moved, so an edit no longer costs a full rescan. That means the scan has to be
+able to ask a rule about a class without a syntax tree in hand, so the method takes a small
+value object instead of a parser node:
+
+```php
+// before
+protected function newShortNameFor(Class_ $class): ?string
+{
+    if ($class->isAbstract()) {
+        return null;
+    }
+
+    $className = $class->name->toString();
+    $parent = $class->extends->toString();
+    // ...
+}
+
+// after
+protected function newShortNameFor(ClassDeclaration $declaration): ?string
+{
+    if ($declaration->isAbstract) {
+        return null;
+    }
+
+    $className = $declaration->shortName;
+    $parent = $declaration->parentFqcn;   // null when the class extends nothing
+    // ...
+}
+```
+
+`ClassDeclaration` carries `fqcn`, `shortName`, `parentFqcn` and `isAbstract` — everything
+the built-in rules ever read from the node. The parent name is already resolved, so a
+`use` alias needs no further work.
+
 ## 0.20.0
 
 ### A file whose only extra class is anonymous is now renamed

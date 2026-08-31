@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Hihaho\RectorRules\Rector\NamingClasses;
 
 use Hihaho\RectorRules\Rector\NamingClasses\Concerns\ChecksClassHierarchy;
+use Hihaho\RectorRules\Rector\NamingClasses\Support\ClassDeclaration;
 use Hihaho\RectorRules\Rector\NamingClasses\Support\SuffixRenameMap;
 use PhpParser\Node;
 use PhpParser\Node\Identifier;
-use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\Class_;
 use PHPStan\Reflection\ReflectionProvider;
 use Rector\Rector\AbstractRector;
@@ -27,7 +27,7 @@ abstract class AbstractAddSuffixRector extends AbstractRector
         // so the rename map is complete for every file in the run, whatever the order.
         $this->suffixRenameMap->register(
             static::class,
-            fn (Class_ $class): ?string => $this->newShortNameFor($class),
+            fn (ClassDeclaration $declaration): ?string => $this->newShortNameFor($declaration),
             [$this->suffix()],
         );
     }
@@ -48,18 +48,21 @@ abstract class AbstractAddSuffixRector extends AbstractRector
             return null;
         }
 
-        $newShortName = $this->newShortNameFor($node);
+        // Anonymous class, or one whose name the parser could not resolve; a named class in
+        // the global namespace still resolves.
+        $declaration = ClassDeclaration::fromNode($node);
+
+        if (! $declaration instanceof ClassDeclaration) {
+            return null;
+        }
+
+        $newShortName = $this->newShortNameFor($declaration);
 
         if ($newShortName === null) {
             return null;
         }
 
-        $oldFqcn = $node->namespacedName?->toString();
-
-        // Anonymous class; a named class in the global namespace still has one.
-        if ($oldFqcn === null) {
-            return null;
-        }
+        $oldFqcn = $declaration->fqcn;
 
         if (! $this->suffixRenameMap->claim($oldFqcn, $newShortName, $this->getFile()->getFilePath())) {
             return null;
@@ -73,31 +76,25 @@ abstract class AbstractAddSuffixRector extends AbstractRector
     /**
      * The new short name for a class this rule claims, or null if it does not claim it.
      */
-    protected function newShortNameFor(Class_ $class): ?string
+    protected function newShortNameFor(ClassDeclaration $declaration): ?string
     {
-        if ($class->isAbstract()) {
+        if ($declaration->isAbstract) {
             return null;
         }
 
-        if (! $class->name instanceof Identifier) {
+        if (str_ends_with($declaration->shortName, $this->suffix())) {
             return null;
         }
 
-        $className = $class->name->toString();
-
-        if (str_ends_with($className, $this->suffix())) {
+        if ($declaration->parentFqcn === null) {
             return null;
         }
 
-        if (! $class->extends instanceof Name) {
+        if (! $this->isSubclassOf($declaration->parentFqcn, $this->baseClass())) {
             return null;
         }
 
-        if (! $this->isSubclassOf($class->extends->toString(), $this->baseClass())) {
-            return null;
-        }
-
-        return $this->buildNewName($className);
+        return $this->buildNewName($declaration->shortName);
     }
 
     protected function buildNewName(string $currentName): string

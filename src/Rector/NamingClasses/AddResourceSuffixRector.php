@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Hihaho\RectorRules\Rector\NamingClasses;
 
 use Hihaho\RectorRules\Rector\NamingClasses\Concerns\ChecksClassHierarchy;
+use Hihaho\RectorRules\Rector\NamingClasses\Support\ClassDeclaration;
 use Hihaho\RectorRules\Rector\NamingClasses\Support\SuffixRenameMap;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 use PhpParser\Node;
 use PhpParser\Node\Identifier;
-use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\Class_;
 use PHPStan\Reflection\ReflectionProvider;
 use Rector\Rector\AbstractRector;
@@ -55,7 +55,7 @@ final class AddResourceSuffixRector extends AbstractRector
         // so the rename map is complete for every file in the run, whatever the order.
         $this->suffixRenameMap->register(
             self::class,
-            fn (Class_ $class): ?string => $this->newShortNameFor($class),
+            fn (ClassDeclaration $declaration): ?string => $this->newShortNameFor($declaration),
             // Covers "ResourceCollection" too — the test is a substring, not a suffix.
             ['Resource'],
         );
@@ -102,18 +102,21 @@ CODE_SAMPLE,
             return null;
         }
 
-        $newShortName = $this->newShortNameFor($node);
+        // Anonymous class, or one whose name the parser could not resolve; a named class in
+        // the global namespace still resolves.
+        $declaration = ClassDeclaration::fromNode($node);
+
+        if (! $declaration instanceof ClassDeclaration) {
+            return null;
+        }
+
+        $newShortName = $this->newShortNameFor($declaration);
 
         if ($newShortName === null) {
             return null;
         }
 
-        $oldFqcn = $node->namespacedName?->toString();
-
-        // Anonymous class; a named class in the global namespace still has one.
-        if ($oldFqcn === null) {
-            return null;
-        }
+        $oldFqcn = $declaration->fqcn;
 
         if (! $this->suffixRenameMap->claim($oldFqcn, $newShortName, $this->getFile()->getFilePath())) {
             return null;
@@ -127,30 +130,23 @@ CODE_SAMPLE,
     /**
      * The new short name for a resource class, or null if this rule does not claim it.
      */
-    private function newShortNameFor(Class_ $class): ?string
+    private function newShortNameFor(ClassDeclaration $declaration): ?string
     {
-        if ($class->isAbstract()) {
+        if ($declaration->isAbstract) {
             return null;
         }
 
-        if (! $class->name instanceof Identifier) {
+        if ($declaration->parentFqcn === null) {
             return null;
         }
-
-        if (! $class->extends instanceof Name) {
-            return null;
-        }
-
-        $className = $class->name->toString();
-        $parentClassName = $class->extends->toString();
 
         // ResourceCollection extends JsonResource — check the more specific type first.
-        if ($this->isSubclassOf($parentClassName, self::RESOURCE_COLLECTION)) {
-            return $this->resourceCollectionName($className);
+        if ($this->isSubclassOf($declaration->parentFqcn, self::RESOURCE_COLLECTION)) {
+            return $this->resourceCollectionName($declaration->shortName);
         }
 
-        if ($this->isSubclassOf($parentClassName, self::JSON_RESOURCE)) {
-            return $this->jsonResourceName($className);
+        if ($this->isSubclassOf($declaration->parentFqcn, self::JSON_RESOURCE)) {
+            return $this->jsonResourceName($declaration->shortName);
         }
 
         return null;

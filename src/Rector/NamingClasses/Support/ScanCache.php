@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\NamingClasses\Support;
 
-use JsonException;
-use Throwable;
-
 /**
  * Carries the suffix scan's decisions between processes.
  *
@@ -31,32 +28,14 @@ use Throwable;
  */
 final readonly class ScanCache
 {
-    public function __construct(private string $directory) {}
+    public function __construct(private JsonFileStore $jsonFileStore) {}
 
     /**
      * @return Decisions|null
      */
     public function load(string $cacheKey): ?array
     {
-        $filePath = $this->pathFor($cacheKey);
-
-        if (! is_file($filePath)) {
-            return null;
-        }
-
-        $contents = @file_get_contents($filePath);
-
-        if ($contents === false) {
-            return null;
-        }
-
-        try {
-            /** @var mixed $decoded */
-            $decoded = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
-            // A half-written or hand-edited entry. Scanning is always a correct answer.
-            return null;
-        }
+        $decoded = $this->jsonFileStore->read($cacheKey);
 
         return $this->isWellFormed($decoded) ? $decoded : null;
     }
@@ -66,39 +45,7 @@ final readonly class ScanCache
      */
     public function store(string $cacheKey, array $decisions): void
     {
-        // 0700, not the default 0777: the directory usually lands under a predictable
-        // path in the system temp dir, and an entry is trusted enough to drive renames
-        // across a codebase. Another user on the host must not be able to plant one.
-        if (! is_dir($this->directory) && ! @mkdir($this->directory, 0o700, true) && ! is_dir($this->directory)) {
-            return;
-        }
-
-        try {
-            $contents = json_encode($decisions, JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
-            return;
-        }
-
-        // Workers read this while the run is in flight, so it has to appear whole or not
-        // at all — write beside the destination and move it into place.
-        $temporaryPath = $this->pathFor($cacheKey) . '.' . getmypid() . '.tmp';
-
-        try {
-            if (@file_put_contents($temporaryPath, $contents) === false) {
-                return;
-            }
-
-            if (! @rename($temporaryPath, $this->pathFor($cacheKey))) {
-                @unlink($temporaryPath);
-            }
-        } catch (Throwable) {
-            @unlink($temporaryPath);
-        }
-    }
-
-    private function pathFor(string $cacheKey): string
-    {
-        return $this->directory . '/' . hash('xxh128', $cacheKey) . '.json';
+        $this->jsonFileStore->write($cacheKey, $decisions);
     }
 
     /**

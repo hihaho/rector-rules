@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Tests\Rector\NamingClasses\Support;
 
+use Hihaho\RectorRules\Rector\NamingClasses\Support\ClassDeclaration;
 use Hihaho\RectorRules\Rector\NamingClasses\Support\SuffixRenameMap;
 use InvalidArgumentException;
-use PhpParser\Node\Stmt\Class_;
 use Rector\Configuration\Option;
 use Rector\Configuration\Parameter\SimpleParameterProvider;
 use Rector\Configuration\RenamedClassesDataCollector;
@@ -173,7 +173,7 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
 
             $this->makeMapWith($renamedClassesDataCollector)->register(
                 'skip-test',
-                static fn (Class_ $class): string => 'OrderShippedNotification',
+                static fn (ClassDeclaration $declaration): string => 'OrderShippedNotification',
                 ['Notification'],
             );
 
@@ -215,7 +215,7 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
 
             $this->makeMapWith($renamedClassesDataCollector)->register(
                 'consumer-suffix-test',
-                static fn (Class_ $class): string => 'OrderShippedListener',
+                static fn (ClassDeclaration $declaration): string => 'OrderShippedListener',
                 ['Listener'],
             );
 
@@ -242,7 +242,7 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
 
             $this->makeMap()->register(
                 'undeclared-destination-test',
-                static fn (Class_ $class): string => 'OrderShippedEvent',
+                static fn (ClassDeclaration $declaration): string => 'OrderShippedEvent',
                 ['Notification'],
             );
         } finally {
@@ -283,7 +283,7 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
 
             $map->register(
                 'anonymous-class-test',
-                static fn (Class_ $class): string => 'OrderShippedNotification',
+                static fn (ClassDeclaration $declaration): string => 'OrderShippedNotification',
                 ['Notification'],
             );
 
@@ -328,7 +328,7 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
 
             $this->makeMapWith($renamedClassesDataCollector)->register(
                 'unwritable-test',
-                static fn (Class_ $class): string => 'OrderShippedNotification',
+                static fn (ClassDeclaration $declaration): string => 'OrderShippedNotification',
                 ['Notification'],
             );
 
@@ -343,7 +343,7 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
 
             $this->makeMapWith($writableCollector)->register(
                 'writable-control',
-                static fn (Class_ $class): string => 'OrderShippedNotification',
+                static fn (ClassDeclaration $declaration): string => 'OrderShippedNotification',
                 ['Notification'],
             );
 
@@ -364,7 +364,7 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
 
         SimpleParameterProvider::setParameter(Option::PATHS, [$this->directory]);
 
-        $resolver = static fn (Class_ $class): string => 'OrderShippedNotification';
+        $resolver = static fn (ClassDeclaration $declaration): string => 'OrderShippedNotification';
 
         $this->makeMap()->register('replay-test', $resolver, ['Notification']);
 
@@ -374,9 +374,22 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
         $this->assertNotSame([], $entries, 'nothing was cached, so there is no replay to test');
 
         // Rewriting the stored decision is the only way to tell a replay apart from a
-        // second walk, which would produce the original name.
-        $stored = (string) file_get_contents($entries[0]);
-        file_put_contents($entries[0], str_replace('OrderShippedNotification', 'TamperedNotification', $stored));
+        // second walk, which would produce the original name. The directory also holds the
+        // per-file declaration entry, so pick the decisions one by its shape.
+        $decisionsPath = null;
+
+        foreach ($entries as $entry) {
+            if (str_contains((string) file_get_contents($entry), '"accepted"')) {
+                $decisionsPath = $entry;
+
+                break;
+            }
+        }
+
+        $this->assertNotNull($decisionsPath, 'no decisions entry was written');
+
+        $stored = (string) file_get_contents($decisionsPath);
+        file_put_contents($decisionsPath, str_replace('OrderShippedNotification', 'TamperedNotification', $stored));
 
         $collector = new RenamedClassesDataCollector();
 
@@ -396,7 +409,7 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
 
         SimpleParameterProvider::setParameter(Option::PATHS, [$this->directory]);
 
-        $resolver = static fn (Class_ $class): string => 'OrderShippedNotification';
+        $resolver = static fn (ClassDeclaration $declaration): string => 'OrderShippedNotification';
 
         $this->makeMap()->register('replay-unwritable-test', $resolver, ['Notification']);
 
@@ -422,6 +435,176 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
             chmod($this->directory, 0o777);
             clearstatcache(true, $this->directory);
         }
+    }
+
+    public function test_an_unchanged_file_is_reused_when_another_file_changes(): void
+    {
+        // The point of the per-file layer: editing one file must not re-read the rest. The
+        // only way to observe that from outside is to plant something in a neighbour's
+        // cached entry that a fresh parse would never produce, and see it honoured.
+        $candidate = $this->writeSettledClass('OrderShipped.php', 'OrderShipped');
+        $this->writeSettledClass('Neighbour.php', 'Neighbour');
+
+        SimpleParameterProvider::setParameter(Option::PATHS, [$this->directory]);
+
+        $resolver = static fn (ClassDeclaration $declaration): ?string => $declaration->shortName === 'OrderShipped'
+            ? 'OrderShippedNotification'
+            : null;
+
+        $this->makeMap()->register('reuse-test', $resolver, ['Notification']);
+
+        $declarationsPath = $this->declarationsEntryPath();
+        $stored = json_decode((string) file_get_contents($declarationsPath), true);
+        $this->assertIsArray($stored);
+
+        // Neighbour.php now claims to declare the name the rename wants.
+        $neighbourPath = $this->directory . '/Neighbour.php';
+        $this->assertArrayHasKey($neighbourPath, $stored);
+        $this->assertIsArray($stored[$neighbourPath]);
+        $stored[$neighbourPath]['names'] = ['App\\Notifications\\OrderShippedNotification'];
+        file_put_contents($declarationsPath, (string) json_encode($stored));
+
+        // Change only the candidate file, so its entry is stale and Neighbour's is not.
+        file_put_contents($candidate, file_get_contents($candidate) . "\n// touched\n");
+        touch($candidate, time() - 4);
+        clearstatcache();
+
+        $collector = new RenamedClassesDataCollector();
+        $this->makeMapWith($collector)->register('reuse-test', $resolver, ['Notification']);
+
+        // Neighbour was not re-read, so its planted declaration stands and collides.
+        $this->assertSame([], $collector->getOldToNewClasses());
+    }
+
+    public function test_an_edited_file_is_re_read_rather_than_replayed(): void
+    {
+        $candidate = $this->writeSettledClass('OrderShipped.php', 'OrderShipped');
+
+        SimpleParameterProvider::setParameter(Option::PATHS, [$this->directory]);
+
+        $resolver = static fn (ClassDeclaration $declaration): ?string => $declaration->shortName === 'OrderShipped'
+            ? 'OrderShippedNotification'
+            : null;
+
+        $firstCollector = new RenamedClassesDataCollector();
+        $this->makeMapWith($firstCollector)->register('edit-test', $resolver, ['Notification']);
+        $this->assertNotSame([], $firstCollector->getOldToNewClasses());
+
+        // Rename the class on disk. A replayed entry would still claim OrderShipped.
+        file_put_contents(
+            $candidate,
+            str_replace('class OrderShipped', 'class SomethingElse', (string) file_get_contents($candidate))
+        );
+        touch($candidate, time() - 4);
+        clearstatcache();
+
+        $secondCollector = new RenamedClassesDataCollector();
+        $this->makeMapWith($secondCollector)->register('edit-test', $resolver, ['Notification']);
+
+        $this->assertSame([], $secondCollector->getOldToNewClasses());
+    }
+
+    public function test_a_deleted_file_does_not_linger_in_the_index(): void
+    {
+        $this->writeSettledClass('OrderShipped.php', 'OrderShipped');
+        $goingAway = $this->writeSettledClass('GoingAway.php', 'GoingAway');
+
+        SimpleParameterProvider::setParameter(Option::PATHS, [$this->directory]);
+
+        $resolver = static fn (ClassDeclaration $declaration): ?string => null;
+
+        $this->makeMap()->register('prune-test', $resolver, ['Notification']);
+
+        unlink($goingAway);
+        clearstatcache();
+
+        $this->makeMap()->register('prune-test', $resolver, ['Notification']);
+
+        $stored = json_decode((string) file_get_contents($this->declarationsEntryPath()), true);
+        $this->assertIsArray($stored);
+        $this->assertArrayNotHasKey($goingAway, $stored);
+    }
+
+    public function test_the_per_file_entry_stores_syntax_and_never_a_candidate_verdict(): void
+    {
+        // Whether a class is a candidate depends on reflection over its parent, which spans
+        // files and installed packages. Caching that verdict per file is the unsound design
+        // this layer exists to avoid, so the stored shape is pinned here.
+        $this->writeSettledClass('OrderShipped.php', 'OrderShipped');
+
+        SimpleParameterProvider::setParameter(Option::PATHS, [$this->directory]);
+
+        $this->makeMap()->register(
+            'shape-test',
+            static fn (ClassDeclaration $declaration): ?string => null,
+            ['Notification'],
+        );
+
+        $stored = json_decode((string) file_get_contents($this->declarationsEntryPath()), true);
+        $this->assertIsArray($stored);
+
+        $entry = $stored[$this->directory . '/OrderShipped.php'] ?? null;
+        $this->assertIsArray($entry);
+        $this->assertSame(['digest', 'names', 'classes'], array_keys($entry));
+        $this->assertIsArray($entry['classes']);
+
+        foreach ($entry['classes'] as $class) {
+            $this->assertIsArray($class);
+            $this->assertSame(['fqcn', 'shortName', 'parentFqcn', 'isAbstract'], array_keys($class));
+        }
+    }
+
+    public function test_an_unreadable_file_is_not_cached_as_declaring_nothing(): void
+    {
+        // The end-to-end shape of the same hazard: a file the scan could not open must not
+        // be remembered as empty, or it drops out of collision detection for good.
+        $this->writeSettledClass('OrderShipped.php', 'OrderShipped');
+        $unreadable = $this->writeSettledClass('Taken.php', 'OrderShippedNotification');
+
+        SimpleParameterProvider::setParameter(Option::PATHS, [$this->directory]);
+
+        chmod($unreadable, 0o000);
+        clearstatcache(true, $unreadable);
+
+        try {
+            if (is_readable($unreadable)) {
+                self::markTestSkipped('Running as a user that can read a mode-000 file.');
+            }
+
+            $this->makeMap()->register(
+                'unreadable-test',
+                static fn (ClassDeclaration $declaration): ?string => $declaration->shortName === 'OrderShipped'
+                    ? 'OrderShippedNotification'
+                    : null,
+                ['Notification'],
+            );
+
+            $stored = json_decode((string) file_get_contents($this->declarationsEntryPath()), true);
+            $this->assertIsArray($stored);
+            $this->assertArrayNotHasKey($unreadable, $stored);
+        } finally {
+            chmod($unreadable, 0o644);
+            clearstatcache(true, $unreadable);
+        }
+    }
+
+    /**
+     * The cache directory holds both the decisions entry and the per-file declarations
+     * entry; only the latter is keyed by file path.
+     */
+    private function declarationsEntryPath(): string
+    {
+        $entries = glob($this->cacheDirectory . '/hihaho-suffix-scan*/*.json');
+
+        $this->assertNotFalse($entries);
+
+        foreach ($entries as $entry) {
+            if (! str_contains((string) file_get_contents($entry), '"accepted"')) {
+                return $entry;
+            }
+        }
+
+        self::fail('no per-file declarations entry was written');
     }
 
     private function makeMap(): SuffixRenameMap

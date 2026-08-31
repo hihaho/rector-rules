@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Tests\Rector\NamingClasses\Support;
 
+use Hihaho\RectorRules\Rector\NamingClasses\Support\JsonFileStore;
 use Hihaho\RectorRules\Rector\NamingClasses\Support\ScanCache;
 use Rector\Testing\PHPUnit\AbstractLazyTestCase;
 
@@ -51,7 +52,7 @@ final class ScanCacheTest extends AbstractLazyTestCase
             'declined' => ['App\Notifications\InvoicePaid'],
         ];
 
-        $scanCache = new ScanCache($this->directory);
+        $scanCache = new ScanCache(new JsonFileStore($this->directory));
         $scanCache->store('some-key', $decisions);
 
         $this->assertSame($decisions, $scanCache->load('some-key'));
@@ -59,12 +60,12 @@ final class ScanCacheTest extends AbstractLazyTestCase
 
     public function test_a_key_that_was_never_stored_is_a_miss(): void
     {
-        $this->assertNull((new ScanCache($this->directory))->load('never-written'));
+        $this->assertNull((new ScanCache(new JsonFileStore($this->directory)))->load('never-written'));
     }
 
     public function test_a_different_key_does_not_read_another_entry(): void
     {
-        $scanCache = new ScanCache($this->directory);
+        $scanCache = new ScanCache(new JsonFileStore($this->directory));
         $scanCache->store('one-corpus', ['accepted' => [], 'declined' => ['App\Gone']]);
 
         $this->assertNull($scanCache->load('another-corpus'));
@@ -72,7 +73,7 @@ final class ScanCacheTest extends AbstractLazyTestCase
 
     public function test_a_truncated_entry_is_a_miss_rather_than_an_error(): void
     {
-        $scanCache = new ScanCache($this->directory);
+        $scanCache = new ScanCache(new JsonFileStore($this->directory));
         $scanCache->store('half-written', ['accepted' => [], 'declined' => []]);
 
         $entries = glob($this->directory . '/*.json');
@@ -86,7 +87,7 @@ final class ScanCacheTest extends AbstractLazyTestCase
 
     public function test_an_entry_of_the_wrong_shape_is_a_miss(): void
     {
-        $scanCache = new ScanCache($this->directory);
+        $scanCache = new ScanCache(new JsonFileStore($this->directory));
         $scanCache->store('foreign', ['accepted' => [], 'declined' => []]);
 
         $entries = glob($this->directory . '/*.json');
@@ -100,7 +101,7 @@ final class ScanCacheTest extends AbstractLazyTestCase
 
     public function test_a_declined_list_holding_something_other_than_class_names_is_a_miss(): void
     {
-        $scanCache = new ScanCache($this->directory);
+        $scanCache = new ScanCache(new JsonFileStore($this->directory));
         $scanCache->store('bad-declined', ['accepted' => [], 'declined' => []]);
 
         $entries = glob($this->directory . '/*.json');
@@ -123,7 +124,7 @@ final class ScanCacheTest extends AbstractLazyTestCase
             self::markTestSkipped('Running as a user that can write to a read-only directory.');
         }
 
-        $scanCache = new ScanCache($unwritable);
+        $scanCache = new ScanCache(new JsonFileStore($unwritable));
         $scanCache->store('anything', ['accepted' => [], 'declined' => []]);
 
         $this->assertNull($scanCache->load('anything'));
