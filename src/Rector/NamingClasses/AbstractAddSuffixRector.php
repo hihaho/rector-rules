@@ -28,6 +28,7 @@ abstract class AbstractAddSuffixRector extends AbstractRector
         $this->suffixRenameMap->register(
             static::class,
             fn (Class_ $class): ?string => $this->newShortNameFor($class),
+            [$this->suffix()],
         );
     }
 

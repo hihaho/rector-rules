@@ -56,6 +56,8 @@ final class AddResourceSuffixRector extends AbstractRector
         $this->suffixRenameMap->register(
             self::class,
             fn (Class_ $class): ?string => $this->newShortNameFor($class),
+            // Covers "ResourceCollection" too — the test is a substring, not a suffix.
+            ['Resource'],
         );
     }
 
