@@ -2,6 +2,50 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 0.19.0 - 2026-08-31
+
+### Fixed
+
+**Rector 2.6.5 compatibility.** Rector 2.6.5 removed `RelatedConfigInterface` ([rector-src#8395](https://github.com/rectorphp/rector-src/pull/8395)). The four suffix rules implemented it, so any run that loaded them died before analysis:
+
+```
+[ERROR] Interface "Rector\Contract\DependencyInjection\RelatedConfigInterface" not found
+
+```
+That interface was also how the rules pulled in their rename-propagation wiring — the `SuffixRenameMap` singleton, `RenameClassRector`, and `RenameDocBlockSeeTagRector`. Removing the `implements` on its own would have left the rules renaming declarations while every reference and every `@see`/`@link`/`@uses` tag kept pointing at a class that no longer exists.
+
+The wiring now lives in the package's own `config/config.php`, which reaches consumers two ways:
+
+- Imported by `config/sets/naming.php`, so `HihahoSetList::NAMING` needs nothing else. This is the recommended path.
+- Auto-included through `extra.rector.includes`, which Rector only honours when the optional `rector/extension-installer` plugin is allowed. That covers `->withRules([AddNotificationSuffixRector::class])` without a set.
+
+Both rules short-circuit on an empty rename map, so registering them unconditionally costs nothing when no rename is found.
+
+If neither path applies — the installer plugin is not allowed *and* the rule is registered directly rather than through the set — a suffix rule now aborts the run with a message naming the ways to fix it, instead of renaming declarations and leaving every reference behind.
+
+On `rector/rector` below 2.6.5 that combination used to work through `RelatedConfigInterface`, so this is a behaviour change for anyone on an older Rector who registers a suffix rule directly without the installer plugin. It fails loudly, and either switching to `HihahoSetList::NAMING` or allowing the plugin restores it.
+
+### Changed
+
+- **`rector/extension-installer` is suggested, not required.** Its generated config is what Rector's `ExtensionConfigResolver` reads to honour `extra.rector.includes`, so allowing it is what lets a `withRules([...])`-only setup keep reference propagation. It stays optional because requiring a Composer plugin would hard-fail `composer install --no-interaction` for any project whose `allow-plugins` map does not already list it.
+- `config/related/rename-propagation.php` is gone; its contents moved to `config/config.php`. It was never public API — no rule class, set list constant, set file, or configuration constant referenced it.
+- **`RenameClassRector` and `RenameDocBlockSeeTagRector` are now registered wherever `config/config.php` is loaded**, not only for runs that include a suffix rule — so any set from this package, and any consumer with the installer plugin allowed, gets them. Both return early on an empty rename map, so a run with no renames is unaffected. One visible consequence: if you configure `RenameClassRector` yourself, its renames now also get `@see`/`@link`/`@uses` tags rewritten.
+
+### Upgrading
+
+Update and re-run:
+
+```bash
+composer update hihaho/rector-rules
+vendor/bin/rector process --dry-run
+
+```
+If you pinned `rector/rector` to `>=2.6.2 <2.6.5` to work around the fatal, drop the pin.
+
+See `UPGRADING.md` for the one behaviour change and how to restore the old behaviour if it affects you.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/0.18.0...0.19.0
+
 ## 0.18.0 - 2026-08-14
 
 ### Fixed
@@ -218,6 +262,7 @@ lines of configuration.
   
   
   
+  
   ```
   The rule's purpose is unchanged — it aligns a test's request-payload field-name array
   keys with their endpoint's FormRequest constants, bidirectionally by endpoint (internal →
@@ -411,6 +456,7 @@ serialized in an argument-count-sensitive way.
   
   
   
+  
   ```
   Dropping the all-default `1` (or `60, 1`) there is value-equivalent but changes the
   serialized string, and the parser can't see that coupling. `exclude_calls` lets a
@@ -422,6 +468,7 @@ serialized in an argument-count-sensitive way.
           \Illuminate\Routing\Middleware\ThrottleRequests::class => ['with'],
       ],
   ])
+  
   
   
   
@@ -461,6 +508,7 @@ feedback.
   ```diff
   -$query->has('posts', '=', 1);   // 0.11.1 dropped the 1 →
   +$query->has('posts', '=');      // ...leaving the comparison operator without its operand
+  
   
   
   
@@ -544,6 +592,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   
   
   
+  
   ```
   By default it drops an already-named default argument (order-independent) or a
   trailing positional default (iteratively), and it fires on any callee — those drops
@@ -567,6 +616,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   ```diff
   -$store->paginate(1, perPage: 50);
   +$store->paginate(page: 1, perPage: 50);
+  
   
   
   
@@ -615,11 +665,13 @@ explicit `config()->set()` form.
   
   
   
+  
   ```
   into the explicit setter form:
   
   ```php
   config()->set('queue.default', 'sync');
+  
   
   
   
@@ -721,6 +773,7 @@ in `MiddlewareStringToClassRector`'s default surfaced by real-world adoption.
           'auth', 'auth.basic', 'can', 'guest', 'password.confirm', 'signed', 'verified',
       ],
   ])
+  
   
   
   
@@ -886,6 +939,7 @@ Laravel's class-based fluent form.
   
   
   
+  
   ```
   It is **not in any set** and reachable by FQN only — Laravel doesn't document
   this form as a recommended convention, so adopting it is a deliberate choice.
@@ -942,6 +996,7 @@ type only resolves under a PHPStan extension such as larastan.
   ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
       NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
   ])
+  
   
   
   
@@ -1020,6 +1075,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   
   
@@ -1324,11 +1380,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -1391,6 +1449,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -1535,6 +1594,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -1542,6 +1602,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
