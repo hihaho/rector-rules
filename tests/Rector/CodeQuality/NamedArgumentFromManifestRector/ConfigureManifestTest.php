@@ -15,8 +15,7 @@ use ReflectionProperty;
 /**
  * Unit-tests the manifest loading/validation in configure(), independent of the
  * Rector fixture harness. Extends Rector's lazy test base (not a bare PHPUnit
- * TestCase) for the same reason {@see \Hihaho\RectorRules\Tests\Caching\ManifestCacheMetaExtensionTest}
- * does: its setUp pulls in Rector's scoper autoload, so loading a class that
+ * TestCase) because its setUp pulls in Rector's scoper autoload, so loading a class that
  * implements a Rector contract doesn't double-declare the bundled symfony
  * polyfill on the Windows prefer-lowest CI leg.
  */

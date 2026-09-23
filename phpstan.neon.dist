@@ -45,16 +45,6 @@ parameters:
             identifier: ternary.condNotBoolean
             reportUnmatched: false
 
-        # ManifestCacheMetaExtension is @deprecated (Rector 2.6 retired the interface it
-        # implements) but is public API, so it keeps a deprecation cycle instead of being
-        # removed outright — and its test has to keep exercising it until then.
-        -
-            identifier: method.deprecatedClass
-            path: tests/Caching/ManifestCacheMetaExtensionTest.php
-        -
-            identifier: new.deprecatedClass
-            path: tests/Caching/ManifestCacheMetaExtensionTest.php
-
         # Option::PATHS is how a rule learns which paths the consumer configured — the
         # suffix rules need it to build their rename map before traversal starts.
         # Option::REGISTERED_RECTOR_RULES is likewise the only place a registration test

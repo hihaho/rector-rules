@@ -3,6 +3,29 @@
 Migration notes for breaking changes, newest first. Patch and minor releases
 without a breaking change are not listed here — see the `CHANGELOG.md`.
 
+## 1.0.0
+
+### `ManifestCacheMetaExtension` is removed
+
+Only affects a `rector.php` that binds and tags
+`Hihaho\RectorRules\Caching\ManifestCacheMetaExtension`. It was deprecated because
+Rector 2.6 retired the `CacheMetaExtensionInterface` it implements, so on current Rector
+it no longer did anything.
+
+Delete the `singleton()` + `tag()` lines and run the manifest- or route-driven pass without
+the cache instead:
+
+```php
+// before
+$rectorConfig->singleton(ManifestCacheMetaExtension::class, fn () => new ManifestCacheMetaExtension($manifest));
+$rectorConfig->tag(ManifestCacheMetaExtension::class, CacheMetaExtensionInterface::class);
+```
+
+```bash
+# after
+vendor/bin/rector process --no-cache
+```
+
 ## 0.22.0
 
 ### `newShortNameFor()` takes a `ClassDeclaration`, not a `Class_`

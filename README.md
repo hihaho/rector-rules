@@ -281,43 +281,9 @@ single structurally-invalid record (missing key, wrong scalar type, or an empty
 **The manifest is invisible to Rector's cache.** Rector keys each file's cache on
 the source content plus the configuration *parameters* — never the content of a
 file a rule points at. So a regenerated manifest with new findings, over
-unchanged source, is served from cache and **silently skipped**. Two ways to stay
-correct:
-
-- **Run the pass with `rector process --no-cache`** (or `--clear-cache`). Simplest;
-  fits the regenerate-then-apply workflow, where the manifest changes every cycle
-  anyway.
-- **Register `ManifestCacheMetaExtension`** to fold the manifest's hash into the
-  cache key, so Rector reprocesses exactly when the manifest content changes and
-  keeps the cache while it is stable (useful for a standing CI Rector check). Bind
-  it with the manifest path and tag it directly — do *not* use
-  `cacheMetaExtension()`, which re-binds the class to autowiring and drops the
-  path:
-
-  ```php
-  use Hihaho\RectorRules\Caching\ManifestCacheMetaExtension;
-  use Rector\Caching\Contract\CacheMetaExtensionInterface;
-
-  $manifest = __DIR__ . '/named-arguments-manifest.json';
-  $rectorConfig->ruleWithConfiguration(NamedArgumentFromManifestRector::class, [
-      NamedArgumentFromManifestRector::MANIFEST => $manifest,
-  ]);
-  $rectorConfig->singleton(ManifestCacheMetaExtension::class, fn () => new ManifestCacheMetaExtension($manifest));
-  $rectorConfig->tag(ManifestCacheMetaExtension::class, CacheMetaExtensionInterface::class);
-  ```
-
-  This wiring needs the **classic `RectorConfig` callback style** (a `$rectorConfig`
-  parameter). The fluent `RectorConfig::configure()->withConfiguredRule(...)` builder
-  cannot register a tagged singleton, so put the `ManifestCacheMetaExtension`
-  `singleton()` + `tag()` in a classic-style config file (the rule itself can still be
-  configured either way).
-
-  Pointing at **more than one** manifest (a future manifest-driven rule, or one rule
-  reading several manifests)? Register **one** extension and pass it **every** manifest
-  path — `new ManifestCacheMetaExtension($manifestA, $manifestB)`.
-  A cache-meta extension is keyed by one identifier, so a second instance would
-  collide with the first; one instance folds all the manifests together, reprocessing
-  when any of them changes.
+unchanged source, is served from cache and **silently skipped**. Run the pass with
+`rector process --no-cache` (or `--clear-cache`); that fits the regenerate-then-apply
+workflow, where the manifest changes every cycle anyway.
 
 > **Running under an agent wrapper?** `laravel/pao` rewrites `--error-format` (and can
 > interfere with Rector's stream handling), so run the manifest pass with `PAO_DISABLE=1`
@@ -740,11 +706,8 @@ It is **not in any set** and is a **no-op until configured**. Three config value
 reflected request constants), but Rector keys its per-file cache on the *test* file's
 content and the config *parameters* — not the route files' content. So with caching on, a
 route change (a new route, a moved middleware, a renamed constant) over unchanged test
-files would be served stale until you clear the cache. Fold the route files into the cache
-key the same way the manifest rules do: register `ManifestCacheMetaExtension` with your
-route file paths (it hashes any file paths you give it), or run the rule's pass with
-`rector process --no-cache`. See the cache note under `NamedArgumentFromManifestRector`
-above for the singleton-binding wiring.
+files would be served stale until you clear the cache. Run the rule's pass with
+`rector process --no-cache` (or `--clear-cache`) after changing route files.
 
 **Correlation is same-call-site:** the rule rewrites a payload only where the verb call
 names its route directly — `$this->postJson(route('orders.store'), ['id' => …])`. The
