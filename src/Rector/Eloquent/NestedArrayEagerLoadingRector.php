@@ -223,13 +223,7 @@ CODE_SAMPLE,
 
             [$prefix, $remainder] = $result;
 
-            $foundGroupId = null;
-            foreach ($groupPrefixes as $gid => $gPrefix) {
-                if ($this->nodeComparator->areNodesEqual($gPrefix, $prefix)) {
-                    $foundGroupId = $gid;
-                    break;
-                }
-            }
+            $foundGroupId = $this->findGroupId($groupPrefixes, $prefix);
 
             if ($foundGroupId === null) {
                 $foundGroupId = count($groupPrefixes);
@@ -252,6 +246,21 @@ CODE_SAMPLE,
         $array->items = $this->buildGroupedItems($array->items, $groupPrefixes, $groupRemainders, $itemGroupIds);
 
         return $array;
+    }
+
+    /**
+     * @param array<int<0, max>, Expr> $groupPrefixes
+     * @return int<0, max>|null
+     */
+    private function findGroupId(array $groupPrefixes, Expr $prefix): ?int
+    {
+        foreach ($groupPrefixes as $groupId => $groupPrefix) {
+            if ($this->nodeComparator->areNodesEqual($groupPrefix, $prefix)) {
+                return $groupId;
+            }
+        }
+
+        return null;
     }
 
     /**
