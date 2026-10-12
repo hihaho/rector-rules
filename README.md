@@ -81,9 +81,11 @@ non-nullable type"); this rule *fixes* it, so the two complement each other.
   immediate receiver is provably non-null — so in a chain like
   `$resource?->maybePoster?->original` only the load-bearing nullsafe survives.
 - Nullability is read from the PHPStan `Scope` (`getNativeType`), which resolves a
-  `?Foo` receiver to `Foo|null` and leaves it untouched. A receiver that is
-  `mixed`/unknown, a union with a scalar, or possibly-null is always left alone —
-  the rule only removes a `?->` it can prove is redundant.
+  `?Foo` receiver to `Foo|null` and leaves it untouched. A method-call or static-call
+  receiver is read from the called method's declared return type instead. A receiver
+  that is `mixed`/unknown, a union with a scalar, possibly-null, or a function call or
+  `new` expression is always left alone — the rule only removes a `?->` it can prove
+  is redundant.
 - By default it ignores phpdoc-only non-nullability (e.g. an Eloquent `@property`),
   so a stale annotation can't cause a wrong removal. Pass
   `['trust_phpdoc_types' => true]` via `withConfiguredRule()` to also trust phpdoc.
