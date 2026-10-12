@@ -1,3 +1,35 @@
+## Project Conventions
+
+```yaml
+schema-version: 1
+github:
+  owner: hihaho
+  repo: rector-rules
+  default_base_branch: main
+testing:
+  backend_framework: pest
+  forbid:
+    - dusk
+codex:
+  invocation_mode: plugin
+spec:
+  filename_pattern: 'specs/{slug}.md'
+fixtures:
+  anonymization:
+    guideline: .ai/guidelines/anonymize-public-examples.md
+    scope:
+      - tests/
+      - src/
+      - docs/
+      - README.md
+      - specs/
+    forbidden_terms:
+      - Video
+      - videos
+      - caliper
+      - adaptive
+```
+
 # Anonymize Fixtures, Docs, and Specs
 
 This is a **public, open-source repository**. Test fixtures, the rule

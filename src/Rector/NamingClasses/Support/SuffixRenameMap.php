@@ -49,13 +49,6 @@ final class SuffixRenameMap implements ResettableInterface
     private array $scanned = [];
 
     /**
-     * Renames to apply to the filesystem once the run has written its changes.
-     *
-     * @var list<array{path: string, oldShortName: string, newShortName: string}>
-     */
-    private array $pendingFileRenames = [];
-
-    /**
      * Every rename this service registered, `$oldFqcn => $newFqcn`. The rules consult
      * it so a class the scan declined (a collision) is not renamed in isolation.
      *
@@ -70,8 +63,6 @@ final class SuffixRenameMap implements ResettableInterface
      * @var array<string, true>
      */
     private array $declined = [];
-
-    private bool $shutdownRegistered = false;
 
     private ?Parser $parser = null;
 
@@ -98,18 +89,21 @@ final class SuffixRenameMap implements ResettableInterface
 
     private readonly ScanCacheKeys $scanCacheKeys;
 
+    private readonly PendingFileRenames $pendingFileRenames;
+
     public function __construct(
         private readonly RenamedClassesDataCollector $renamedClassesDataCollector,
         private readonly Skipper $skipper,
     ) {
         $this->corpusFiles = new CorpusFiles();
         $this->scanCacheKeys = new ScanCacheKeys($this->corpusFiles, (new PackageFingerprint())->resolve());
+        $this->pendingFileRenames = new PendingFileRenames($this->declaresShortName(...));
     }
 
     public function reset(): void
     {
         $this->scanned = [];
-        $this->pendingFileRenames = [];
+        $this->pendingFileRenames->reset();
         $this->renames = [];
         $this->declined = [];
         $this->scanByFile = [];
@@ -508,73 +502,15 @@ final class SuffixRenameMap implements ResettableInterface
             return;
         }
 
-        $this->pendingFileRenames[] = [
-            'path' => $candidate['path'],
-            'oldShortName' => $candidate['oldShortName'],
-            'newShortName' => $candidate['newShortName'],
-        ];
-
-        $this->registerShutdownFlush();
-    }
-
-    private function registerShutdownFlush(): void
-    {
-        if ($this->shutdownRegistered) {
-            return;
-        }
-
-        $this->shutdownRegistered = true;
-
-        register_shutdown_function(function (): void {
-            $this->flushFileRenames();
-        });
+        $this->pendingFileRenames->add($candidate['path'], $candidate['oldShortName'], $candidate['newShortName']);
     }
 
     /**
-     * Rector has no file-move API, so the rename happens after the run has written
-     * every file. Each guard below also makes `--dry-run` a no-op: nothing was
-     * written, so the new class name is never found on disk.
-     *
      * @internal exposed for tests; not part of the public API
      */
     public function flushFileRenames(): void
     {
-        foreach ($this->pendingFileRenames as $pendingFileRename) {
-            $path = $pendingFileRename['path'];
-
-            if (! is_file($path)) {
-                continue;
-            }
-
-            // Rector did not write the rename — a dry run, or another worker owns this
-            // file. Parsed rather than grepped, so a mention of the name in a comment or
-            // a string literal cannot be mistaken for the declaration.
-            if (! $this->declaresShortName($path, $pendingFileRename['newShortName'])) {
-                continue;
-            }
-
-            $destination = dirname($path) . '/' . $pendingFileRename['newShortName'] . '.php';
-
-            if (file_exists($destination)) {
-                continue;
-            }
-
-            if (! @rename($path, $destination)) {
-                // Loud, because the tree is now inconsistent: the class was renamed but
-                // its file was not, so it no longer autoloads.
-                fwrite(
-                    STDERR,
-                    sprintf(
-                        '[hihaho/rector-rules] Could not rename "%s" to "%s". The class was renamed but the file was not, so it will not autoload. Rename it by hand.%s',
-                        $path,
-                        basename($destination),
-                        PHP_EOL,
-                    ),
-                );
-            }
-        }
-
-        $this->pendingFileRenames = [];
+        $this->pendingFileRenames->flush();
     }
 
     /**
