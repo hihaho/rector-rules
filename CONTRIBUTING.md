@@ -71,5 +71,6 @@ PHPStan runs at `level: max` with strict rules. If a finding looks like a real b
 
 - One rule or behavior change per PR keeps review easy.
 - Update `CHANGELOG.md` under the `## Unreleased` section.
-- If you add a rule, update `README.md` so the set table stays in sync.
+- If you add a rule, update `README.md` so the set table stays in sync, and add its
+  before/after diff and scope notes to the matching page under `docs/`.
 - Fixture files should stay minimal — one concern per fixture.

@@ -5,6 +5,9 @@
 *.md diff=markdown
 *.php diff=php
 
+# Docs site — published to GitHub Pages, not needed in the dist archive
+docs/ export-ignore
+
 # >>> package-boost (managed) >>>
 .agents/ export-ignore
 .ai/ export-ignore

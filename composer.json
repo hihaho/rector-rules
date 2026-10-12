@@ -17,7 +17,7 @@
     "support": {
         "issues": "https://github.com/hihaho/rector-rules/issues",
         "source": "https://github.com/hihaho/rector-rules",
-        "docs": "https://guidelines.hihaho.com"
+        "docs": "https://hihaho.github.io/rector-rules/"
     },
     "autoload": {
         "psr-4": {

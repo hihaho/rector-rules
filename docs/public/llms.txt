@@ -1,0 +1,43 @@
+# Hihaho Rector Rules
+
+> Rector rules that enforce the Hihaho Laravel conventions by rewriting code, not reporting it. A Composer dev dependency (`hihaho/rector-rules`) grouped into seven set-list constants you enable in `rector.php`. It ships no service provider and no publishable config.
+
+Key properties an agent should know before using it:
+
+- **Sets are the interface.** Consumers enable `Hihaho\RectorRules\Set\HihahoSetList::ALL` or an individual set constant. Referencing a rule class by FQN works too, and is required for the four opt-in rules.
+- **Four rules are in no set and are a no-op until configured.** `NamedArgumentFromManifestRector` (needs a manifest path), `MiddlewareStringToClassRector`, `FlagColumnToBooleanRector` (needs `confirm_mysql_compatible`, and is only safe on MySQL/MariaDB), `TestFieldStringToConstantRector` (needs route files and every internal-middleware token). Do not suggest these as part of a set.
+- **Two sets gate on file location.** The routing rules run only on files under a `routes/` directory, the migration rules only under a `migrations/` directory; both skip `/vendor/`. A rule that "does not fire" is usually a `withPaths()` problem, not a bug.
+- **The naming set moves files and rewrites references.** `Add*SuffixRector` renames the declaration, rewrites every reference (including `@see`/`@link`/`@uses` docblock tags, via `RenameClassRector` and `RenameDocBlockSeeTagRector` from the package's `config/config.php`), and renames the declaring file after the run. Registering one of these rules through `->withRules()` instead of `HihahoSetList::NAMING` needs `rector/extension-installer`; without it the rule aborts the run. The pre-scan also needs paths in `withPaths()`, not only on the command line.
+- **Verify-or-skip is the design.** Rules leave code untouched when they cannot prove the rewrite preserves behaviour. A conversion that did not happen is expected, not a defect to work around.
+- **Flag-naming rules are first-party only.** They read parameter names by reflection, and vendor parameter names change under semver, so they fire only for namespaces in `first_party_namespaces` (default `App\`).
+- **Two rules are invisible to Rector's cache.** `NamedArgumentFromManifestRector` and `TestFieldStringToConstantRector` derive rewrites from files Rector does not hash (a manifest, your route files). Run those passes with `--no-cache` or `--clear-cache`, or a stale result is served silently.
+- **Public API is narrow.** Rule class FQNs, `HihahoSetList` constants, the `config/sets/` files, and a configurable rule's public config constants. A rule's `refactor()` logic and the `Concerns/` traits are not public API.
+
+## Formats
+
+- [llms-full.txt](https://hihaho.github.io/rector-rules/llms-full.txt): every page below, in reading order, in one fetch
+- Any page is also served as markdown at its own URL plus `.md` (for example [code-quality.md](https://hihaho.github.io/rector-rules/code-quality.md))
+
+## Docs
+
+- [Why hihaho/rector-rules?](https://hihaho.github.io/rector-rules/why-rector-rules): what the rules rewrite, the five refusals that shape every rule, and when phpstan-rules, rector-laravel or Pint is the right tool instead
+- [Installation](https://hihaho.github.io/rector-rules/installation): requirements (PHP 8.3+, Rector 2.6+, Laravel 12/13), enabling `ALL` or individual sets, and the `withPaths()` requirement for the location-gated sets
+- [Getting started](https://hihaho.github.io/rector-rules/getting-started): dry run, reading the diff output, exit code 2 on pending changes, and the `PAO_DISABLE=1` workaround
+- [Code quality](https://hihaho.github.io/rector-rules/code-quality): 5 rules covering nullsafe removal, native and first-party flag naming, `config()->set()`, default-argument dropping; plus `cascade_*`, `exclude_calls` and `first_party_namespaces`
+- [Eloquent](https://hihaho.github.io/rector-rules/eloquent): 4 rules covering `#[CollectedBy]` and `#[ObservedBy]` conversions (the former gated to `final` on Laravel 12), nested eager loading, relation names as class constants
+- [Naming](https://hihaho.github.io/rector-rules/naming): 4 rules covering the `Command`, `Mail`, `Notification`, `Resource` and `ResourceCollection` suffixes, and the classes that are skipped
+- [Routing](https://hihaho.github.io/rector-rules/routing): 2 rules covering route-path normalization for 7 verbs, array route groups to fluent chains for 9 supported keys
+- [Migrations](https://hihaho.github.io/rector-rules/migrations): 2 rules covering `->after()` removal (INSTANT DDL), class-constant inlining; plus the opt-in MySQL-only `FlagColumnToBooleanRector`
+- [Imports](https://hihaho.github.io/rector-rules/imports): 1 rule. Its alias map is supplied by the set, not the rule; configuring it replaces the whole map; a taken alias skips the file
+- [Testing](https://hihaho.github.io/rector-rules/testing): 2 rules covering table string to model class (verify-or-skip), and `assertDatabaseHas(Model::class, ['id' => …])` to `assertModelExists()`
+
+## Opt-in rules
+
+- [Named arguments from a manifest](https://hihaho.github.io/rector-rules/named-argument-manifest): the manifest JSON schema, when to load a PHPStan config instead, and the cache-staleness trap
+- [Middleware strings to classes](https://hihaho.github.io/rector-rules/middleware-string-to-class): the five behaviour-safe aliases, why `auth`/`guest` are excluded, and the `throttle` caveat that needs an explicit class
+- [Test payload field names](https://hihaho.github.io/rector-rules/test-field-constants): the internal/public asymmetry, the `INTERNAL_MIDDLEWARE` config contract, and the boundary cases that make a route skip
+
+## Optional
+
+- [Source and issues](https://github.com/hihaho/rector-rules)
+- [Static-analysis counterparts](https://github.com/hihaho/phpstan-rules)

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://hihaho.github.io/rector-rules/sitemap.xml
