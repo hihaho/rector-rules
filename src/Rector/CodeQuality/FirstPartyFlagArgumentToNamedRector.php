@@ -202,8 +202,10 @@ CODE_SAMPLE,
         $hasNamed = false;
         $hasPositional = false;
         foreach ($args as $arg) {
-            if ($arg->name instanceof Identifier) {
+            if ($this->isNamedInSource($arg)) {
                 $hasNamed = true;
+            } elseif ($arg->name instanceof Identifier) {
+                continue;
             } elseif (! $arg->unpack) {
                 $hasPositional = true;
             }
@@ -231,7 +233,7 @@ CODE_SAMPLE,
                 return false;
             }
 
-            if ($arg->name instanceof Identifier) {
+            if ($this->isNamedInSource($arg)) {
                 $hasNamed = true;
             }
         }
@@ -255,7 +257,7 @@ CODE_SAMPLE,
                 continue;
             }
 
-            $arg->name = new Identifier($parameter->getName());
+            $this->nameArgument($arg, $parameter->getName());
             $changed = true;
         }
 

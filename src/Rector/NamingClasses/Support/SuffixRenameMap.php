@@ -22,6 +22,7 @@ use Rector\Configuration\RenamedClassesDataCollector;
 use Rector\Contract\DependencyInjection\ResettableInterface;
 use Rector\Renaming\Rector\Name\RenameClassRector;
 use Rector\Skipper\Skipper\Skipper;
+use Rector\Skipper\ValueObject\SkipMatch;
 use Throwable;
 
 /**
@@ -255,10 +256,16 @@ final class SuffixRenameMap implements ResettableInterface
             // A file the consumer skipped is never processed, so its declaration would
             // stay put while references to it got rewritten — a broken tree. Both a
             // global skip and one scoped to this rule count.
-            // `shouldSkipElementAndFilePath()` rather than `matchSkip()`: the latter does
-            // not exist in the `rector/rector` floor this package supports, and would only
-            // fail on CI's prefer-lowest leg.
-            if ($this->skipper->shouldSkipFilePath($filePath) || $this->skipper->shouldSkipElementAndFilePath($key, $filePath)) {
+            if ($this->skipper->shouldSkipFilePath($filePath)) {
+                continue;
+            }
+
+            // A rule-scoped skip that applies here is marked used, so Rector does not
+            // report it as unused.
+            $skipMatch = $this->skipper->matchSkip($key, $filePath);
+            if ($skipMatch instanceof SkipMatch) {
+                $this->skipper->markSkipUsed($skipMatch);
+
                 continue;
             }
 
