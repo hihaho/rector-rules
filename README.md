@@ -13,7 +13,7 @@ For the static-analysis counterparts (rules that flag code but don't rewrite it)
 ## Requirements
 
 - PHP `^8.3`
-- Rector `^2.0`
+- Rector `^2.6`
 - Laravel `^12` or `^13` (rules reference `Illuminate\…` classes)
 
 ## Installation
