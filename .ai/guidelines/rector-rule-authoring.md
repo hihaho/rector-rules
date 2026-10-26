@@ -25,9 +25,10 @@ logic. `refactor()` runs on every matching node in the consumer's codebase, so:
 ## `provideMinPhpVersion()`: use `PhpVersion::PHP_*`, not a new `PhpVersionFeature::*`
 
 `PhpVersionFeature` feature aliases can be **newer than the `rector/rector`
-floor** in `composer.json` (`^2.4.1`). `PhpVersionFeature::NAMED_ARGUMENTS`, for
-instance, does not exist in the floor and throws `Undefined constant` on the CI
-`prefer-lowest` leg — green locally (latest Rector), red in CI.
+floor** in `composer.json`. `PhpVersionFeature::NAMED_ARGUMENTS`, for instance,
+did not exist in the former `^2.4.1` floor and threw `Undefined constant` on the CI
+`prefer-lowest` leg — green locally (latest Rector), red in CI. Rector also
+deprecates feature aliases (`NULLSAFE_OPERATOR` in 2.8), which PHPStan reports.
 
 Return a stable `Rector\ValueObject\PhpVersion::PHP_8X` constant instead (e.g.
 `PhpVersion::PHP_80` for a PHP-8.0 feature), unless you have confirmed the
