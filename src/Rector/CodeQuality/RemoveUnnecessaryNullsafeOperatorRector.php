@@ -23,7 +23,7 @@ use PHPStan\Type\TypeCombinator;
 use Rector\Contract\Rector\ConfigurableRectorInterface;
 use Rector\NodeTypeResolver\Node\AttributeKey;
 use Rector\Rector\AbstractRector;
-use Rector\ValueObject\PhpVersionFeature;
+use Rector\ValueObject\PhpVersion;
 use Rector\VersionBonding\Contract\MinPhpVersionInterface;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\ConfiguredCodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
@@ -178,6 +178,6 @@ CODE_SAMPLE,
 
     public function provideMinPhpVersion(): int
     {
-        return PhpVersionFeature::NULLSAFE_OPERATOR;
+        return PhpVersion::PHP_80;
     }
 }

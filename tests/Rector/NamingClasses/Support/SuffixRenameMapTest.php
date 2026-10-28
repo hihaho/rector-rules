@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Tests\Rector\NamingClasses\Support;
 
+use Hihaho\RectorRules\Rector\NamingClasses\AddNotificationSuffixRector;
 use Hihaho\RectorRules\Rector\NamingClasses\Support\ClassDeclaration;
 use Hihaho\RectorRules\Rector\NamingClasses\Support\SuffixRenameMap;
 use InvalidArgumentException;
@@ -11,6 +12,7 @@ use Rector\Configuration\Option;
 use Rector\Configuration\Parameter\SimpleParameterProvider;
 use Rector\Configuration\RenamedClassesDataCollector;
 use Rector\Skipper\Skipper\Skipper;
+use Rector\Skipper\ValueObject\SkipMatch;
 use Rector\Testing\PHPUnit\AbstractLazyTestCase;
 
 /**
@@ -173,6 +175,38 @@ final class SuffixRenameMapTest extends AbstractLazyTestCase
 
             $this->makeMapWith($renamedClassesDataCollector)->register(
                 'skip-test',
+                static fn (ClassDeclaration $declaration): string => 'OrderShippedNotification',
+                ['Notification'],
+            );
+
+            $this->assertSame([], $renamedClassesDataCollector->getOldToNewClasses());
+        } finally {
+            SimpleParameterProvider::setParameter(Option::SKIP, $originalSkip);
+            SimpleParameterProvider::setParameter(Option::PATHS, $originalPaths);
+        }
+    }
+
+    public function test_the_scan_ignores_a_file_the_consumer_skipped_for_this_rule(): void
+    {
+        $this->writeClass('OrderShipped.php', 'OrderShipped');
+
+        $originalSkip = SimpleParameterProvider::provideArrayParameter(Option::SKIP);
+        $originalPaths = SimpleParameterProvider::provideArrayParameter(Option::PATHS);
+
+        SimpleParameterProvider::setParameter(Option::SKIP, [AddNotificationSuffixRector::class => [$this->directory . '/*']]);
+        SimpleParameterProvider::setParameter(Option::PATHS, [$this->directory]);
+
+        try {
+            $skipper = $this->make(Skipper::class);
+
+            if (! $skipper->matchSkip(AddNotificationSuffixRector::class, $this->directory . '/OrderShipped.php') instanceof SkipMatch) {
+                self::markTestSkipped("Rector's skipped-class cache was populated before this test could configure a skip.");
+            }
+
+            $renamedClassesDataCollector = new RenamedClassesDataCollector();
+
+            $this->makeMapWith($renamedClassesDataCollector)->register(
+                AddNotificationSuffixRector::class,
                 static fn (ClassDeclaration $declaration): string => 'OrderShippedNotification',
                 ['Notification'],
             );

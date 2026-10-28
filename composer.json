@@ -41,7 +41,7 @@
     "prefer-stable": true,
     "require": {
         "php": "^8.3",
-        "rector/rector": "^2.4.1",
+        "rector/rector": "^2.6.0",
         "symplify/rule-doc-generator-contracts": "^11.2"
     },
     "require-dev": {

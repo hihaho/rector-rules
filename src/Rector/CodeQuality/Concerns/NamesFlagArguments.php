@@ -16,6 +16,24 @@ use PHPStan\Reflection\ParameterReflection;
 trait NamesFlagArguments
 {
     /**
+     * Set on every argument a flag rule names. Rector 2.8 runs a rule again on a
+     * node it just changed, so this tells an argument named in the source apart
+     * from one the rule named on an earlier pass.
+     */
+    private const string NAMED_BY_FLAG_RULE = 'hihaho_named_by_flag_rule';
+
+    private function isNamedInSource(Arg $arg): bool
+    {
+        return $arg->name instanceof Identifier && $arg->getAttribute(self::NAMED_BY_FLAG_RULE) !== true;
+    }
+
+    private function nameArgument(Arg $arg, string $name): void
+    {
+        $arg->name = new Identifier($name);
+        $arg->setAttribute(self::NAMED_BY_FLAG_RULE, true);
+    }
+
+    /**
      * True when $arg is a positional, non-unpacked bare `true`/`false`/`null`
      * literal. An already-named arg, an unpacked arg (`...$args`), or any
      * non-literal (variable, const, enum case) is not an opaque flag.
@@ -55,7 +73,7 @@ trait NamesFlagArguments
             return false;
         }
 
-        $arg->name = new Identifier($paramName);
+        $this->nameArgument($arg, $paramName);
 
         return true;
     }
@@ -130,7 +148,7 @@ trait NamesFlagArguments
         for ($index = $start, $count = count($args); $index < $count; ++$index) {
             $arg = $args[$index];
             if (! $arg->name instanceof Identifier) {
-                $arg->name = new Identifier($parameters[$index]->getName());
+                $this->nameArgument($arg, $parameters[$index]->getName());
             }
         }
 
