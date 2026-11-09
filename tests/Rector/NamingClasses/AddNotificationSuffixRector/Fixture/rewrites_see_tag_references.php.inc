@@ -20,7 +20,7 @@ class OrderShipped extends Notification
 class OrderShippedDispatcher
 {
     /**
-     * @param  OrderShipped  $notification
+     * @param OrderShipped $notification
      * @return OrderShipped
      */
     public function passThrough(OrderShipped $notification): OrderShipped

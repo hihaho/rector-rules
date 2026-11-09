@@ -243,8 +243,8 @@ CODE_SAMPLE,
         }
 
         $changed = false;
-        foreach ($args as $index => $arg) {
-            if ($arg->name instanceof Identifier) {
+        foreach ($args as $index => $positionalArg) {
+            if ($positionalArg->name instanceof Identifier) {
                 continue;
             }
 
@@ -257,7 +257,7 @@ CODE_SAMPLE,
                 continue;
             }
 
-            $this->nameArgument($arg, $parameter->getName());
+            $this->nameArgument($positionalArg, $parameter->getName());
             $changed = true;
         }
 

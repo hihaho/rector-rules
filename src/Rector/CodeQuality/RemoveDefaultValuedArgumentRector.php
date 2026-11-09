@@ -344,12 +344,12 @@ CODE_SAMPLE,
 
         $firstRemoved = min($removedPositions);
         $renames = [];
-        foreach ($positionalIndexes as $position => $argIndex) {
-            if ($argIndex <= $firstRemoved) {
+        foreach ($positionalIndexes as $position => $positionalIndex) {
+            if ($positionalIndex <= $firstRemoved) {
                 continue;
             }
 
-            if (isset($remove[$argIndex])) {
+            if (isset($remove[$positionalIndex])) {
                 continue;
             }
 
@@ -360,7 +360,7 @@ CODE_SAMPLE,
                 return [[], []];
             }
 
-            $renames[$argIndex] = $parameter->getName();
+            $renames[$positionalIndex] = $parameter->getName();
         }
 
         return [array_keys($remove), $renames];
