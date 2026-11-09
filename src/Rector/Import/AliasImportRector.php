@@ -30,13 +30,14 @@ use PhpParser\Node\Stmt\Use_;
 use PhpParser\Node\Stmt\While_;
 use PhpParser\Node\UseItem;
 use PhpParser\NodeVisitor;
+use PHPStan\PhpDocParser\Ast\AbstractNodeVisitor;
 use PHPStan\PhpDocParser\Ast\Node as PhpDocAstNode;
+use PHPStan\PhpDocParser\Ast\NodeTraverser as PhpDocNodeTraverser;
 use PHPStan\PhpDocParser\Ast\Type\IdentifierTypeNode;
 use Rector\BetterPhpDocParser\PhpDocInfo\PhpDocInfo;
 use Rector\BetterPhpDocParser\PhpDocInfo\PhpDocInfoFactory;
 use Rector\Comments\NodeDocBlock\DocBlockUpdater;
 use Rector\Contract\Rector\ConfigurableRectorInterface;
-use Rector\PhpDocParser\PhpDocParser\PhpDocNodeTraverser;
 use Rector\PhpParser\Node\FileNode;
 use Rector\Rector\AbstractRector;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\ConfiguredCodeSample;
@@ -377,29 +378,37 @@ CODE_SAMPLE,
             return null;
         }
 
-        $renames = $this->shortNameRenames;
-        $hasChanged = false;
+        // phpstan/phpdoc-parser's traverser, not Rector's PhpDocNodeTraverser:
+        // Rector 2.8.2 removed that class.
+        $visitor = new class ($this->shortNameRenames) extends AbstractNodeVisitor {
+            public bool $hasChanged = false;
 
-        $traverser = new PhpDocNodeTraverser();
-        $traverser->traverseWithCallable(
-            $phpDocInfo->getPhpDocNode(),
-            '',
-            static function (PhpDocAstNode $docNode) use ($renames, &$hasChanged): ?IdentifierTypeNode {
-                if (! $docNode instanceof IdentifierTypeNode) {
+            /**
+             * @param array<string, string> $renames
+             */
+            public function __construct(
+                private readonly array $renames,
+            ) {}
+
+            public function enterNode(PhpDocAstNode $node): ?IdentifierTypeNode
+            {
+                if (! $node instanceof IdentifierTypeNode) {
                     return null;
                 }
 
-                if (! isset($renames[$docNode->name])) {
+                if (! isset($this->renames[$node->name])) {
                     return null;
                 }
 
-                $hasChanged = true;
+                $this->hasChanged = true;
 
-                return new IdentifierTypeNode($renames[$docNode->name]);
-            },
-        );
+                return new IdentifierTypeNode($this->renames[$node->name]);
+            }
+        };
 
-        if (! $hasChanged) {
+        (new PhpDocNodeTraverser([$visitor]))->traverse([$phpDocInfo->getPhpDocNode()]);
+
+        if (! $visitor->hasChanged) {
             return null;
         }
 
