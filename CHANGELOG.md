@@ -2,6 +2,18 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 1.2.1 - 2026-11-09
+
+### Changed
+
+- Moved the rule reference from the README to a documentation site at https://hihaho.github.io/rector-rules/.
+
+### Fixed
+
+- Fixed `AliasImportRector` failing with `Class "Rector\PhpDocParser\PhpDocParser\PhpDocNodeTraverser" not found` on Rector 2.8.2 and later. The error occurred when the rule renamed an import that a docblock also used.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/1.2.0...1.2.1
+
 ## 1.2.0 - 2026-10-26
 
 ### Changed
@@ -9,6 +21,7 @@ All notable changes to `hihaho/rector-rules` will be documented in this file.
 - Raised the minimum `rector/rector` version to 2.6.0. Projects on an older Rector must upgrade it first:
   ```bash
   composer require --dev "rector/rector:^2.6"
+  
   
   ```
 
@@ -53,6 +66,7 @@ composer require hihaho/rector-rules:^1.0 --dev
 
 
 
+
 ```
 A `^0.22` constraint will not pick up 1.0.0 on its own.
 
@@ -85,6 +99,7 @@ A file the scan cannot read is not remembered as declaring nothing. A failed rea
 
 ```bash
 composer update hihaho/rector-rules
+
 
 
 
@@ -181,6 +196,7 @@ The remaining cost is one read and one parse per file that survives the filter. 
 
 
 
+
 ```
 That interface was also how the rules pulled in their rename-propagation wiring — the `SuffixRenameMap` singleton, `RenameClassRector`, and `RenameDocBlockSeeTagRector`. Removing the `implements` on its own would have left the rules renaming declarations while every reference and every `@see`/`@link`/`@uses` tag kept pointing at a class that no longer exists.
 
@@ -208,6 +224,7 @@ Update and re-run:
 ```bash
 composer update hihaho/rector-rules
 vendor/bin/rector process --dry-run
+
 
 
 
@@ -445,6 +462,7 @@ lines of configuration.
   
   
   
+  
   ```
   The rule's purpose is unchanged — it aligns a test's request-payload field-name array
   keys with their endpoint's FormRequest constants, bidirectionally by endpoint (internal →
@@ -645,6 +663,7 @@ serialized in an argument-count-sensitive way.
   
   
   
+  
   ```
   Dropping the all-default `1` (or `60, 1`) there is value-equivalent but changes the
   serialized string, and the parser can't see that coupling. `exclude_calls` lets a
@@ -656,6 +675,7 @@ serialized in an argument-count-sensitive way.
           \Illuminate\Routing\Middleware\ThrottleRequests::class => ['with'],
       ],
   ])
+  
   
   
   
@@ -702,6 +722,7 @@ feedback.
   ```diff
   -$query->has('posts', '=', 1);   // 0.11.1 dropped the 1 →
   +$query->has('posts', '=');      // ...leaving the comparison operator without its operand
+  
   
   
   
@@ -799,6 +820,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   
   
   
+  
   ```
   By default it drops an already-named default argument (order-independent) or a
   trailing positional default (iteratively), and it fires on any callee — those drops
@@ -822,6 +844,7 @@ opt-in knob on `FirstPartyFlagArgumentToNamedRector` for naming leading position
   ```diff
   -$store->paginate(1, perPage: 50);
   +$store->paginate(page: 1, perPage: 50);
+  
   
   
   
@@ -884,11 +907,13 @@ explicit `config()->set()` form.
   
   
   
+  
   ```
   into the explicit setter form:
   
   ```php
   config()->set('queue.default', 'sync');
+  
   
   
   
@@ -997,6 +1022,7 @@ in `MiddlewareStringToClassRector`'s default surfaced by real-world adoption.
           'auth', 'auth.basic', 'can', 'guest', 'password.confirm', 'signed', 'verified',
       ],
   ])
+  
   
   
   
@@ -1176,6 +1202,7 @@ Laravel's class-based fluent form.
   
   
   
+  
   ```
   It is **not in any set** and reachable by FQN only — Laravel doesn't document
   this form as a recommended convention, so adopting it is a deliberate choice.
@@ -1232,6 +1259,7 @@ type only resolves under a PHPStan extension such as larastan.
   ->withConfiguredRule(NamedArgumentFromManifestRector::class, [
       NamedArgumentFromManifestRector::MANIFEST => __DIR__ . '/named-arguments-manifest.json',
   ])
+  
   
   
   
@@ -1317,6 +1345,7 @@ call shape it previously left alone: a bare flag that is not the last argument.
   $store->loadCount(true, $start, $end);
   // ->
   $store->loadCount(hasStarted: true, start: $start, end: $end);
+  
   
   
   
@@ -1635,11 +1664,13 @@ use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
 
 
 
+
 ```
 becomes:
 
 ```php
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -1709,6 +1740,7 @@ Statement nodes covered: `Expression`, `Foreach_`, `If_`, `While_`, `For_`, `Do_
 ```php
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentQueryBuilder;
+
 
 
 
@@ -1867,6 +1899,7 @@ composer require hihaho/rector-rules --dev
 
 
 
+
 ```
 ```php
 use Hihaho\RectorRules\Set\HihahoSetList;
@@ -1874,6 +1907,7 @@ use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
     ->withSets([HihahoSetList::ALL]);
+
 
 
 
