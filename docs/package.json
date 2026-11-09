@@ -11,7 +11,8 @@
         "vitepress": "^1.6.4"
     },
     "overrides": {
-        "vite": "^6.4.3",
+        "vite": "^6.4.6",
+        "source-map-js": "^1.2.2",
         "esbuild": "^0.25.0"
     }
 }
