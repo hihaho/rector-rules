@@ -124,7 +124,8 @@ into one `set()` call per pair, in source order.
 - A callee that behaves differently depending on how many arguments it gets is skipped:
   one whose body calls `func_num_args()` or `func_get_args()` (Laravel's `str(null)` is
   not `str()`, and `->where('a', null)` is not `->where('a')`), or a built-in with more
-  than one signature.
+  than one signature. A call through an interface or a non-final parent is judged by the
+  declared method, not by the override that runs.
 - Unpacked arguments, variadic target parameters, first-class callables and unresolved
   callees are skipped.
 
