@@ -2,13 +2,13 @@
 
 namespace App;
 
-use Hihaho\RectorRules\Tests\Rector\CodeQuality\RemoveDefaultValuedArgumentRector\Source\Vendor\Stopwatch;
+use Hihaho\RectorRules\Tests\Rector\CodeQuality\RemoveDefaultValuedArgumentRector\Source\Vendor\TabFile;
 
-// Stopwatch overrides setTime() with a renamed parameter outside the first-party
+// TabFile overrides setCsvControl() with renamed parameters outside the first-party
 // namespaces, so the arguments are not named.
-function run(Stopwatch $stopwatch, int $microsecond): \DateTime
+function run(TabFile $file): void
 {
-    return $stopwatch->setTime(12, 30, 0, $microsecond);
+    $file->setCsvControl("\t", '"', '');
 }
 
 ?>

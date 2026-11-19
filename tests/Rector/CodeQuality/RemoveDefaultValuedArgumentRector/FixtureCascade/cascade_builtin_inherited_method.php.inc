@@ -2,11 +2,11 @@
 
 namespace App;
 
-use Hihaho\RectorRules\Tests\Rector\CodeQuality\RemoveDefaultValuedArgumentRector\Source\Vendor\Clock;
+use Hihaho\RectorRules\Tests\Rector\CodeQuality\RemoveDefaultValuedArgumentRector\Source\Vendor\CsvFile;
 
-function run(Clock $clock, int $microsecond): \DateTime
+function run(CsvFile $file): void
 {
-    return $clock->setTime(12, 30, 0, $microsecond);
+    $file->setCsvControl(',', '"', '');
 }
 
 ?>
@@ -15,11 +15,11 @@ function run(Clock $clock, int $microsecond): \DateTime
 
 namespace App;
 
-use Hihaho\RectorRules\Tests\Rector\CodeQuality\RemoveDefaultValuedArgumentRector\Source\Vendor\Clock;
+use Hihaho\RectorRules\Tests\Rector\CodeQuality\RemoveDefaultValuedArgumentRector\Source\Vendor\CsvFile;
 
-function run(Clock $clock, int $microsecond): \DateTime
+function run(CsvFile $file): void
 {
-    return $clock->setTime(12, 30, microsecond: $microsecond);
+    $file->setCsvControl(escape: '');
 }
 
 ?>

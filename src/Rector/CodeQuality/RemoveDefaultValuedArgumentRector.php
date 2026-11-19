@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Hihaho\RectorRules\Rector\CodeQuality;
 
 use Hihaho\RectorRules\Rector\CodeQuality\Concerns\PreservesFluentNewline;
+use Hihaho\RectorRules\Rector\CodeQuality\Support\ArgumentCountSensitiveCallee;
 use Hihaho\RectorRules\Rector\CodeQuality\Support\ExactBuiltInCallee;
 use Hihaho\RectorRules\Rector\CodeQuality\Support\ExcludedCallMatcher;
 use PhpParser\Node;
@@ -92,6 +93,7 @@ final class RemoveDefaultValuedArgumentRector extends AbstractRector implements 
         private readonly ReflectionResolver $reflectionResolver,
         private readonly ExcludedCallMatcher $excludedCallMatcher,
         private readonly ExactBuiltInCallee $exactBuiltInCallee,
+        private readonly ArgumentCountSensitiveCallee $argumentCountSensitiveCallee,
     ) {}
 
     public function configure(array $configuration): void
@@ -208,7 +210,7 @@ CODE_SAMPLE,
         $parameters = ParametersAcceptorSelectorVariantsWrapper::select($calleeReflection, $node, $scope)->getParameters();
 
         [$removeIndexes, $renames] = $this->resolveDrops($args, $parameters, $this->allowsCascade($node, $calleeReflection, $scope));
-        if ($removeIndexes === []) {
+        if ($removeIndexes === [] || $this->argumentCountSensitiveCallee->isSensitive($calleeReflection)) {
             return null;
         }
 
