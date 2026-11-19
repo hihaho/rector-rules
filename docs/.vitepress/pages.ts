@@ -101,6 +101,11 @@ export const sections: DocSection[] = [
                 text: 'Named arguments on long calls',
                 blurb: 'Naming every argument of a first-party call past a threshold, and the magic methods it never touches.',
             },
+            {
+                file: '15-multiline-call-arguments',
+                text: 'One argument per line',
+                blurb: 'Wrapping long calls one argument per line, and the Pint settings that finish the job.',
+            },
         ],
     },
 ]
