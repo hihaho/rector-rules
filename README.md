@@ -72,6 +72,7 @@ Read the full documentation at
 - [Named arguments from a manifest](https://hihaho.github.io/rector-rules/named-argument-manifest): the manifest schema, and the cache trap that hides a fresh one
 - [Middleware strings to classes](https://hihaho.github.io/rector-rules/middleware-string-to-class): the behaviour-safe aliases, and the `throttle` caveat
 - [Test payload field names](https://hihaho.github.io/rector-rules/test-field-constants): the internal/public asymmetry and its config contract
+- [Named arguments on long calls](https://hihaho.github.io/rector-rules/first-party-min-arguments): naming first-party calls past a threshold, and the magic methods it never touches
 
 For the static-analysis counterparts, the rules that report but don't rewrite, see
 [`hihaho/phpstan-rules`](https://github.com/hihaho/phpstan-rules).

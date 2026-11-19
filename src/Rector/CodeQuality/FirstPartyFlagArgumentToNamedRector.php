@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Hihaho\RectorRules\Rector\CodeQuality;
 
 use Hihaho\RectorRules\Rector\CodeQuality\Concerns\NamesFlagArguments;
+use Hihaho\RectorRules\Rector\CodeQuality\Concerns\ResolvesNativeFirstPartyCallee;
 use PhpParser\Node;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Expr\MethodCall;
@@ -12,14 +13,13 @@ use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Identifier;
 use PHPStan\Analyser\Scope;
-use PHPStan\Reflection\MethodReflection;
+use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\ParameterReflection;
-use PHPStan\Type\TypeCombinator;
+use PHPStan\Reflection\ReflectionProvider;
 use Rector\Contract\Rector\ConfigurableRectorInterface;
 use Rector\NodeTypeResolver\Node\AttributeKey;
 use Rector\NodeTypeResolver\PHPStan\ParametersAcceptorSelectorVariantsWrapper;
 use Rector\Rector\AbstractRector;
-use Rector\Reflection\ReflectionResolver;
 use Rector\ValueObject\PhpVersion;
 use Rector\VersionBonding\Contract\MinPhpVersionInterface;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\ConfiguredCodeSample;
@@ -32,6 +32,7 @@ use Webmozart\Assert\Assert;
 final class FirstPartyFlagArgumentToNamedRector extends AbstractRector implements ConfigurableRectorInterface, MinPhpVersionInterface
 {
     use NamesFlagArguments;
+    use ResolvesNativeFirstPartyCallee;
 
     public const string FIRST_PARTY_NAMESPACES = 'first_party_namespaces';
 
@@ -69,7 +70,7 @@ final class FirstPartyFlagArgumentToNamedRector extends AbstractRector implement
     private bool $namePrecedingPositionals = false;
 
     public function __construct(
-        private readonly ReflectionResolver $reflectionResolver,
+        private readonly ReflectionProvider $reflectionProvider,
     ) {}
 
     public function configure(array $configuration): void
@@ -155,20 +156,21 @@ CODE_SAMPLE,
             return null;
         }
 
-        $methodReflection = $this->resolveCalleeReflection($node);
-
-        // Unresolved callee (dynamic name, closure, __call magic, unknown type):
-        // skip rather than guess at a parameter name.
-        if (! $methodReflection instanceof MethodReflection) {
-            return null;
-        }
-
-        if (! $this->isFirstParty($methodReflection)) {
-            return null;
-        }
-
         $scope = $node->getAttribute(AttributeKey::SCOPE);
         if (! $scope instanceof Scope) {
+            return null;
+        }
+
+        $methodReflection = $this->resolveNativeCallee($node, $scope);
+
+        // Unresolved or magic callee (dynamic name, union receiver, `@method`,
+        // `@mixin`, macro, `__call` forward, unknown type): skip rather than
+        // guess at a parameter name.
+        if (! $methodReflection instanceof ExtendedMethodReflection) {
+            return null;
+        }
+
+        if (! $this->isDeclaredInNamespaces($methodReflection, $this->firstPartyNamespaces)) {
             return null;
         }
 
@@ -267,60 +269,5 @@ CODE_SAMPLE,
     public function provideMinPhpVersion(): int
     {
         return PhpVersion::PHP_80;
-    }
-
-    /**
-     * Resolve the called method / constructor. For an instance call the receiver
-     * type has its null stripped first: a nullable receiver (`Foo|null`, the
-     * common shape of a docblock-typed property or a nullable return) otherwise
-     * resolves to no single class and the call is silently skipped.
-     *
-     * @param MethodCall|StaticCall|New_ $node
-     */
-    private function resolveCalleeReflection(Node $node): ?MethodReflection
-    {
-        if ($node instanceof New_) {
-            return $this->reflectionResolver->resolveMethodReflectionFromNew($node);
-        }
-
-        if ($node instanceof StaticCall) {
-            return $this->reflectionResolver->resolveMethodReflectionFromStaticCall($node);
-        }
-
-        // Strip null before resolving the receiver class: a nullable receiver
-        // resolves to more than one type member, so the single-class lookup below
-        // would otherwise return nothing and the call would be skipped.
-        $callerType = TypeCombinator::removeNull($this->getType($node->var));
-        $classReflections = $callerType->getObjectClassReflections();
-        if (count($classReflections) !== 1) {
-            return null;
-        }
-
-        $methodName = $this->getName($node->name);
-        if ($methodName === null) {
-            return null;
-        }
-
-        $scope = $node->getAttribute(AttributeKey::SCOPE);
-        if (! $scope instanceof Scope) {
-            return null;
-        }
-
-        $classReflection = $classReflections[0];
-
-        return $classReflection->hasMethod($methodName) ? $classReflection->getMethod($methodName, $scope) : null;
-    }
-
-    private function isFirstParty(MethodReflection $methodReflection): bool
-    {
-        $declaringClass = $methodReflection->getDeclaringClass()->getName();
-
-        foreach ($this->firstPartyNamespaces as $namespace) {
-            if (str_starts_with($declaringClass, $namespace)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }
