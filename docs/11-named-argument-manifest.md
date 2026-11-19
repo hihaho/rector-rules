@@ -10,7 +10,8 @@ type is declared:
 |---|---|---|
 | Native docblock `@property` on the class | Yes, already: PHPStan's built-in annotation extension reads it | Nothing. The usual gates still apply: an `@property` pointing at a vendor class or a union still skips |
 | Extension-only dynamic property (no declared property, no typed docblock, type synthesized by a `PropertiesClassReflectionExtension`) | No, not by default | Load the extension into Rector with `withPHPStanConfigs()` |
-| Method invented at runtime (a `Macroable` macro or mixin, never statically registered) | No, and static analysis cannot see it at all | Use the manifest bridge |
+| Receiver only a consumer-side PHPStan run resolves (larastan in your `phpstan.neon`, not loaded into Rector) | No | Use the manifest bridge |
+| Method that runs through `__call` / `__callStatic` (a `@method` or `@mixin` method, a macro, a facade, a forwarded builder call) | Never named | Nothing. These receive their arguments positionally, so a named argument would change behaviour |
 
 ## Extension-only properties: load the PHPStan config
 
@@ -23,9 +24,10 @@ resolution, so pointing it at a larastan-enabled neon resolves those receivers d
 
 ## The manifest bridge
 
-For receivers static analysis cannot resolve even with extensions loaded, chiefly runtime
-macros, this rule applies findings a consumer-side PHPStan pass computed. It
-does no type resolution of its own. A ready-made producer ships in
+For receivers only your own PHPStan run resolves, this rule applies findings that a
+consumer-side PHPStan pass computed. It does no type resolution of its own, so the
+producer decides which calls are safe to name; the bundled producer records only calls
+that reach a native method. A ready-made producer ships in
 [`hihaho/phpstan-rules`](https://github.com/hihaho/phpstan-rules) as a Collector that
 writes the JSON below; include its `named-argument-manifest.neon`, or write your own
 producer to the format.
@@ -44,7 +46,7 @@ The manifest is a JSON array of records, each naming one argument of one call:
 
 - `file` is a project-relative path, matched as a path-segment suffix of the file under
   traversal. Emit root-relative paths to keep the suffix unambiguous.
-- `method` is the method name for a method or static call (never namespaced), or the
+- `method` is the method name for a method, nullsafe or static call (never namespaced), or the
   resolved class FQCN for a `new` expression. Both producer and Rector run name
   resolution, so the FQCN is the stable key there.
 - `value` is optional: a literal flag the argument must still hold. It guards against

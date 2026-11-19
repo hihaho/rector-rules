@@ -11,6 +11,7 @@ use PhpParser\Node\Arg;
 use PhpParser\Node\Expr\ConstFetch;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
+use PhpParser\Node\Expr\NullsafeMethodCall;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
@@ -149,7 +150,7 @@ CODE_SAMPLE,
     {
         // FileNode is the per-file root, visited before the call nodes — it replaces a
         // (now-deprecated) beforeTraverse() override for the once-per-file record setup.
-        return [FileNode::class, MethodCall::class, StaticCall::class, New_::class];
+        return [FileNode::class, MethodCall::class, NullsafeMethodCall::class, StaticCall::class, New_::class];
     }
 
     public function refactor(Node $node): ?Node
@@ -171,7 +172,7 @@ CODE_SAMPLE,
             return null;
         }
 
-        if (! $node instanceof MethodCall && ! $node instanceof StaticCall && ! $node instanceof New_) {
+        if (! $node instanceof MethodCall && ! $node instanceof NullsafeMethodCall && ! $node instanceof StaticCall && ! $node instanceof New_) {
             return null;
         }
 
@@ -292,7 +293,7 @@ CODE_SAMPLE,
 
     private function resolveCallName(Node $node): ?string
     {
-        if ($node instanceof MethodCall || $node instanceof StaticCall) {
+        if ($node instanceof MethodCall || $node instanceof NullsafeMethodCall || $node instanceof StaticCall) {
             return $node->name instanceof Identifier ? $node->name->toString() : null;
         }
 
