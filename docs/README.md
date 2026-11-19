@@ -28,6 +28,7 @@ Each sits outside every set and is a no-op until registered by FQN.
 - [Named arguments from a manifest](11-named-argument-manifest.md): the manifest schema, and the cache trap that hides a fresh one
 - [Middleware strings to classes](12-middleware-string-to-class.md): the behaviour-safe aliases, and the `throttle` caveat
 - [Test payload field names](13-test-field-constants.md): the internal/public asymmetry and its config contract
+- [Named arguments on long calls](14-first-party-min-arguments.md): naming first-party calls past a threshold, and the magic methods it never touches
 
 ## Working on the site
 

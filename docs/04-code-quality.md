@@ -66,6 +66,10 @@ The two rules split by what owns the parameter name:
   the `false`, while `json_decode($j, true, 512)` is left alone.
 - Already-named arguments, unpacked arguments (`...$args`), variadic target parameters,
   first-class callables and unresolvable callees are skipped.
+- `FirstPartyFlagArgumentToNamedRector` names a call only when it reaches a native
+  method: `@method`, `@mixin`, macro, facade and other `__call` / `__callStatic` calls
+  are skipped. The checks are listed under
+  [which calls get named](14-first-party-min-arguments.md#which-calls-get-named).
 
 ### Opt-in flags on `FirstPartyFlagArgumentToNamedRector`
 

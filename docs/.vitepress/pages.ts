@@ -96,6 +96,11 @@ export const sections: DocSection[] = [
                 text: 'Test payload field names',
                 blurb: 'Constants on internal endpoints, literals on public ones, and the config contract that decides which.',
             },
+            {
+                file: '14-first-party-min-arguments',
+                text: 'Named arguments on long calls',
+                blurb: 'Naming every argument of a first-party call past a threshold, and the magic methods it never touches.',
+            },
         ],
     },
 ]
