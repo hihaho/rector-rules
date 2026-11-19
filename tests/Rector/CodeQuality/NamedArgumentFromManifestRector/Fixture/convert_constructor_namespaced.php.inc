@@ -2,20 +2,20 @@
 
 namespace App\Demo;
 
-use App\Feedback\MergeFeedback;
+use App\Orders\ShipmentNotice;
 
-function build($answer): MergeFeedback
+function build($order): ShipmentNotice
 {
-    return new MergeFeedback($answer, true);
+    return new ShipmentNotice($order, true);
 }
 -----
 <?php
 
 namespace App\Demo;
 
-use App\Feedback\MergeFeedback;
+use App\Orders\ShipmentNotice;
 
-function build($answer): MergeFeedback
+function build($order): ShipmentNotice
 {
-    return new MergeFeedback($answer, answeredCorrectly: true);
+    return new ShipmentNotice($order, notifyCustomer: true);
 }

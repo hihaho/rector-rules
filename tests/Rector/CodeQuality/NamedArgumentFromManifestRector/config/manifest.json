@@ -4,10 +4,10 @@
 
   { "file": "convert_static_call.php", "line": 5, "method": "resolve", "argIndex": 1, "paramName": "strict", "value": "true" },
 
-  { "file": "convert_constructor.php", "line": 5, "method": "MergeFeedback", "argIndex": 1, "paramName": "answeredCorrectly", "value": "true" },
-  { "file": "convert_constructor.php", "line": 5, "method": "MergeFeedback", "argIndex": 2, "paramName": "answeredPartlyCorrect", "value": "false" },
+  { "file": "convert_constructor.php", "line": 5, "method": "ShipmentNotice", "argIndex": 1, "paramName": "notifyCustomer", "value": "true" },
+  { "file": "convert_constructor.php", "line": 5, "method": "ShipmentNotice", "argIndex": 2, "paramName": "includeInvoice", "value": "false" },
 
-  { "file": "convert_constructor_namespaced.php", "line": 9, "method": "App\\Feedback\\MergeFeedback", "argIndex": 1, "paramName": "answeredCorrectly", "value": "true" },
+  { "file": "convert_constructor_namespaced.php", "line": 9, "method": "App\\Orders\\ShipmentNotice", "argIndex": 1, "paramName": "notifyCustomer", "value": "true" },
 
   { "file": "convert_null_literal.php", "line": 5, "method": "setOption", "argIndex": 1, "paramName": "option", "value": "null" },
 
