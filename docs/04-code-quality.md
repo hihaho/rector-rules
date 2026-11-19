@@ -121,6 +121,11 @@ into one `set()` call per pair, in source order.
 - Covers function, method, static and constructor (`new`) calls. `in_array`,
   `array_search`, `array_keys` and `base64_decode` are skipped: phpstan-strict-rules checks
   their flag, so an explicit `false` marks a deliberate loose comparison and stays.
+- A callee that behaves differently depending on how many arguments it gets is skipped:
+  one whose body calls `func_num_args()` or `func_get_args()` (Laravel's `str(null)` is
+  not `str()`, and `->where('a', null)` is not `->where('a')`), or a built-in with more
+  than one signature. A call through an interface or a non-final parent is judged by the
+  declared method, not by the override that runs.
 - Unpacked arguments, variadic target parameters, first-class callables and unresolved
   callees are skipped.
 
@@ -128,7 +133,7 @@ into one `set()` call per pair, in source order.
 
 | Key | Effect |
 |---|---|
-| `cascade_drop` | Also drops a *mid*-positional default by naming the arguments after it: `attach($user, [], $relationship)` → `attach($user, relationship: $relationship)`, `strspn($text, ' ', 0, $length)` → `strspn($text, ' ', length: $length)`. Only for callees in `first_party_namespaces` (default `App\`) and PHP built-ins the call surely reaches: a function, `new` or a static call on a named class, or a method on a final class. A `\DateTime` can be Carbon at runtime, which renames `setTime()`'s `$microsecond`. |
+| `cascade_drop` | Also drops a *mid*-positional default by naming the arguments after it: `attach($user, [], $relationship)` → `attach($user, relationship: $relationship)`, `strspn($text, ' ', 0, $length)` → `strspn($text, ' ', length: $length)`. Only for callees in `first_party_namespaces` (default `App\`) and PHP built-ins the call surely reaches: a function, `new` or a static call on a named class, or a method on a final class. The `DateTimeInterface` family is skipped: a `\DateTime` can be Carbon at runtime, which renames `setTime()`'s `$microsecond`. |
 | `exclude_calls` | Methods the rule must never touch, keyed by class FQN → method names. |
 
 `exclude_calls` exists for methods whose return value is serialized in an

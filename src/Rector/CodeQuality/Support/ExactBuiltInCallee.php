@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\CodeQuality\Support;
 
+use DateTimeInterface;
 use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
@@ -19,7 +20,8 @@ use PHPStan\Type\TypeCombinator;
  * {@see \Hihaho\RectorRules\Rector\CodeQuality\RemoveDefaultValuedArgumentRector}
  * may name its arguments. A `\DateTime`-typed value can be a subclass at runtime
  * (Carbon renames `setTime()`'s `$microsecond`), so a method call qualifies only on
- * a final receiver class.
+ * a final receiver class. The `DateTimeInterface` family is skipped outright: Rector's
+ * `DateTimeInstanceToCarbonRector` can turn `new \DateTime()` into Carbon in the same run.
  *
  * @internal
  */
@@ -32,6 +34,10 @@ final readonly class ExactBuiltInCallee
     ): bool {
         // Signature variants may name their parameters differently from the runtime.
         if (count($calleeReflection->getVariants()) !== 1) {
+            return false;
+        }
+
+        if ($calleeReflection instanceof MethodReflection && $calleeReflection->getDeclaringClass()->implementsInterface(DateTimeInterface::class)) {
             return false;
         }
 
