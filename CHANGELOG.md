@@ -2,6 +2,20 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 1.4.0 - 2026-11-19
+
+### Added
+
+- Added `MultilineCallArgumentsRector`, which puts each argument of a single-line call with `min_arguments` (default 3) or more arguments on its own line (#26). It is opt-in and not in any set:
+  ```php
+  ->withConfiguredRule(MultilineCallArgumentsRector::class, [
+      'min_arguments' => 3,
+  ])
+  ```
+  Run Pint after Rector, with the two `pint.json` settings listed in [One argument per line](https://hihaho.github.io/rector-rules/multiline-call-arguments), to remove the blank line Rector leaves and add the trailing comma.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/1.3.0...1.4.0
+
 ## 1.3.0 - 2026-11-19
 
 ### Added
