@@ -1,5 +1,6 @@
 [
   { "file": "convert_method_call.php", "line": 5, "method": "getToken", "argIndex": 1, "paramName": "inherit", "value": "false" },
+  { "file": "convert_nullsafe_method_call.php", "line": 5, "method": "getToken", "argIndex": 1, "paramName": "inherit", "value": "false" },
 
   { "file": "convert_static_call.php", "line": 5, "method": "resolve", "argIndex": 1, "paramName": "strict", "value": "true" },
 
