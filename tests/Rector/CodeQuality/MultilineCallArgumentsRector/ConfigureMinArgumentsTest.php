@@ -19,7 +19,7 @@ final class ConfigureMinArgumentsTest extends AbstractLazyTestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        (new MultilineCallArgumentsRector())->configure([MultilineCallArgumentsRector::MIN_ARGUMENTS => $minimum]);
+        $this->make(MultilineCallArgumentsRector::class)->configure([MultilineCallArgumentsRector::MIN_ARGUMENTS => $minimum]);
     }
 
     /**

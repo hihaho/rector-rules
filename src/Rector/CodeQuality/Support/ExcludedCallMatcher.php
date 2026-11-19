@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\CodeQuality\Support;
 
+use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Name;
 use PHPStan\Analyser\Scope;
 use PHPStan\Reflection\ClassReflection;
+use PHPStan\Reflection\FunctionReflection;
 use PHPStan\Reflection\MethodReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use Rector\NodeNameResolver\NodeNameResolver;
@@ -21,10 +23,18 @@ use Rector\NodeNameResolver\NodeNameResolver;
  * base covers inherited calls on a subclass, and excluding the subclass covers calls
  * written on it directly.
  *
+ * A few built-in functions are always excluded: see EXPLICIT_FLAG_FUNCTIONS.
+ *
  * @internal
  */
 final readonly class ExcludedCallMatcher
 {
+    /**
+     * Built-ins whose flag phpstan/phpstan-strict-rules checks. An explicit `false`
+     * there marks a deliberate loose comparison, usually behind an ignore, so it stays.
+     */
+    private const array EXPLICIT_FLAG_FUNCTIONS = ['in_array', 'array_search', 'array_keys', 'base64_decode'];
+
     public function __construct(
         private ReflectionProvider $reflectionProvider,
         private NodeNameResolver $nodeNameResolver,
@@ -33,10 +43,22 @@ final readonly class ExcludedCallMatcher
     /**
      * @param  array<string, list<string>>  $excludedCalls  class FQN → lowercased method names
      */
-    public function matches(MethodCall|StaticCall|New_ $node, MethodReflection $methodReflection, Scope $scope, array $excludedCalls): bool
-    {
-        $methodName = strtolower($methodReflection->getName());
-        $classReflections = [$methodReflection->getDeclaringClass(), ...$this->calledClassReflections($node, $scope)];
+    public function matches(
+        MethodCall|StaticCall|New_|FuncCall $node,
+        MethodReflection|FunctionReflection $calleeReflection,
+        Scope $scope,
+        array $excludedCalls,
+    ): bool {
+        if ($calleeReflection instanceof FunctionReflection) {
+            return in_array(strtolower($calleeReflection->getName()), self::EXPLICIT_FLAG_FUNCTIONS, true);
+        }
+
+        if ($excludedCalls === [] || $node instanceof FuncCall) {
+            return false;
+        }
+
+        $methodName = strtolower($calleeReflection->getName());
+        $classReflections = [$calleeReflection->getDeclaringClass(), ...$this->calledClassReflections($node, $scope)];
 
         foreach ($excludedCalls as $class => $methods) {
             if (in_array($methodName, $methods, true) && $this->anyClassIsA($classReflections, $class)) {

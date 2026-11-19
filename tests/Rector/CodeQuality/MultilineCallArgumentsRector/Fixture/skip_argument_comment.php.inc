@@ -4,9 +4,9 @@ namespace App;
 
 function run(string $name, int $total): string
 {
-    $first = sprintf(/* format */ "%s %d", $name, $total);
+    $first = format_line(/* format */ "%s %d", $name, $total);
 
-    return sprintf("%s %d", $name, /* total */ $total);
+    return format_line("%s %d", $name, /* total */ $total);
 }
 
 ?>
