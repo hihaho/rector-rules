@@ -4,7 +4,7 @@ namespace App;
 
 function run(): \Closure
 {
-    return sprintf(...);
+    return format_line(...);
 }
 
 ?>

@@ -6,7 +6,7 @@ use App\Models\Order;
 
 function run(?Order $order, string $name, int $total): void
 {
-    $line = sprintf("%s: %d", $name, $total);
+    $line = format_line("%s: %d", $name, $total);
     $copy = new Order($name, $total, false);
     $order?->ship($name, $total, true);
     Order::create($name, $total, false);
@@ -22,7 +22,7 @@ use App\Models\Order;
 
 function run(?Order $order, string $name, int $total): void
 {
-    $line = sprintf(
+    $line = format_line(
         
         "%s: %d",
         $name,

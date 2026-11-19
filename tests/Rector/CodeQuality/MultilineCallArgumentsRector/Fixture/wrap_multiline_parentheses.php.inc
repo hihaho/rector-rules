@@ -4,7 +4,7 @@ namespace App;
 
 function run(string $name, int $total): string
 {
-    return sprintf(
+    return format_line(
         "%s %d", $name, $total
     );
 }
@@ -17,7 +17,7 @@ namespace App;
 
 function run(string $name, int $total): string
 {
-    return sprintf(
+    return format_line(
         
         "%s %d",
         $name,

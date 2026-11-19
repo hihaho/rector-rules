@@ -4,7 +4,7 @@ namespace App;
 
 function run(array $items, int $offset): array
 {
-    return array_merge($items, array_slice($items, $offset, 2), []);
+    return merge_items($items, slice_items($items, $offset, 2), []);
 }
 
 ?>
@@ -15,10 +15,10 @@ namespace App;
 
 function run(array $items, int $offset): array
 {
-    return array_merge(
+    return merge_items(
         
         $items,
-        array_slice(
+        slice_items(
             
             $items,
             $offset,

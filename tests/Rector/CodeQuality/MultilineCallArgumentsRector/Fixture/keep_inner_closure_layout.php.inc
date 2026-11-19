@@ -4,7 +4,7 @@ namespace App;
 
 function run(array $items, int $total): array
 {
-    return array_map(fn (int $item): int => $item * $total, $items, $items);
+    return map_items(fn (int $item): int => $item * $total, $items, $items);
 }
 
 ?>
@@ -15,7 +15,7 @@ namespace App;
 
 function run(array $items, int $total): array
 {
-    return array_map(
+    return map_items(
         
         fn (int $item): int => $item * $total,
         $items,

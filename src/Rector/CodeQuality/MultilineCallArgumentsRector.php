@@ -19,9 +19,13 @@ use PhpParser\Node\Expr\PropertyFetch;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Expr\StaticPropertyFetch;
 use PhpParser\Node\Stmt\Class_;
+use PHPStan\Reflection\FunctionReflection;
+use PHPStan\Reflection\MethodReflection;
+use PHPStan\Type\TypeCombinator;
 use Rector\Contract\Rector\ConfigurableRectorInterface;
 use Rector\NodeTypeResolver\Node\AttributeKey;
 use Rector\Rector\AbstractRector;
+use Rector\Reflection\ReflectionResolver;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\ConfiguredCodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 use Webmozart\Assert\Assert;
@@ -45,6 +49,10 @@ final class MultilineCallArgumentsRector extends AbstractRector implements Confi
     private const string DEREFERENCED_NEW = 'hihaho_multiline_call_arguments_dereferenced_new';
 
     private int $minArguments = self::DEFAULT_MIN_ARGUMENTS;
+
+    public function __construct(
+        private readonly ReflectionResolver $reflectionResolver,
+    ) {}
 
     public function configure(array $configuration): void
     {
@@ -134,6 +142,12 @@ CODE_SAMPLE,
             }
         }
 
+        // A built-in such as `strspn()` takes mostly positional, well-known
+        // arguments, so wrapping it adds lines without making it any clearer.
+        if ($this->callsBuiltIn($node)) {
+            return null;
+        }
+
         // Reprinting a call drops the line break before its `->` when it sits on
         // its own line in a chain. Rector can restore that break only for a
         // method call on another call (`->a()\n->b(...)`); any other chained
@@ -151,6 +165,33 @@ CODE_SAMPLE,
         $node->setAttribute(AttributeKey::ORIGINAL_NODE, null);
 
         return $node;
+    }
+
+    private function callsBuiltIn(CallLike $call): bool
+    {
+        $reflection = $call instanceof NullsafeMethodCall
+            ? $this->resolveNullsafeMethodReflection($call)
+            : $this->reflectionResolver->resolveFunctionLikeReflectionFromCall($call);
+
+        return match (true) {
+            $reflection instanceof FunctionReflection => $reflection->isBuiltin(),
+            $reflection instanceof MethodReflection => $reflection->getDeclaringClass()->isBuiltin(),
+            default => false,
+        };
+    }
+
+    /**
+     * ReflectionResolver does not cover nullsafe calls, so resolve the receiver here.
+     */
+    private function resolveNullsafeMethodReflection(NullsafeMethodCall $call): ?MethodReflection
+    {
+        $methodName = $this->getName($call->name);
+        $classReflections = TypeCombinator::removeNull($this->getType($call->var))->getObjectClassReflections();
+        if ($methodName === null || count($classReflections) !== 1 || ! $classReflections[0]->hasNativeMethod($methodName)) {
+            return null;
+        }
+
+        return $classReflections[0]->getNativeMethod($methodName);
     }
 
     private function resolveDereferencedNew(Node $node): ?New_
