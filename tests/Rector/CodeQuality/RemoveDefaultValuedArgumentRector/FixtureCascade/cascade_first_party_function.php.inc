@@ -1,11 +1,8 @@
 <?php
 
-namespace Hihaho\RectorRules\Tests\Rector\CodeQuality\RemoveDefaultValuedArgumentRector\Source\FirstParty;
+namespace App;
 
-function measure(string $text, int $offset = 0, ?int $length = null): int
-{
-    return $offset + ($length ?? strlen($text));
-}
+use function Hihaho\RectorRules\Tests\Rector\CodeQuality\RemoveDefaultValuedArgumentRector\Source\FirstParty\measure;
 
 function run(string $text, int $length): int
 {
@@ -16,12 +13,9 @@ function run(string $text, int $length): int
 -----
 <?php
 
-namespace Hihaho\RectorRules\Tests\Rector\CodeQuality\RemoveDefaultValuedArgumentRector\Source\FirstParty;
+namespace App;
 
-function measure(string $text, int $offset = 0, ?int $length = null): int
-{
-    return $offset + ($length ?? strlen($text));
-}
+use function Hihaho\RectorRules\Tests\Rector\CodeQuality\RemoveDefaultValuedArgumentRector\Source\FirstParty\measure;
 
 function run(string $text, int $length): int
 {

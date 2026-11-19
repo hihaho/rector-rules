@@ -2,9 +2,7 @@
 
 namespace App;
 
-final class Clock extends \DateTime
-{
-}
+use Hihaho\RectorRules\Tests\Rector\CodeQuality\RemoveDefaultValuedArgumentRector\Source\Vendor\Clock;
 
 function run(Clock $clock, int $microsecond): \DateTime
 {
@@ -17,9 +15,7 @@ function run(Clock $clock, int $microsecond): \DateTime
 
 namespace App;
 
-final class Clock extends \DateTime
-{
-}
+use Hihaho\RectorRules\Tests\Rector\CodeQuality\RemoveDefaultValuedArgumentRector\Source\Vendor\Clock;
 
 function run(Clock $clock, int $microsecond): \DateTime
 {

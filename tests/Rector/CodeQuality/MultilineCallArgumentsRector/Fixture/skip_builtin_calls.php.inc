@@ -2,9 +2,7 @@
 
 namespace App;
 
-final class Schedule extends \DateTime
-{
-}
+use Hihaho\RectorRules\Tests\Rector\CodeQuality\MultilineCallArgumentsRector\Source\Schedule;
 
 function run(string $text, int $offset, \DateTime $date, ?\DateTime $maybe, Schedule $schedule): bool
 {
