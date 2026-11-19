@@ -118,6 +118,9 @@ into one `set()` call per pair, in source order.
 - A positional default is kept once an earlier optional positional was overridden, since
   that default is often the overridden argument's operand. So `->has($relation, '=', 1)` keeps
   the `1`, while `->has($relation, '>=', 1)` collapses to `->has($relation)`.
+- Covers function, method, static and constructor (`new`) calls. `in_array`,
+  `array_search`, `array_keys` and `base64_decode` are skipped: phpstan-strict-rules checks
+  their flag, so an explicit `false` marks a deliberate loose comparison and stays.
 - Unpacked arguments, variadic target parameters, first-class callables and unresolved
   callees are skipped.
 
@@ -125,7 +128,7 @@ into one `set()` call per pair, in source order.
 
 | Key | Effect |
 |---|---|
-| `cascade_drop` | Also drops a *mid*-positional default by naming the arguments after it: `attach($user, [], $relationship)` → `attach($user, relationship: $relationship)`. First-party only, gated on `first_party_namespaces` (default `App\`). |
+| `cascade_drop` | Also drops a *mid*-positional default by naming the arguments after it: `attach($user, [], $relationship)` → `attach($user, relationship: $relationship)`, `strspn($text, ' ', 0, $length)` → `strspn($text, ' ', length: $length)`. Only for callees in `first_party_namespaces` (default `App\`) and PHP built-ins, whose parameter names PHP keeps stable. |
 | `exclude_calls` | Methods the rule must never touch, keyed by class FQN → method names. |
 
 `exclude_calls` exists for methods whose return value is serialized in an

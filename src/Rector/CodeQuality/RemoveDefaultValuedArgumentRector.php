@@ -12,6 +12,7 @@ use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\ClassConstFetch;
 use PhpParser\Node\Expr\ConstFetch;
+use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\StaticCall;
@@ -20,6 +21,7 @@ use PhpParser\Node\Expr\UnaryPlus;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Scalar;
 use PHPStan\Analyser\Scope;
+use PHPStan\Reflection\FunctionReflection;
 use PHPStan\Reflection\MethodReflection;
 use PHPStan\Reflection\ParameterReflection;
 use PHPStan\Type\Type;
@@ -51,8 +53,9 @@ final class RemoveDefaultValuedArgumentRector extends AbstractRector implements 
     /**
      * Gates the *cascade* drop only: renaming the arguments after a dropped
      * mid-positional default couples to the callee's parameter names, which is safe
-     * only for signatures you control. A *pure* drop (a named default, or a trailing
-     * positional default) couples only to the default value and fires on any callee.
+     * only for signatures you control, or PHP built-ins (whose names PHP keeps stable).
+     * A *pure* drop (a named default, or a trailing positional default) couples only to
+     * the default value and fires on any callee.
      *
      * @var list<string>
      */
@@ -63,8 +66,8 @@ final class RemoveDefaultValuedArgumentRector extends AbstractRector implements 
 
     /**
      * When enabled, a mid-positional default (one followed by a positional argument)
-     * is dropped by naming the arguments that follow it. Off by default and first-party
-     * only: it produces broader diffs and depends on parameter names.
+     * is dropped by naming the arguments that follow it. Off by default: it produces
+     * broader diffs.
      */
     private bool $cascadeDrop = false;
 
@@ -145,6 +148,15 @@ $factory->attach($user, relationship: $relationship);
 CODE_SAMPLE,
                     [self::FIRST_PARTY_NAMESPACES => ['App\\'], self::CASCADE_DROP => true],
                 ),
+                new ConfiguredCodeSample(
+                    <<<'CODE_SAMPLE'
+$isBlank = strspn($text, ' ', 0, $length) === $length;
+CODE_SAMPLE,
+                    <<<'CODE_SAMPLE'
+$isBlank = strspn($text, ' ', length: $length) === $length;
+CODE_SAMPLE,
+                    [self::CASCADE_DROP => true],
+                ),
             ],
         );
     }
@@ -152,12 +164,12 @@ CODE_SAMPLE,
     /** @return array<class-string<Node>> */
     public function getNodeTypes(): array
     {
-        return [MethodCall::class, StaticCall::class, New_::class];
+        return [MethodCall::class, StaticCall::class, New_::class, FuncCall::class];
     }
 
     public function refactor(Node $node): ?Node
     {
-        if (! $node instanceof MethodCall && ! $node instanceof StaticCall && ! $node instanceof New_) {
+        if (! $node instanceof MethodCall && ! $node instanceof StaticCall && ! $node instanceof New_ && ! $node instanceof FuncCall) {
             return null;
         }
 
@@ -177,8 +189,8 @@ CODE_SAMPLE,
             return null;
         }
 
-        $methodReflection = $this->resolveCalleeReflection($node);
-        if (! $methodReflection instanceof MethodReflection) {
+        $calleeReflection = $this->resolveCalleeReflection($node);
+        if ($calleeReflection === null) {
             return null;
         }
 
@@ -187,13 +199,13 @@ CODE_SAMPLE,
             return null;
         }
 
-        if ($this->excludedCalls !== [] && $this->excludedCallMatcher->matches($node, $methodReflection, $scope, $this->excludedCalls)) {
+        if ($this->excludedCallMatcher->matches($node, $calleeReflection, $scope, $this->excludedCalls)) {
             return null;
         }
 
-        $parameters = ParametersAcceptorSelectorVariantsWrapper::select($methodReflection, $node, $scope)->getParameters();
+        $parameters = ParametersAcceptorSelectorVariantsWrapper::select($calleeReflection, $node, $scope)->getParameters();
 
-        [$removeIndexes, $renames] = $this->resolveDrops($args, $parameters, $this->isFirstParty($methodReflection));
+        [$removeIndexes, $renames] = $this->resolveDrops($args, $parameters, $this->allowsCascade($calleeReflection));
         if ($removeIndexes === []) {
             return null;
         }
@@ -228,7 +240,7 @@ CODE_SAMPLE,
      * @param  array<int, ParameterReflection>  $parameters
      * @return array{0: list<int>, 1: array<int, string>} [indexes to remove, index => name to assign]
      */
-    private function resolveDrops(array $args, array $parameters, bool $firstParty): array
+    private function resolveDrops(array $args, array $parameters, bool $allowsCascade): array
     {
         $remove = [];
 
@@ -263,7 +275,7 @@ CODE_SAMPLE,
 
         $droppablePositional = $this->resolveDroppablePositional($args, $positionalIndexes, $parameters);
 
-        if ($firstParty && $this->cascadeDrop) {
+        if ($allowsCascade && $this->cascadeDrop) {
             return $this->resolveCascadeDrops($remove, $positionalIndexes, $droppablePositional, $parameters);
         }
 
@@ -461,20 +473,12 @@ CODE_SAMPLE,
     }
 
     /**
-     * Resolve the called method / constructor. For an instance call the receiver type
-     * has its null stripped first, so a nullable receiver still resolves to a single
-     * class. Mirrors FirstPartyFlagArgumentToNamedRector's resolver.
-     *
-     * @param  MethodCall|StaticCall|New_  $node
+     * A nullable receiver has its null stripped, so it still resolves to a single class.
      */
-    private function resolveCalleeReflection(Node $node): ?MethodReflection
+    private function resolveCalleeReflection(MethodCall|StaticCall|New_|FuncCall $node): MethodReflection|FunctionReflection|null
     {
-        if ($node instanceof New_) {
-            return $this->reflectionResolver->resolveMethodReflectionFromNew($node);
-        }
-
-        if ($node instanceof StaticCall) {
-            return $this->reflectionResolver->resolveMethodReflectionFromStaticCall($node);
+        if (! $node instanceof MethodCall) {
+            return $this->reflectionResolver->resolveFunctionLikeReflectionFromCall($node);
         }
 
         $callerType = TypeCombinator::removeNull($this->getType($node->var));
@@ -498,12 +502,21 @@ CODE_SAMPLE,
         return $classReflection->hasMethod($methodName) ? $classReflection->getMethod($methodName, $scope) : null;
     }
 
-    private function isFirstParty(MethodReflection $methodReflection): bool
+    /**
+     * The cascade renames arguments, so it needs parameter names that will not change
+     * under the caller: a first-party callee, or a PHP built-in.
+     */
+    private function allowsCascade(MethodReflection|FunctionReflection $calleeReflection): bool
     {
-        $declaringClass = $methodReflection->getDeclaringClass()->getName();
+        $owner = $calleeReflection instanceof MethodReflection ? $calleeReflection->getDeclaringClass() : $calleeReflection;
 
+        return $owner->isBuiltin() || $this->isFirstParty($owner->getName());
+    }
+
+    private function isFirstParty(string $name): bool
+    {
         foreach ($this->firstPartyNamespaces as $namespace) {
-            if (str_starts_with($declaringClass, $namespace)) {
+            if (str_starts_with($name, $namespace)) {
                 return true;
             }
         }
