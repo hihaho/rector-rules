@@ -128,7 +128,7 @@ into one `set()` call per pair, in source order.
 
 | Key | Effect |
 |---|---|
-| `cascade_drop` | Also drops a *mid*-positional default by naming the arguments after it: `attach($user, [], $relationship)` → `attach($user, relationship: $relationship)`, `strspn($text, ' ', 0, $length)` → `strspn($text, ' ', length: $length)`. Only for callees in `first_party_namespaces` (default `App\`) and PHP built-ins, whose parameter names PHP keeps stable. |
+| `cascade_drop` | Also drops a *mid*-positional default by naming the arguments after it: `attach($user, [], $relationship)` → `attach($user, relationship: $relationship)`, `strspn($text, ' ', 0, $length)` → `strspn($text, ' ', length: $length)`. Only for callees in `first_party_namespaces` (default `App\`) and PHP built-ins the call surely reaches: a function, `new` or a static call on a named class, or a method on a final class. A `\DateTime` can be Carbon at runtime, which renames `setTime()`'s `$microsecond`. |
 | `exclude_calls` | Methods the rule must never touch, keyed by class FQN → method names. |
 
 `exclude_calls` exists for methods whose return value is serialized in an

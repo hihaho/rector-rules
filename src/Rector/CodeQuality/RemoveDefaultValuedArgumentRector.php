@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Hihaho\RectorRules\Rector\CodeQuality;
 
 use Hihaho\RectorRules\Rector\CodeQuality\Concerns\PreservesFluentNewline;
+use Hihaho\RectorRules\Rector\CodeQuality\Support\ExactBuiltInCallee;
 use Hihaho\RectorRules\Rector\CodeQuality\Support\ExcludedCallMatcher;
 use PhpParser\Node;
 use PhpParser\Node\Arg;
@@ -90,6 +91,7 @@ final class RemoveDefaultValuedArgumentRector extends AbstractRector implements 
     public function __construct(
         private readonly ReflectionResolver $reflectionResolver,
         private readonly ExcludedCallMatcher $excludedCallMatcher,
+        private readonly ExactBuiltInCallee $exactBuiltInCallee,
     ) {}
 
     public function configure(array $configuration): void
@@ -205,7 +207,7 @@ CODE_SAMPLE,
 
         $parameters = ParametersAcceptorSelectorVariantsWrapper::select($calleeReflection, $node, $scope)->getParameters();
 
-        [$removeIndexes, $renames] = $this->resolveDrops($args, $parameters, $this->allowsCascade($calleeReflection));
+        [$removeIndexes, $renames] = $this->resolveDrops($args, $parameters, $this->allowsCascade($node, $calleeReflection, $scope));
         if ($removeIndexes === []) {
             return null;
         }
@@ -504,13 +506,19 @@ CODE_SAMPLE,
 
     /**
      * The cascade renames arguments, so it needs parameter names that will not change
-     * under the caller: a first-party callee, or a PHP built-in.
+     * under the caller: a first-party callee, or a PHP built-in the call surely reaches.
      */
-    private function allowsCascade(MethodReflection|FunctionReflection $calleeReflection): bool
-    {
+    private function allowsCascade(
+        MethodCall|StaticCall|New_|FuncCall $node,
+        MethodReflection|FunctionReflection $calleeReflection,
+        Scope $scope,
+    ): bool {
         $owner = $calleeReflection instanceof MethodReflection ? $calleeReflection->getDeclaringClass() : $calleeReflection;
+        if ($this->isFirstParty($owner->getName())) {
+            return true;
+        }
 
-        return $owner->isBuiltin() || $this->isFirstParty($owner->getName());
+        return $owner->isBuiltin() && $this->exactBuiltInCallee->isExact($node, $calleeReflection, $scope);
     }
 
     private function isFirstParty(string $name): bool
