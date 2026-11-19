@@ -73,6 +73,7 @@ Read the full documentation at
 - [Middleware strings to classes](https://hihaho.github.io/rector-rules/middleware-string-to-class): the behaviour-safe aliases, and the `throttle` caveat
 - [Test payload field names](https://hihaho.github.io/rector-rules/test-field-constants): the internal/public asymmetry and its config contract
 - [Named arguments on long calls](https://hihaho.github.io/rector-rules/first-party-min-arguments): naming first-party calls past a threshold, and the magic methods it never touches
+- [One argument per line](https://hihaho.github.io/rector-rules/multiline-call-arguments): wrapping calls with many arguments, and the Pint settings it needs
 
 For the static-analysis counterparts, the rules that report but don't rewrite, see
 [`hihaho/phpstan-rules`](https://github.com/hihaho/phpstan-rules).

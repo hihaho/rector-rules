@@ -13,3 +13,7 @@ trim_trailing_whitespace = false
 
 [*.{yml,yaml,json}]
 indent_size = 4
+
+# The rule prints an indented blank line that Pint removes; the fixtures keep it.
+[tests/Rector/CodeQuality/MultilineCallArgumentsRector/**.inc]
+trim_trailing_whitespace = false
