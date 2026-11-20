@@ -2,6 +2,19 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 1.6.0 - 2026-11-20
+
+### Added
+
+- `FacadeToHelperFunctionRector` turns a static facade call into the matching helper function, for example `Cache::get('key')` into `cache()->get('key')` (#34). It covers App, Auth, Cache, Config, Context, Log (`logger()`), Redirect, Request, Response, Session, URL and View. Calls that exist only on the facade (`shouldReceive()`, `spy()`, `fake()`, Mockery assertions such as `shouldHaveReceived()`) stay static, and so do first-class callables. The rule is opt-in and is not in any set. See [Facades to helper functions](https://hihaho.github.io/rector-rules/facade-to-helper-function).
+- `FirstPartyMinArgumentsToNamedRector` and `FirstPartyFlagArgumentToNamedRector` now name the arguments of a call to a private trait method from inside that trait (#33). This needs Rector 2.7.0 or later. A class that uses the trait and declares a method with the same name replaces it; the rule does not check for that.
+
+### Changed
+
+- `MultilineCallArgumentsRector` no longer wraps `where…`, `orWhere…`, `having…` and `…join` calls on a query builder, relation, collection or model (#32). Calls nested in such a condition stay on one line too. A condition that takes a closure or arrow function is still wrapped, and so is your own method with a name like `whereSomething()` on another class.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/1.5.1...1.6.0
+
 ## 1.5.1 - 2026-11-20
 
 ### Fixed
