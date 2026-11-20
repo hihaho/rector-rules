@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Response;
@@ -22,9 +23,9 @@ final class Report
         $id = Auth::id();
         $input = Request::input('page');
         $view = View::make('reports.show');
-        $getter = Cache::get(...);
+        Context::add('key', $key);
 
-        return Response::json([$value, $name, $id, $input, $view, $getter]);
+        return Response::json([$value, $name, $id, $input, $view]);
     }
 }
 
@@ -38,6 +39,7 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Response;
@@ -54,9 +56,9 @@ final class Report
         $id = auth()->id();
         $input = request()->input('page');
         $view = view()->make('reports.show');
-        $getter = cache()->get(...);
+        context()->add('key', $key);
 
-        return response()->json([$value, $name, $id, $input, $view, $getter]);
+        return response()->json([$value, $name, $id, $input, $view]);
     }
 }
 
