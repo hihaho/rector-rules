@@ -2,6 +2,20 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 1.5.0 - 2026-11-20
+
+### Changed
+
+- `RemoveDefaultValuedArgumentRector` now also handles function calls, not only method calls, static calls and `new` (#29). The rule is in the `code-quality` set, so changes like `str_pad($s, 10, ' ')` → `str_pad($s, 10)` and `rescue(..., report: true)` → `rescue(...)` now happen there too. `in_array`, `array_search`, `array_keys` and `base64_decode` are never touched: phpstan-strict-rules checks their flag.
+- With `cascade_drop`, `RemoveDefaultValuedArgumentRector` now also drops a default in the middle of a call to a PHP built-in, and names the arguments after it (#29). For example, `strspn($text, ' ', 0, $length)` becomes `strspn($text, ' ', length: $length)`. This happens only when the call is sure to reach the built-in: a function, a `new` or static call on a named class, or a method on a final class. Date classes are left alone, because the value can be Carbon at runtime.
+
+### Fixed
+
+- `RemoveDefaultValuedArgumentRector` no longer drops an argument when the callee behaves differently depending on how many arguments it gets (#30). Before, `->where('status', null)` became `->where('status')`, which filters on truthy values instead of null. Calls like `str(null)` and `response(null, 200)` are also left alone.
+- `MultilineCallArgumentsRector` no longer wraps calls to PHP built-ins, such as `strspn()` or `$date->setDate(...)` (#29). A built-in method that your own class overrides is still wrapped.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/1.4.0...1.5.0
+
 ## 1.4.0 - 2026-11-19
 
 ### Added
