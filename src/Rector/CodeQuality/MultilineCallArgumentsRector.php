@@ -26,6 +26,7 @@ use Rector\Contract\Rector\ConfigurableRectorInterface;
 use Rector\NodeTypeResolver\Node\AttributeKey;
 use Rector\Rector\AbstractRector;
 use Rector\Reflection\ReflectionResolver;
+use Rector\ValueObject\Application\File;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\ConfiguredCodeSample;
 use Symplify\RuleDocGenerator\ValueObject\RuleDefinition;
 use Webmozart\Assert\Assert;
@@ -49,6 +50,11 @@ final class MultilineCallArgumentsRector extends AbstractRector implements Confi
     private const string DEREFERENCED_NEW = 'hihaho_multiline_call_arguments_dereferenced_new';
 
     private int $minArguments = self::DEFAULT_MIN_ARGUMENTS;
+
+    private ?File $ignoredLinesFile = null;
+
+    /** @var array<int, true> */
+    private array $ignoredLines = [];
 
     public function __construct(
         private readonly ReflectionResolver $reflectionResolver,
@@ -142,6 +148,12 @@ CODE_SAMPLE,
             }
         }
 
+        // A PHPStan ignore comment covers one line. Once the call is wrapped, an error
+        // on an argument is reported on that argument's own line, outside the ignore.
+        if ($this->hasPhpstanIgnore($node)) {
+            return null;
+        }
+
         // A built-in such as `strspn()` takes mostly positional, well-known
         // arguments, so wrapping it adds lines without making it any clearer.
         if ($this->callsBuiltIn($node)) {
@@ -165,6 +177,41 @@ CODE_SAMPLE,
         $node->setAttribute(AttributeKey::ORIGINAL_NODE, null);
 
         return $node;
+    }
+
+    private function hasPhpstanIgnore(CallLike $call): bool
+    {
+        $ignoredLines = $this->resolveIgnoredLines();
+        for ($line = $call->getStartLine() - 1; $line <= $call->getEndLine(); $line++) {
+            if (isset($ignoredLines[$line])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * The lines of the current file that end a PHPStan ignore comment.
+     *
+     * @return array<int, true>
+     */
+    private function resolveIgnoredLines(): array
+    {
+        $file = $this->getFile();
+        if ($this->ignoredLinesFile === $file) {
+            return $this->ignoredLines;
+        }
+
+        $this->ignoredLinesFile = $file;
+        $this->ignoredLines = [];
+        foreach ($file->getOldTokens() as $token) {
+            if ($token->is([T_COMMENT, T_DOC_COMMENT]) && str_contains($token->text, '@phpstan-ignore')) {
+                $this->ignoredLines[$token->line + substr_count($token->text, "\n")] = true;
+            }
+        }
+
+        return $this->ignoredLines;
     }
 
     private function callsBuiltIn(CallLike $call): bool
