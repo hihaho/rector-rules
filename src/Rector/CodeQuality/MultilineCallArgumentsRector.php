@@ -393,6 +393,11 @@ CODE_SAMPLE,
             $call instanceof FuncCall => $call->name,
             default => null,
         };
+        // A receiver another rule built has no tokens; the call's own range is unknown.
+        if ($receiver instanceof Node && $receiver->getEndTokenPos() < 0) {
+            return true;
+        }
+
         $start = $receiver instanceof Node ? $receiver->getEndTokenPos() + 1 : $call->getStartTokenPos();
 
         $tokens = $this->getFile()->getOldTokens();
