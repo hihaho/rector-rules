@@ -149,10 +149,11 @@ trait ResolvesNativeFirstPartyCallee
     }
 
     /**
-     * A class that uses the trait can declare a method with the same name, which
-     * then replaces the trait's, possibly with other parameter names. That class is
-     * out of sight here, so only a private, non-abstract trait method is trusted: it
-     * is an internal helper, not a hook meant to be overridden.
+     * A class that uses the trait can declare a method with the same name, whatever
+     * its visibility, which then replaces the trait's, possibly with other parameter
+     * names. That class is out of sight here, so this is a bet, not a guarantee: a
+     * private, non-abstract trait method is an internal helper that is rarely
+     * replaced, while a protected or public one is often a hook meant to be.
      */
     private function resolveTraitMethod(ClassReflection $traitReflection, string $methodName, Scope $scope): ?ExtendedMethodReflection
     {

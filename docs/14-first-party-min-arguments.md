@@ -48,8 +48,11 @@ A call is named only when it reaches exactly one native method:
   `new static` are late bound, so a subclass with renamed parameters would break them.
 - Inside a trait, `$this->method()` and `self::method()` are named only when the trait
   declares the method as private and not abstract. Rector reads a trait without the class
-  that uses it, and that class can replace a protected or public method with one whose
-  parameters have other names. This needs Rector 2.7.0 or later, which analyses code
+  that uses it. That class replaces a trait method by declaring one with the same name,
+  whatever its visibility, and the rule does not check for that. A protected or public
+  method is often meant to be replaced, so those stay positional; a private helper rarely
+  is, but if a using class does replace it with other parameter names, the named call
+  throws at runtime. This needs Rector 2.7.0 or later, which analyses code
   inside a trait.
 
 `FirstPartyFlagArgumentToNamedRector` applies the same checks.
