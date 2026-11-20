@@ -106,6 +106,11 @@ export const sections: DocSection[] = [
                 text: 'One argument per line',
                 blurb: 'Wrapping long calls one argument per line, and the Pint settings that finish the job.',
             },
+            {
+                file: '16-facade-to-helper-function',
+                text: 'Facades to helper functions',
+                blurb: 'Replacing static facade calls with the helper that returns the same service.',
+            },
         ],
     },
 ]
