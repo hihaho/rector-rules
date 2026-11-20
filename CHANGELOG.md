@@ -2,6 +2,14 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 1.6.1 - 2026-11-20
+
+### Fixed
+
+- `MultilineCallArgumentsRector` no longer drops a comment when it wraps a call (#35). This happened to a comment on the line above a chained `->call(...)`, an inline `/* … */` before the `->`, and a comment after an argument. A call that holds such a comment is now left alone.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/1.6.0...1.6.1
+
 ## 1.6.0 - 2026-11-20
 
 ### Added
