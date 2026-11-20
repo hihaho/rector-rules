@@ -43,6 +43,14 @@ final class VendorMinArgumentsToNamedRector extends AbstractRector implements Co
 
     public const string MIN_ARGUMENTS = 'min_arguments';
 
+    public const string SKIP_QUERY_CONDITIONS = 'skip_query_conditions';
+
+    /**
+     * where…, orWhere…, having… and …join: their column / operator / value order is
+     * familiar enough that names only lengthen the line.
+     */
+    private const string QUERY_CONDITION_PATTERN = '/^(?:or)?(?:where|having)|^(?:left|right|cross)?join/i';
+
     /** @var list<string> */
     private const array DEFAULT_VENDOR_NAMESPACES = ['Illuminate\\'];
 
@@ -52,6 +60,8 @@ final class VendorMinArgumentsToNamedRector extends AbstractRector implements Co
     private array $vendorNamespaces = self::DEFAULT_VENDOR_NAMESPACES;
 
     private int $minArguments = self::DEFAULT_MIN_ARGUMENTS;
+
+    private bool $skipQueryConditions = true;
 
     public function __construct(
         private readonly ReflectionProvider $reflectionProvider,
@@ -68,6 +78,10 @@ final class VendorMinArgumentsToNamedRector extends AbstractRector implements Co
         Assert::integer($minArguments);
         Assert::greaterThanEq($minArguments, 1);
         $this->minArguments = $minArguments;
+
+        $skipQueryConditions = $configuration[self::SKIP_QUERY_CONDITIONS] ?? true;
+        Assert::boolean($skipQueryConditions);
+        $this->skipQueryConditions = $skipQueryConditions;
     }
 
     public function getRuleDefinition(): RuleDefinition
@@ -113,6 +127,11 @@ CODE_SAMPLE,
         // positional to name, and no `...$spread` (a positional spread cannot
         // follow a named argument, and a named spread is not expressible).
         if (count($args) < $this->minArguments || ! $this->hasOnlyPlainArguments($args)) {
+            return null;
+        }
+
+        if ($this->skipQueryConditions && ! $node instanceof New_ && $node->name instanceof Identifier
+            && preg_match(self::QUERY_CONDITION_PATTERN, $node->name->toString()) === 1) {
             return null;
         }
 

@@ -3,6 +3,7 @@
 namespace App;
 
 use Illuminate\Contracts\Routing\ResponseFactory;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
@@ -14,8 +15,14 @@ final class Formatter
     }
 }
 
-function run(ResponseFactory $responses, Formatter $formatter, string $body): mixed
+function run(ResponseFactory $responses, Formatter $formatter, Builder $query, string $body): mixed
 {
+    // Query conditions, skipped by default.
+    $query->where('status', '!=', $body)
+        ->orWhere('title', 'like', $body)
+        ->having('total', '>', 10)
+        ->leftJoin('authors', 'authors.id', '=', 'posts.author_id');
+
     // An interface method: the class that runs is chosen at runtime.
     $responses->view('welcome', [], 200);
 

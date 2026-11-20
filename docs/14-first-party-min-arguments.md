@@ -81,6 +81,7 @@ in a vendor namespace. It sits outside every set as well.
 ->withConfiguredRule(VendorMinArgumentsToNamedRector::class, [
     'vendor_namespaces' => ['Illuminate\\'],
     'min_arguments' => 3,
+    'skip_query_conditions' => true,
 ])
 ```
 
@@ -88,6 +89,7 @@ in a vendor namespace. It sits outside every set as well.
 |---|---|---|
 | `vendor_namespaces` | `['Illuminate\\']` | Only methods declared in these namespaces are named |
 | `min_arguments` | `3` | The fewest arguments a call needs before it is named |
+| `skip_query_conditions` | `true` | Leaves `where…`, `orWhere…`, `having…` and `…join` calls positional |
 
 It applies every check above, plus one: a method without a body, declared on an
 interface or as abstract, is skipped. The class that runs is then chosen at runtime, often
