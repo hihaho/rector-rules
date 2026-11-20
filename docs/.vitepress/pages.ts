@@ -99,7 +99,7 @@ export const sections: DocSection[] = [
             {
                 file: '14-first-party-min-arguments',
                 text: 'Named arguments on long calls',
-                blurb: 'Naming every argument of a first-party call past a threshold, and the magic methods it never touches.',
+                blurb: 'Naming every argument of a first-party or vendor call past a threshold, and the magic methods it never touches.',
             },
             {
                 file: '15-multiline-call-arguments',

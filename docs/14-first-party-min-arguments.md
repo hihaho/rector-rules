@@ -31,9 +31,8 @@ Arguments that are already named stay as they are.
 A named argument binds the call to the parameter name of the method that actually runs.
 A call is named only when it reaches exactly one native method:
 
-- The method is declared in one of `first_party_namespaces`. Vendor and framework
-  signatures are never named: Laravel keeps named arguments out of its BC promise, and
-  PHPUnit's assertions are `@no-named-arguments`.
+- The method is declared in one of `first_party_namespaces`. For vendor and framework
+  methods, see [Vendor calls](#vendor-calls).
 - The receiver is a single class. A nullable receiver counts; any other union or
   intersection is skipped.
 - The class declares the method natively and the call can reach it from where it is made.
@@ -67,6 +66,38 @@ A call is named only when it reaches exactly one native method:
   interface or a parent class. If an implementation renames a parameter, the named call
   throws at runtime. PHPStan reports that case (`argument.parameterRenamedInSubtype`) for
   the subtypes it analyses.
+
+## Vendor calls
+
+`VendorMinArgumentsToNamedRector` names the same long calls when the method is declared
+in a vendor namespace. It sits outside every set as well.
+
+```diff
+-$excerpt = Str::limit($body, 100, '...');
++$excerpt = Str::limit(value: $body, limit: 100, end: '...');
+```
+
+```php
+->withConfiguredRule(VendorMinArgumentsToNamedRector::class, [
+    'vendor_namespaces' => ['Illuminate\\'],
+    'min_arguments' => 3,
+])
+```
+
+| Key | Default | Effect |
+|---|---|---|
+| `vendor_namespaces` | `['Illuminate\\']` | Only methods declared in these namespaces are named |
+| `min_arguments` | `3` | The fewest arguments a call needs before it is named |
+
+It applies every check above, plus one: a method without a body, declared on an
+interface or as abstract, is skipped. The class that runs is then chosen at runtime, often
+by configuration, and your PHPStan run does not check that its parameter names match.
+`ResponseFactory::view()` stays positional; `Model::hasMany()`, a concrete method on an
+abstract class, is named.
+
+Laravel keeps parameter names out of its BC promise, so an upgrade can rename one. PHPStan
+then reports the call as an unknown named parameter. A fake that a test swaps in
+(`Queue::fake()`) can also use other names; the test that runs the call fails.
 
 ## Test doubles
 
