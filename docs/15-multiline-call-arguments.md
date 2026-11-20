@@ -66,7 +66,8 @@ parenthesis or brace. Expect a one-time formatting diff when you enable them.
 - Only a call whose arguments all sit on one line is wrapped. A call with several
   arguments on one line is wrapped even when its parentheses are on other lines; a call
   with an argument that spans lines, such as a closure or a heredoc, is left alone.
-- A call is skipped if any of its arguments has a comment.
+- A call is skipped if it holds a comment after its receiver: before an argument, after
+  one, or between a chained call's `->` and the call before it. A reprint would drop it.
 - A call is skipped if a `@phpstan-ignore` comment sits on the line above it or on its
   own line. The ignore covers one line, and once the arguments are wrapped PHPStan reports
   an error on an argument on that argument's line instead.

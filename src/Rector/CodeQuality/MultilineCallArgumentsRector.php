@@ -175,13 +175,8 @@ CODE_SAMPLE,
             return null;
         }
 
-        // Skip a call whose arguments carry a comment: the placeholder would be
-        // printed next to it. This also skips a call this rule already wrapped,
-        // which keeps its original line numbers until the file is reparsed.
-        foreach ($args as $arg) {
-            if ($arg->getComments() !== []) {
-                return null;
-            }
+        if ($this->hasComment($node, $args)) {
+            return null;
         }
 
         // A PHPStan ignore comment covers one line. Once the call is wrapped, an error
@@ -373,6 +368,46 @@ CODE_SAMPLE,
         };
 
         return $dereferenced instanceof New_ ? $dereferenced : null;
+    }
+
+    /**
+     * A comment on an argument would sit next to the placeholder; this also skips a
+     * call this rule already wrapped, which keeps its original line numbers until
+     * the file is reparsed. php-parser attaches a comment between a chained call's
+     * receiver and its `->`, or after an argument, to no node, so a reprint would
+     * drop it; only the receiver keeps its layout.
+     *
+     * @param array<Arg> $args
+     */
+    private function hasComment(CallLike $call, array $args): bool
+    {
+        foreach ($args as $arg) {
+            if ($arg->getComments() !== []) {
+                return true;
+            }
+        }
+
+        $receiver = match (true) {
+            $call instanceof MethodCall, $call instanceof NullsafeMethodCall => $call->var,
+            $call instanceof StaticCall, $call instanceof New_ => $call->class,
+            $call instanceof FuncCall => $call->name,
+            default => null,
+        };
+        // A receiver another rule built has no tokens; the call's own range is unknown.
+        if ($receiver instanceof Node && $receiver->getEndTokenPos() < 0) {
+            return true;
+        }
+
+        $start = $receiver instanceof Node ? $receiver->getEndTokenPos() + 1 : $call->getStartTokenPos();
+
+        $tokens = $this->getFile()->getOldTokens();
+        for ($position = $start; $position < $call->getEndTokenPos(); $position++) {
+            if (isset($tokens[$position]) && $tokens[$position]->is([T_COMMENT, T_DOC_COMMENT])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
