@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\CodeQuality;
 
+use Hihaho\RectorRules\Rector\CodeQuality\Concerns\NamesPositionalArguments;
 use Hihaho\RectorRules\Rector\CodeQuality\Concerns\ResolvesNativeFirstPartyCallee;
 use PhpParser\Node;
-use PhpParser\Node\Arg;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\NullsafeMethodCall;
@@ -14,7 +14,6 @@ use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Identifier;
 use PHPStan\Analyser\Scope;
 use PHPStan\Reflection\ExtendedMethodReflection;
-use PHPStan\Reflection\ParameterReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use Rector\Contract\Rector\ConfigurableRectorInterface;
 use Rector\NodeTypeResolver\Node\AttributeKey;
@@ -31,6 +30,7 @@ use Webmozart\Assert\Assert;
  */
 final class FirstPartyMinArgumentsToNamedRector extends AbstractRector implements ConfigurableRectorInterface, MinPhpVersionInterface
 {
+    use NamesPositionalArguments;
     use ResolvesNativeFirstPartyCallee;
 
     public const string FIRST_PARTY_NAMESPACES = 'first_party_namespaces';
@@ -141,69 +141,5 @@ CODE_SAMPLE,
     public function provideMinPhpVersion(): int
     {
         return PhpVersion::PHP_80;
-    }
-
-    /**
-     * True when no argument is unpacked and at least one is positional. A call
-     * whose arguments are all named has nothing left to name, which is also what
-     * makes a re-run on an already-converted call a no-op.
-     *
-     * @param array<Arg> $args
-     */
-    private function hasOnlyPlainArguments(array $args): bool
-    {
-        $hasPositional = false;
-        foreach ($args as $arg) {
-            if ($arg->unpack) {
-                return false;
-            }
-
-            if (! $arg->name instanceof Identifier) {
-                $hasPositional = true;
-            }
-        }
-
-        return $hasPositional;
-    }
-
-    /**
-     * Map each positional argument's index to its parameter name. Returns null —
-     * skip the whole call — when any argument lands on a variadic parameter
-     * (positionally, or as a named argument the variadic would collect) or
-     * beyond the parameter list. Naming only part of such a call would leave a
-     * positional argument after a named one.
-     *
-     * @param array<Arg> $args
-     * @param array<int, ParameterReflection> $parameters
-     * @return array<string>|null
-     */
-    private function resolveArgumentNames(array $args, array $parameters): ?array
-    {
-        $parameterNames = [];
-        foreach ($parameters as $parameter) {
-            if (! $parameter->isVariadic()) {
-                $parameterNames[$parameter->getName()] = true;
-            }
-        }
-
-        $names = [];
-        foreach ($args as $index => $arg) {
-            if ($arg->name instanceof Identifier) {
-                if (! isset($parameterNames[$arg->name->toString()])) {
-                    return null;
-                }
-
-                continue;
-            }
-
-            $parameter = $parameters[$index] ?? null;
-            if (! $parameter instanceof ParameterReflection || $parameter->isVariadic()) {
-                return null;
-            }
-
-            $names[$index] = $parameter->getName();
-        }
-
-        return $names;
     }
 }

@@ -72,7 +72,7 @@ Read the full documentation at
 - [Named arguments from a manifest](https://hihaho.github.io/rector-rules/named-argument-manifest): the manifest schema, and the cache trap that hides a fresh one
 - [Middleware strings to classes](https://hihaho.github.io/rector-rules/middleware-string-to-class): the behaviour-safe aliases, and the `throttle` caveat
 - [Test payload field names](https://hihaho.github.io/rector-rules/test-field-constants): the internal/public asymmetry and its config contract
-- [Named arguments on long calls](https://hihaho.github.io/rector-rules/first-party-min-arguments): naming first-party calls past a threshold, and the magic methods it never touches
+- [Named arguments on long calls](https://hihaho.github.io/rector-rules/first-party-min-arguments): naming first-party and vendor calls past a threshold, and the magic methods it never touches
 - [One argument per line](https://hihaho.github.io/rector-rules/multiline-call-arguments): wrapping calls with many arguments, and the Pint settings it needs
 - [Facades to helper functions](https://hihaho.github.io/rector-rules/facade-to-helper-function): which facades map to which helper, and the facade-only methods it leaves alone
 
