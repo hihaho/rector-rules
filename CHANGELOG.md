@@ -2,6 +2,14 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 1.5.1 - 2026-11-20
+
+### Fixed
+
+- `MultilineCallArgumentsRector` no longer wraps a call that a `@phpstan-ignore` comment covers (#31). The ignore applies to one line, so after the wrap PHPStan reported the error on an argument's own line and the ignore matched nothing. A call is now left alone when the comment sits on the line above it or on its own line.
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/1.5.0...1.5.1
+
 ## 1.5.0 - 2026-11-20
 
 ### Changed
