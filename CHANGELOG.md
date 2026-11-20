@@ -2,6 +2,14 @@
 
 All notable changes to `hihaho/rector-rules` will be documented in this file.
 
+## 1.7.0 - 2026-11-20
+
+### Added
+
+- `VendorMinArgumentsToNamedRector` names every argument of a call with 3 or more arguments to a vendor method, `Illuminate\` by default (#36). For example, `Str::limit($body, 100, '...')` becomes `Str::limit(value: $body, limit: 100, end: '...')`. It applies the same checks as `FirstPartyMinArgumentsToNamedRector` and skips interface and abstract methods, whose implementation is chosen at runtime. `where…`, `orWhere…`, `having…` and `…join` calls stay positional unless `skip_query_conditions` is `false`. The rule is opt-in and is not in any set. Laravel keeps parameter names out of its BC promise, so run PHPStan after a dependency update. See [Vendor calls](https://hihaho.github.io/rector-rules/first-party-min-arguments#vendor-calls).
+
+**Full Changelog**: https://github.com/hihaho/rector-rules/compare/1.6.1...1.7.0
+
 ## 1.6.1 - 2026-11-20
 
 ### Fixed
