@@ -8,8 +8,10 @@ use PhpParser\Comment;
 use PhpParser\Node;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Expr\ArrayDimFetch;
+use PhpParser\Node\Expr\ArrowFunction;
 use PhpParser\Node\Expr\CallLike;
 use PhpParser\Node\Expr\ClassConstFetch;
+use PhpParser\Node\Expr\Closure;
 use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
@@ -18,6 +20,7 @@ use PhpParser\Node\Expr\NullsafePropertyFetch;
 use PhpParser\Node\Expr\PropertyFetch;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Expr\StaticPropertyFetch;
+use PhpParser\Node\Identifier;
 use PhpParser\Node\Stmt\Class_;
 use PHPStan\Reflection\FunctionReflection;
 use PHPStan\Reflection\MethodReflection;
@@ -139,6 +142,10 @@ CODE_SAMPLE,
             return null;
         }
 
+        if ($this->isWhereCondition($node, $args)) {
+            return null;
+        }
+
         // Skip a call whose arguments carry a comment: the placeholder would be
         // printed next to it. This also skips a call this rule already wrapped,
         // which keeps its original line numbers until the file is reparsed.
@@ -177,6 +184,29 @@ CODE_SAMPLE,
         $node->setAttribute(AttributeKey::ORIGINAL_NODE, null);
 
         return $node;
+    }
+
+    /**
+     * `->where('status', '!=', $value)` reads as one condition, so a `where*` or
+     * `orWhere*` call stays on one line unless one of its arguments is a closure.
+     *
+     * @param array<Arg> $args
+     */
+    private function isWhereCondition(CallLike $call, array $args): bool
+    {
+        if (! ($call instanceof MethodCall || $call instanceof NullsafeMethodCall || $call instanceof StaticCall)
+            || ! $call->name instanceof Identifier
+            || preg_match('/^(?:or)?where/i', $call->name->toString()) !== 1) {
+            return false;
+        }
+
+        foreach ($args as $arg) {
+            if ($arg->value instanceof Closure || $arg->value instanceof ArrowFunction) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function hasPhpstanIgnore(CallLike $call): bool
