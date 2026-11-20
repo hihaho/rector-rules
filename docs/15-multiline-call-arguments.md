@@ -79,8 +79,10 @@ parenthesis or brace. Expect a one-time formatting diff when you enable them.
   mostly positional and well known, so one argument per line only makes them longer.
 - A query condition reads as one unit and is skipped unless one of its arguments is a
   closure: `where*` and `orWhere*` (`->where('status', '!=', $value)`), `having*` and
-  `orHaving*`, and `join*`, `leftJoin*`, `rightJoin*` and `crossJoin*`. The match is on
-  the method name, so a `whereActive()` method of your own counts too.
+  `orHaving*`, and `join*`, `leftJoin*`, `rightJoin*` and `crossJoin*`. The receiver must
+  be a query builder, relation, collection or model, or of unknown type, so
+  `$this->whereActive(...)` on your own class is still wrapped. A call nested in a skipped
+  condition stays on one line with it.
 - Nested calls that each meet the threshold are each wrapped.
 - A dereferenced `new` (`new Report($a, $b, $c)->render()`, `->total`, `::class`, `[0]`) is
   skipped, along with a call made on it. Rector prints PHP 7.4 syntax, so reprinting
