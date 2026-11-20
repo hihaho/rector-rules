@@ -10,6 +10,7 @@ use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\NullsafeMethodCall;
 use PhpParser\Node\Expr\StaticCall;
+use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\Class_;
@@ -66,6 +67,15 @@ trait ResolvesNativeFirstPartyCallee
             return $this->resolveNativeStaticCallee($node, $methodName, $scope);
         }
 
+        // Rector analyses a trait without the class that uses it, so `$this` has no
+        // type there. The trait's own method is the one that runs, unless the class
+        // declares one with the same name: see resolveTraitMethod().
+        $classReflection = $scope->getClassReflection();
+        if ($classReflection instanceof ClassReflection && $classReflection->isTrait()
+            && $node->var instanceof Variable && $node->var->name === 'this') {
+            return $this->resolveTraitMethod($classReflection, $methodName, $scope);
+        }
+
         // Strip null first: a nullable receiver (`Foo|null`) is still one class.
         // Any other union or intersection is rejected, so the call is never named
         // against one member while another member's signature differs.
@@ -84,7 +94,9 @@ trait ResolvesNativeFirstPartyCallee
             return null;
         }
 
-        $methodReflection = $this->resolveNativeMethod($classReflection, $methodName, $scope);
+        $methodReflection = $classReflection->isTrait()
+            ? $this->resolveTraitMethod($classReflection, $methodName, $scope)
+            : $this->resolveNativeMethod($classReflection, $methodName, $scope);
         if (! $methodReflection instanceof ExtendedMethodReflection) {
             return null;
         }
@@ -134,6 +146,25 @@ trait ResolvesNativeFirstPartyCallee
         return $this->reflectionProvider->hasClass($className)
             ? $this->reflectionProvider->getClass($className)
             : null;
+    }
+
+    /**
+     * A class that uses the trait can declare a method with the same name, whatever
+     * its visibility, which then replaces the trait's, possibly with other parameter
+     * names. That class is out of sight here, so this is a bet, not a guarantee: a
+     * private, non-abstract trait method is an internal helper that is rarely
+     * replaced, while a protected or public one is often a hook meant to be.
+     */
+    private function resolveTraitMethod(ClassReflection $traitReflection, string $methodName, Scope $scope): ?ExtendedMethodReflection
+    {
+        $methodReflection = $this->resolveNativeMethod($traitReflection, $methodName, $scope);
+        if (! $methodReflection instanceof ExtendedMethodReflection || ! $methodReflection->isPrivate()) {
+            return null;
+        }
+
+        $isAbstract = $methodReflection->isAbstract();
+
+        return $isAbstract === false || ($isAbstract instanceof TrinaryLogic && $isAbstract->no()) ? $methodReflection : null;
     }
 
     private function resolveNativeMethod(ClassReflection $classReflection, string $methodName, Scope $scope): ?ExtendedMethodReflection
