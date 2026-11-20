@@ -4,12 +4,20 @@ declare(strict_types=1);
 
 namespace Hihaho\RectorRules\Rector\CodeQuality;
 
+use Illuminate\Contracts\Database\Query\Builder as QueryBuilderContract;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Enumerable;
 use PhpParser\Comment;
 use PhpParser\Node;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Expr\ArrayDimFetch;
+use PhpParser\Node\Expr\ArrowFunction;
 use PhpParser\Node\Expr\CallLike;
 use PhpParser\Node\Expr\ClassConstFetch;
+use PhpParser\Node\Expr\Closure;
 use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
@@ -18,9 +26,15 @@ use PhpParser\Node\Expr\NullsafePropertyFetch;
 use PhpParser\Node\Expr\PropertyFetch;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Expr\StaticPropertyFetch;
+use PhpParser\Node\Identifier;
+use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\Class_;
+use PHPStan\Analyser\Scope;
+use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\FunctionReflection;
 use PHPStan\Reflection\MethodReflection;
+use PHPStan\Type\ObjectType;
+use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
 use Rector\Contract\Rector\ConfigurableRectorInterface;
 use Rector\NodeTypeResolver\Node\AttributeKey;
@@ -48,6 +62,21 @@ final class MultilineCallArgumentsRector extends AbstractRector implements Confi
     private const int DEFAULT_MIN_ARGUMENTS = 3;
 
     private const string DEREFERENCED_NEW = 'hihaho_multiline_call_arguments_dereferenced_new';
+
+    private const string INSIDE_QUERY_CONDITION = 'hihaho_multiline_call_arguments_inside_query_condition';
+
+    /**
+     * Receivers whose where, having and join methods build a query or filter a
+     * collection. A static call counts on a model.
+     */
+    private const array QUERY_RECEIVERS = [
+        QueryBuilderContract::class,
+        QueryBuilder::class,
+        EloquentBuilder::class,
+        Relation::class,
+        Enumerable::class,
+        Model::class,
+    ];
 
     private int $minArguments = self::DEFAULT_MIN_ARGUMENTS;
 
@@ -120,7 +149,8 @@ CODE_SAMPLE,
             return null;
         }
 
-        if (! $node instanceof CallLike || $node->getAttribute(self::DEREFERENCED_NEW) === true) {
+        if (! $node instanceof CallLike || $node->getAttribute(self::DEREFERENCED_NEW) === true
+            || $node->getAttribute(self::INSIDE_QUERY_CONDITION) === true) {
             return null;
         }
 
@@ -136,6 +166,12 @@ CODE_SAMPLE,
 
         $args = $node->getArgs();
         if (count($args) < $this->minArguments || ! $this->isSingleLine($args)) {
+            return null;
+        }
+
+        if ($this->isQueryCondition($node, $args)) {
+            $this->keepNestedCallsOnOneLine($args);
+
             return null;
         }
 
@@ -177,6 +213,87 @@ CODE_SAMPLE,
         $node->setAttribute(AttributeKey::ORIGINAL_NODE, null);
 
         return $node;
+    }
+
+    /**
+     * `->where('status', '!=', $value)` reads as one condition, so a where, having
+     * or join call stays on one line unless one of its arguments is a closure.
+     *
+     * @param array<Arg> $args
+     */
+    private function isQueryCondition(CallLike $call, array $args): bool
+    {
+        if (! ($call instanceof MethodCall || $call instanceof NullsafeMethodCall || $call instanceof StaticCall)
+            || ! $call->name instanceof Identifier
+            || preg_match('/^(?:or)?(?:where|having)|^(?:left|right|cross)?join/i', $call->name->toString()) !== 1) {
+            return false;
+        }
+
+        foreach ($args as $arg) {
+            if ($arg->value instanceof Closure || $arg->value instanceof ArrowFunction) {
+                return false;
+            }
+        }
+
+        return $this->hasQueryReceiver($call);
+    }
+
+    /**
+     * A call nested in a query condition stays on one line with it.
+     *
+     * @param array<Arg> $args
+     */
+    private function keepNestedCallsOnOneLine(array $args): void
+    {
+        $this->traverseNodesWithCallable($args, static function (Node $inner): null {
+            if ($inner instanceof CallLike) {
+                $inner->setAttribute(self::INSIDE_QUERY_CONDITION, true);
+            }
+
+            return null;
+        });
+    }
+
+    /**
+     * True for a query builder, relation, collection or model receiver, and for one
+     * whose type is unknown, such as `$this` inside a trait. A first-party
+     * `$this->whereActive(...)` on a known class is wrapped like any other call.
+     */
+    private function hasQueryReceiver(MethodCall|NullsafeMethodCall|StaticCall $call): bool
+    {
+        $type = $call instanceof StaticCall
+            ? $this->resolveStaticReceiverType($call)
+            : $this->getType($call->var);
+        if (! $type instanceof Type || $type->getObjectClassReflections() === []) {
+            return true;
+        }
+
+        foreach (self::QUERY_RECEIVERS as $receiver) {
+            if ((new ObjectType($receiver))->isSuperTypeOf($type)->yes()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function resolveStaticReceiverType(StaticCall $call): ?Type
+    {
+        if (! $call->class instanceof Name) {
+            return null;
+        }
+
+        if (in_array($call->class->toLowerString(), ['self', 'static', 'parent'], strict: true)) {
+            $scope = $call->getAttribute(AttributeKey::SCOPE);
+            $classReflection = $scope instanceof Scope ? $scope->getClassReflection() : null;
+            if ($classReflection instanceof ClassReflection && $call->class->toLowerString() === 'parent') {
+                $classReflection = $classReflection->getParentClass();
+            }
+
+            return $classReflection instanceof ClassReflection ? new ObjectType($classReflection->getName()) : null;
+        }
+
+        return new ObjectType($call->class->toString());
     }
 
     private function hasPhpstanIgnore(CallLike $call): bool

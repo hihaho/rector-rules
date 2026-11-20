@@ -9,7 +9,7 @@ final class Report
     public function run(string $status): void
     {
         $this->query
-            ->where("status", "=", $status);
+            ->select("id", "status", $status);
     }
 }
 

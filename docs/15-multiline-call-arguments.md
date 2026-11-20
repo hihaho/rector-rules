@@ -71,12 +71,18 @@ parenthesis or brace. Expect a one-time formatting diff when you enable them.
   own line. The ignore covers one line, and once the arguments are wrapped PHPStan reports
   an error on an argument on that argument's line instead.
 - In a method chain, a call on its own line is wrapped only when the link before it is
-  also a call (`->orderBy('id')` then `->whereBetween(...)`). The first link off a
+  also a call (`->orderBy('id')` then `->select(...)`). The first link off a
   variable or property (`$query` then `->where(...)`), and a nullsafe call on its own
   line, are skipped: Rector cannot reprint them without joining them to the line above.
 - PHP built-ins are skipped: internal functions such as `strspn()`, and methods or
   constructors declared on internal classes such as `DateTime`. Their arguments are
   mostly positional and well known, so one argument per line only makes them longer.
+- A query condition reads as one unit and is skipped unless one of its arguments is a
+  closure: `where*` and `orWhere*` (`->where('status', '!=', $value)`), `having*` and
+  `orHaving*`, and `join*`, `leftJoin*`, `rightJoin*` and `crossJoin*`. The receiver must
+  be a query builder, relation, collection or model, or of unknown type, so
+  `$this->whereActive(...)` on your own class is still wrapped. A call nested in a skipped
+  condition stays on one line with it.
 - Nested calls that each meet the threshold are each wrapped.
 - A dereferenced `new` (`new Report($a, $b, $c)->render()`, `->total`, `::class`, `[0]`) is
   skipped, along with a call made on it. Rector prints PHP 7.4 syntax, so reprinting
