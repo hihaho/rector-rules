@@ -9,7 +9,7 @@ function run(Builder $query, string $status): Builder
     return $query
         ->where("status", "=", $status)
         ->orderBy("id")
-        ->join("orders", "orders.user_id", "users.id")
+        ->select("id", "status", "total")
         ->limit(5);
 }
 
@@ -26,11 +26,11 @@ function run(Builder $query, string $status): Builder
     return $query
         ->where("status", "=", $status)
         ->orderBy("id")
-        ->join(
+        ->select(
         
-        "orders",
-        "orders.user_id",
-        "users.id"
+        "id",
+        "status",
+        "total"
     )
         ->limit(5);
 }

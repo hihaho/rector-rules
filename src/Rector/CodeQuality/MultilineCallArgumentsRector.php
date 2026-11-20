@@ -142,7 +142,7 @@ CODE_SAMPLE,
             return null;
         }
 
-        if ($this->isWhereCondition($node, $args)) {
+        if ($this->isQueryCondition($node, $args)) {
             return null;
         }
 
@@ -187,16 +187,16 @@ CODE_SAMPLE,
     }
 
     /**
-     * `->where('status', '!=', $value)` reads as one condition, so a `where*` or
-     * `orWhere*` call stays on one line unless one of its arguments is a closure.
+     * `->where('status', '!=', $value)` reads as one condition, so a where, having
+     * or join call stays on one line unless one of its arguments is a closure.
      *
      * @param array<Arg> $args
      */
-    private function isWhereCondition(CallLike $call, array $args): bool
+    private function isQueryCondition(CallLike $call, array $args): bool
     {
         if (! ($call instanceof MethodCall || $call instanceof NullsafeMethodCall || $call instanceof StaticCall)
             || ! $call->name instanceof Identifier
-            || preg_match('/^(?:or)?where/i', $call->name->toString()) !== 1) {
+            || preg_match('/^(?:or)?(?:where|having)|^(?:left|right|cross)?join/i', $call->name->toString()) !== 1) {
             return false;
         }
 

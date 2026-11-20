@@ -13,6 +13,13 @@ function run(Builder $query, ?Builder $other, string $status): void
     $query->WHERE('status', '=', $status);
     $other?->where('status', '=', $status);
     Order::where('status', '=', $status);
+    $query->orWhereNotLike('name', '%test%', true);
+    $query->whereRelation('items', 'status', '=', $status);
+    $query->having('total', '>', 100);
+    $query->orHaving('total', '<', 10);
+    $query->join('orders', 'orders.user_id', '=', 'users.id');
+    $query->leftJoin('orders', 'orders.user_id', '=', 'users.id');
+    $query->crossJoinSub($other, 'totals', 'totals.id', 'users.id');
 }
 
 ?>
