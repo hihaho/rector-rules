@@ -74,6 +74,7 @@ Read the full documentation at
 - [Test payload field names](https://hihaho.github.io/rector-rules/test-field-constants): the internal/public asymmetry and its config contract
 - [Named arguments on long calls](https://hihaho.github.io/rector-rules/first-party-min-arguments): naming first-party calls past a threshold, and the magic methods it never touches
 - [One argument per line](https://hihaho.github.io/rector-rules/multiline-call-arguments): wrapping calls with many arguments, and the Pint settings it needs
+- [Facades to helper functions](https://hihaho.github.io/rector-rules/facade-to-helper-function): which facades map to which helper, and the facade-only methods it leaves alone
 
 For the static-analysis counterparts, the rules that report but don't rewrite, see
 [`hihaho/phpstan-rules`](https://github.com/hihaho/phpstan-rules).

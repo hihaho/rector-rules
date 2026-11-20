@@ -29,6 +29,7 @@
             "Hihaho\\RectorRules\\Tests\\": "tests/"
         },
         "files": [
+            "tests/Rector/CodeQuality/FacadeToHelperFunctionRector/Source/functions.php",
             "tests/Rector/CodeQuality/RemoveDefaultValuedArgumentRector/Source/functions.php"
         ]
     },
